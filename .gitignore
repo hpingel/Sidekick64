@@ -1,2 +1,5 @@
 *.o
 kernel8.*
+*.prg
+*.s
+*.d
