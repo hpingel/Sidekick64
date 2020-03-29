@@ -63,6 +63,10 @@ const int VK_MOUNT = 205; // SHIFT-M
 const int VK_MOUNT_START = 77; // M
 
 extern CLogger *logger;
+#ifdef WITH_NET
+extern CSidekickNet * pSidekickNet;
+#include "circle/version.h"
+#endif
 
 // todo 
 extern u32 prgSizeLaunch;
@@ -90,6 +94,10 @@ char errorMessages[5][41] = {
 #define MENU_BROWSER 0x01
 #define MENU_ERROR	 0x02
 #define MENU_CONFIG  0x03
+#ifdef WITH_NET
+#define MENU_NETWORK 0x04
+#endif
+
 u32 menuScreen = 0, 
 	previousMenuScreen = 0;
 u32 updateMenu = 1;
@@ -346,6 +354,9 @@ int getMainMenuSelection( int key, char **FILE, char **FILE2, int *addIdx )
 	if ( key == KEY_HELP ) { resetMenuState(3); return 2;/* Browser */ } else
 	if ( key == KEY_F1 ) { resetMenuState(1); return 3;/* GEORAM */ } else
 	if ( key == KEY_F2 ) { resetMenuState(2); return 4;/* SID */ } else
+	#ifdef WITH_NET
+	if ( key == KEY_F6 ) { resetMenuState(4); return 5;/* Network */ } else //hp: don't have a clue about these numbers here
+	#endif
 	{
 		if ( key >= 'A' && key < 'A' + menuItems[ 1 ] ) // PRG
 		{
@@ -463,7 +474,15 @@ void handleC64( int k, u32 *launchKernel, char *FILENAME, char *filenameKernal )
 			handleC64( 0xffffffff, launchKernel, FILENAME, filenameKernal );
 			return;
 		}
-
+#ifdef WITH_NET
+		//entering the network menu via F6
+		if ( k == KEY_F6 )
+		{
+			menuScreen = MENU_NETWORK;
+			handleC64( 0xffffffff, launchKernel, FILENAME, filenameKernal );
+			return;
+		}
+#endif
 		int temp;
 		int r = getMainMenuSelection( k, &filename, &filename2, &temp );
 
@@ -766,6 +785,27 @@ void handleC64( int k, u32 *launchKernel, char *FILENAME, char *filenameKernal )
 			}
 		}
 	} else
+	#ifdef WITH_NET
+		if ( menuScreen == MENU_NETWORK )
+		{
+			//keypress handling while inside of open menu
+			if ( k == KEY_F7 || k == KEY_F6 )
+			{
+				menuScreen = MENU_MAIN;
+				handleC64( 0xffffffff, launchKernel, FILENAME, filenameKernal );
+				return;
+			}
+	/*
+	TODO: add real functionality here
+			if ( k == 'z' || k == 'Z')
+			{
+				menuScreen = MENU_MAIN;
+				handleC64( 0xffffffff, launchKernel, FILENAME, filenameKernal );
+				return;
+			}
+	*/		
+		} else
+	#endif		
 	if ( menuScreen == MENU_CONFIG )
 	{
 		if ( k == KEY_HELP )
@@ -780,7 +820,14 @@ void handleC64( int k, u32 *launchKernel, char *FILENAME, char *filenameKernal )
 			handleC64( 0xffffffff, launchKernel, FILENAME, filenameKernal );
 			return;
 		}
-
+#ifdef WITH_NET
+		if ( k == KEY_F6 )
+		{
+			menuScreen = MENU_NETWORK;
+			handleC64( 0xffffffff, launchKernel, FILENAME, filenameKernal );
+			return;
+		}		
+#endif
 		if ( ( ( k == 'n' || k == 'N' ) || ( k == 13 && curSettingsLine == 1 ) )&& typeInName == 0 )
 		{
 			typeInName = 1;
@@ -977,6 +1024,10 @@ void printMainMenu()
 
 	printC64( menuX[ 0 ], menuY[ 0 ]+3, "F3", skinValues.SKIN_MENU_TEXT_KEY, 0 );
 	printC64( menuX[ 0 ]+3, menuY[ 0 ]+3, "Settings", skinValues.SKIN_MENU_TEXT_ITEM, 0 );
+#ifdef WITH_NET
+	printC64( menuX[ 0 ], menuY[ 0 ]+4, "F6", skinValues.SKIN_MENU_TEXT_KEY, 0 );
+	printC64( menuX[ 0 ]+3, menuY[ 0 ]+4, "Network", skinValues.SKIN_MENU_TEXT_ITEM, 0 );
+#endif
 
 	printSidekickLogo();
 
@@ -997,6 +1048,85 @@ void settingsGetGEORAMInfo( char *filename, u32 *size )
 	sprintf( filename, "SD:GEORAM/slot%02d.ram", settings[ 1 ] );
 }
 
+#ifdef WITH_NET
+void printNetworkScreen()
+{
+	clearC64();
+	//               "012345678901234567890123456789012345XXXX"
+	printC64( 0,  1, "   .- Sidekick264 - Frenetic -.         ", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
+	printC64( 0, 23, "           F6/F7 Back to Menu           ", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
+
+	const u32 x = 1;
+	u32 y1 = 2;
+
+	CString strTimeDate = "";
+	strTimeDate.Append( pSidekickNet->getTimeString());
+	
+	CString strIpAdress   = "IP address:      "; 
+	CString strNetMask    = "Netmask:         "; 
+	CString strDefGateway = "Default Gateway: "; 
+	CString strDNSServer  = "DNS Server:      ";
+	CString strDhcpUsed   = "DHCP active:     ";
+	CString strKernelCV   = "Circle version:  ";
+	CString strKernelTS   = "Compiled on:     ";
+	CString strKernelTS2  = "                 ";
+	CString strHelper;
+	
+	if ( pSidekickNet->IsRunning() )
+	{
+		pSidekickNet->GetNetConfig()->GetIPAddress ()->Format (&strHelper);
+		strIpAdress.Append( strHelper );
+
+		pSidekickNet->GetNetConfig()->GetDefaultGateway ()->Format (&strHelper);
+		strDefGateway.Append( strHelper );
+
+		pSidekickNet->GetNetConfig()->GetDNSServer ()->Format (&strHelper);
+		strDNSServer.Append( strHelper );
+
+		strDhcpUsed.Append( pSidekickNet->GetNetConfig()->IsDHCPUsed() ? "Yes" : "No" );
+	}
+	else
+	{
+		strIpAdress.Append( "-" );
+		strDefGateway.Append( "-" );
+		strDNSServer.Append( "-" );
+		strDhcpUsed.Append( "-" );
+	}
+
+	strKernelCV.Append( CIRCLE_VERSION_STRING );
+	strKernelTS.Append( __DATE__ );
+	strKernelTS2.Append( __TIME__ );
+
+	printC64( x+1, y1+2, "Network settings", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
+	printC64( x+1, y1+3, strIpAdress,   skinValues.SKIN_MENU_TEXT_ITEM, 0 );
+	printC64( x+1, y1+4, strDhcpUsed,   skinValues.SKIN_MENU_TEXT_SYSINFO, 0 );
+	printC64( x+1, y1+5, strDefGateway, skinValues.SKIN_MENU_TEXT_SYSINFO, 0 );
+	printC64( x+1, y1+6, strDNSServer,  skinValues.SKIN_MENU_TEXT_SYSINFO, 0 );
+
+	printC64( x+1, y1+ 8, "Sidekick Kernel Info", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
+	#ifdef NET_DEV_SERVER
+		printC64( x+1, y1+9, "Update via HTTP: On (during boot)", skinValues.SKIN_MENU_TEXT_ITEM, 0 );
+		y1 = 3;
+	#endif
+	printC64( x+1, y1+ 9, strKernelTS, skinValues.SKIN_MENU_TEXT_ITEM, 0 );
+	printC64( x+1, y1+10, strKernelTS2, skinValues.SKIN_MENU_TEXT_ITEM, 0 );
+	printC64( x+1, y1+11, strKernelCV, skinValues.SKIN_MENU_TEXT_ITEM, 0 );
+	
+	y1=2;
+	
+	printC64( x+1, y1+15, "You are running Sidekick on a", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
+	printC64( x+1, y1+16, pSidekickNet->getRaspiModelName(), skinValues.SKIN_MENU_TEXT_ITEM, 0 );
+	
+	printC64( x+1, y1+18, "System time", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
+	printC64( x+1, y1+19, strTimeDate, skinValues.SKIN_MENU_TEXT_ITEM, 0 );
+
+	printSidekickLogo();
+	
+	c64screen[ 1000 ] = ((0x6800 >> 8) & 0xFC);
+	c64screen[ 1001 ] = skinValues.SKIN_MENU_BACKGROUND_COLOR;
+	c64screen[ 1002 ] = skinValues.SKIN_MENU_BORDER_COLOR;
+}
+#endif
 
 
 void printSettingsScreen()
@@ -1122,6 +1252,17 @@ void printSettingsScreen()
 	injectPOKE( 0xff19, skinValues.SKIN_MENU_BORDER_COLOR );*/
 }
 
+void clearErrorMsg()
+{
+	errorMsg = NULL;
+}
+
+void setErrorMsg( char * msg )
+{
+	errorMsg = msg;
+	previousMenuScreen = menuScreen;
+	menuScreen = MENU_ERROR;
+}
 
 void renderC64()
 {
@@ -1137,20 +1278,26 @@ void renderC64()
 	{
 		printSettingsScreen();
 	} else
+#ifdef WITH_NET
+	if ( menuScreen == MENU_NETWORK )
+	{
+		printNetworkScreen();
+	} else
+#endif		
 	//if ( menuScreen == MENU_ERROR )
 	{
-		if ( errorMsg != NULL )
-		{
-			int convert = 0;
-			if ( previousMenuScreen == MENU_BROWSER )
-				convert = 3;
-
-			printC64( 0, 10, "\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9", skinValues.SKIN_ERROR_BAR, 0, 1 );
-			printC64( 0, 11, "                                        ", skinValues.SKIN_ERROR_TEXT, 0 );
-			printC64( 0, 12, errorMsg, skinValues.SKIN_ERROR_TEXT, 0, convert );
-			printC64( 0, 13, "                                        ", skinValues.SKIN_ERROR_TEXT, 0 );
-			printC64( 0, 14, "\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8", skinValues.SKIN_ERROR_BAR, 0, 1 );
-		}
+		if ( errorMsg != NULL ) renderErrorMsg();
 	}
 }
 
+void renderErrorMsg()
+{
+	int convert = 0;
+	if ( previousMenuScreen == MENU_BROWSER )
+		convert = 3;
+	printC64( 0, 10, "\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9", skinValues.SKIN_ERROR_BAR, 0, 1 );
+	printC64( 0, 11, "                                        ", skinValues.SKIN_ERROR_TEXT, 0 );
+	printC64( 0, 12, errorMsg, skinValues.SKIN_ERROR_TEXT, 0, convert );
+	printC64( 0, 13, "                                        ", skinValues.SKIN_ERROR_TEXT, 0 );
+	printC64( 0, 14, "\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8", skinValues.SKIN_ERROR_BAR, 0, 1 );
+}

@@ -75,9 +75,14 @@ const int ACT_LAUNCH_CRT	= 5;
 const int ACT_LAUNCH_PRG	= 6;
 const int ACT_LAUNCH_KERNAL = 7;
 const int ACT_SIDKICK_CFG   = 8;
+const int ACT_NETWORK = 9;
 const int ACT_NOTHING		= 0;
 
 extern CLogger *logger;
+#ifdef WITH_NET
+extern CSidekickNet * pSidekickNet;
+#include "circle/version.h"
+#endif
 
 extern u32 prgSizeLaunch;
 extern unsigned char prgDataLaunch[ 65536 ];
@@ -125,6 +130,11 @@ int extraMsg = 0;
 #define MENU_BROWSER 0x01
 #define MENU_ERROR	 0x02
 #define MENU_CONFIG  0x03
+#ifdef WITH_NET
+#define MENU_NETWORK 0x04
+#define MENU_SKTX 0x05
+#endif
+
 u32 menuScreen = 0, 
 	previousMenuScreen = 0;
 u32 updateMenu = 1;
@@ -444,6 +454,9 @@ int getMainMenuSelection( int key, char **FILE, int *addIdx, char *menuItemStr )
 	if ( key == VK_F1 ) { resetMenuState(1); return ACT_GEORAM;/* GEORAM */ } else
 	if ( key == VK_F6 ) { return ACT_SIDKICK_CFG; } else
 	if ( key == VK_F3 ) { resetMenuState(2); return ACT_SID;/* SID */ } else
+	#ifdef WITH_NET
+	if ( key == VK_F6 ) { resetMenuState(3); return ACT_NETWORK;/* Network */ } else
+	#endif	
 	{
 		if ( key >= 'A' && key < 'A' + menuItems[ 2 ] ) // CRT
 		{
@@ -876,6 +889,16 @@ void handleC64( int k, u32 *launchKernel, char *FILENAME, char *filenameKernal, 
 			handleC64( 0xffffffff, launchKernel, FILENAME, filenameKernal, menuItemStr );
 			return;
 		}
+
+#ifdef WITH_NET
+		//entering the network menu from the main menu via F6
+		if ( k == 139 /* F6 */ )
+		{
+			menuScreen = MENU_NETWORK;
+			handleC64( 0xffffffff, launchKernel, FILENAME, filenameKernal );
+			return;
+		}
+#endif
 
 		int temp;
 		//logger->Write( "h", LogNotice, "--------------" );
@@ -1658,6 +1681,79 @@ void handleC64( int k, u32 *launchKernel, char *FILENAME, char *filenameKernal, 
 		}
 
 	} else
+#ifdef WITH_NET
+	if ( menuScreen == MENU_NETWORK )
+	{
+		//keypress handling while inside of open menu
+		if ( k == 136 /* F7 */ || k == 139 /* F6 */)
+		{
+			menuScreen = MENU_MAIN;
+			handleC64( 0xffffffff, launchKernel, FILENAME, filenameKernal );
+			return;
+		}
+		if ( k == 'x' || k == 'X')
+		{
+			if (pSidekickNet->IsRunning())
+			{
+				pSidekickNet->redrawSktxScreen();
+				menuScreen = MENU_SKTX;
+				handleC64( 0xffffffff, launchKernel, FILENAME, filenameKernal );
+				return;
+			}
+		}
+		else if ( k == 'c' || k == 'C')
+		{
+			if (!pSidekickNet->IsRunning())
+			{
+				pSidekickNet->queueNetworkInit();
+				setErrorMsg( pSidekickNet->getNetworkActionStatusMessage() );
+			}
+		}
+		else if ( k == 'u' || k == 'U')
+		{
+			if (pSidekickNet->IsRunning())
+			{
+				pSidekickNet->queueKernelUpdate();
+				setErrorMsg( pSidekickNet->getNetworkActionStatusMessage() );
+			}
+		}
+		else if ( k == 'd' || k == 'D')
+		{
+				if ( errorMsg != NULL ) errorMsg = NULL;
+		}
+	} else
+	if ( menuScreen == MENU_SKTX )
+	{
+	
+		if ( k == 136 /* F7 */ || k == 139 /* F6 */)
+		{
+			menuScreen = MENU_MAIN;
+			handleC64( 0xffffffff, launchKernel, FILENAME, filenameKernal );
+			return;
+		}
+		/*
+		else if ( k == 'n' || k == 'N')
+		{
+			//only needed temporarily for testing purposes
+			pSidekickNet->resetSktxSession();
+		}*/
+		else if ( k == 'd' || k == 'D')
+		{
+				//http errors might be displayed on top of sktx screen
+				//this assignment is a cheap trick to get rid of error popups
+				if ( errorMsg != NULL ) errorMsg = NULL;
+		}
+		else if (k == 92 )
+		{
+			pSidekickNet->queueSktxRefresh();
+			
+		}
+		else
+		{
+			pSidekickNet->queueSktxKeypress(k); //92 is pound key
+		}
+	} else
+#endif		
 	if ( menuScreen == MENU_CONFIG )
 	{
 		if ( k == VK_F7 )
@@ -1673,7 +1769,15 @@ void handleC64( int k, u32 *launchKernel, char *FILENAME, char *filenameKernal, 
 			handleC64( 0xffffffff, launchKernel, FILENAME, filenameKernal, menuItemStr );
 			return;
 		}
-
+#ifdef WITH_NET
+		if ( k == 139/* F6 */ )
+		{
+			//jump to network menu from config menu - do we really need this?
+			menuScreen = MENU_NETWORK;
+			handleC64( 0xffffffff, launchKernel, FILENAME, filenameKernal );
+			return;
+		}		
+#endif
 		if ( ( ( k == 'n' || k == 'N' ) || ( k == 13 && curSettingsLine == 1 ) )&& typeInName == 0 )
 		{
 			typeInName = 1;
@@ -1781,7 +1885,6 @@ void handleC64( int k, u32 *launchKernel, char *FILENAME, char *filenameKernal, 
 }
 
 extern int subGeoRAM, subSID, subHasKernal;
-
 
 void printSidekickLogo()
 {
@@ -1979,6 +2082,12 @@ void printMainMenu()
 		ADD_JOY_ITEM( menuX[ 0 ], menuY[ 0 ]+4, 2, VK_F6 );
 	}
 
+	#ifdef WITH_NET
+			printC64( menuX[ 0 ], menuY[ 0 ]+4, "F6", skinValues.SKIN_MENU_TEXT_KEY, 0 );
+			printC64( menuX[ 0 ]+3, menuY[ 0 ]+4, "Network", skinValues.SKIN_MENU_TEXT_ITEM, 0 );
+			ADD_JOY_ITEM( menuX[ 0 ], menuY[ 0 ]+4, 2, VK_F6 );
+	#endif
+
 	if ( joyIdx != - 1 )
 		printC64( (joyX-1+40)%40, (joyY%25), ">", 1, 0 );
 
@@ -1999,7 +2108,161 @@ void settingsGetGEORAMInfo( char *filename, u32 *size )
 	sprintf( filename, "SD:GEORAM/slot%02d.ram", settings[ 1 ] );
 }
 
+#ifdef WITH_NET
+void printNetworkScreen()
+{
+	clearC64();
+	//               "012345678901234567890123456789012345XXXX"
+	printC64( 0,  1, "   .- Sidekick64 -- Frenetic -.         ", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
+	printC64( 0, 23, "           F6/F7 Back to Menu           ", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
 
+	const u32 x = 1;
+	
+	CString strTimeDate = "";
+	strTimeDate.Append( pSidekickNet->getTimeString());
+	
+	CString strSysMon = "";
+	strSysMon.Append( pSidekickNet->getSysMonInfo());
+
+	
+	CString strIpAdress   = "IP address:      "; 
+	CString strNetMask    = "Netmask:         "; 
+	CString strDefGateway = "Default Gateway: "; 
+	CString strDNSServer  = "DNS Server:      ";
+	CString strDhcpUsed   = "DHCP active:     ";
+	CString strHelper;
+	if ( pSidekickNet->IsRunning() )
+	{
+		pSidekickNet->GetNetConfig()->GetIPAddress ()->Format (&strHelper);
+		strIpAdress.Append( strHelper );
+	
+		pSidekickNet->GetNetConfig()->GetDefaultGateway ()->Format (&strHelper);
+		strDefGateway.Append( strHelper );
+	
+		pSidekickNet->GetNetConfig()->GetDNSServer ()->Format (&strHelper);
+		strDNSServer.Append( strHelper );
+	
+		strDhcpUsed.Append( pSidekickNet->GetNetConfig()->IsDHCPUsed() ? "Yes" : "No" );
+	}
+	else
+	{
+		strIpAdress.Append( "-" );
+		strDefGateway.Append( "-" );
+		strDNSServer.Append( "-" );
+		strDhcpUsed.Append( "-" );
+	}
+
+	u32 y1 = 2;
+
+	printC64( x+1, y1+2, "Network settings", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
+	if ( pSidekickNet->IsRunning() )
+	{
+		printC64( x+1, y1+3, strIpAdress,   skinValues.SKIN_MENU_TEXT_ITEM, 0 );
+		printC64( x+1, y1+4, strDhcpUsed,   skinValues.SKIN_MENU_TEXT_SYSINFO, 0 );
+		printC64( x+1, y1+5, strDefGateway, skinValues.SKIN_MENU_TEXT_SYSINFO, 0 );
+		printC64( x+1, y1+6, strDNSServer,  skinValues.SKIN_MENU_TEXT_SYSINFO, 0 );
+		printC64( x+1, y1+7, "Press >X< for CSDB launcher demo ", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
+	}
+	else{
+		printC64( x+1, y1+4, "Network connection is inactive", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
+		if (pSidekickNet->isWireless())
+		{
+			//                   "012345678901234567890123456789012345XXXX"
+			printC64( x+1, y1+5, "Press >C< to enable WIFI. (Config",   skinValues.SKIN_MENU_TEXT_ITEM, 0 );
+			printC64( x+1, y1+6, "file with SSID and passphrase is",   skinValues.SKIN_MENU_TEXT_ITEM, 0 );
+			printC64( x+1, y1+7, "needed on the SD card.)"          ,   skinValues.SKIN_MENU_TEXT_ITEM, 0 );
+		}
+		else if (pSidekickNet->RaspiHasOnlyWLAN())
+		{
+			//                   "012345678901234567890123456789012345XXXX"
+			printC64( x+1, y1+5, "This Sidekick kernel does not",   skinValues.SKIN_MENU_TEXT_ITEM, 0 );
+			printC64( x+1, y1+6, "support WLAN. Use a Raspberry Pi",   skinValues.SKIN_MENU_TEXT_ITEM, 0 );
+			printC64( x+1, y1+7, "that has a network socket.",   skinValues.SKIN_MENU_TEXT_ITEM, 0 );
+		}
+		else
+		{
+			//                   "012345678901234567890123456789012345XXXX"
+			printC64( x+1, y1+5, "Press >C< to establish a",   skinValues.SKIN_MENU_TEXT_ITEM, 0 );
+			printC64( x+1, y1+6, "network connection!",   skinValues.SKIN_MENU_TEXT_ITEM, 0 );
+			printC64( x+1, y1+7, "(Plug in a network cable first.)",   skinValues.SKIN_MENU_TEXT_ITEM, 0 );
+		}
+	}
+
+	printC64( x+1, y1+9, "Sidekick Kernel Info", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
+	printC64( x+1, y1+10, "Compiled on: " COMPILE_TIME, skinValues.SKIN_MENU_TEXT_ITEM, 0 );
+	printC64( x+1, y1+11, "Git branch : " GIT_BRANCH, skinValues.SKIN_MENU_TEXT_ITEM, 0 );
+	printC64( x+1, y1+12, "Git hash   : " GIT_HASH, skinValues.SKIN_MENU_TEXT_ITEM, 0 );
+	if ( pSidekickNet->IsRunning() && pSidekickNet->isDevServerConfigured())
+	{
+		printC64( x+1, y1+13, "Press >U< for kernel update via HTTP", skinValues.SKIN_MENU_TEXT_ITEM, 0 );
+	}
+	
+	printC64( x+1, y1+15, "You are running Sidekick on a", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
+	printC64( x+1, y1+16, pSidekickNet->getRaspiModelName(), skinValues.SKIN_MENU_TEXT_ITEM, 0 );
+	printC64( x+1, y1+18, "System time", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
+	printC64( x+1, y1+17, strSysMon, skinValues.SKIN_MENU_TEXT_ITEM, 0 );
+	printC64( x+1, y1+19, strTimeDate, skinValues.SKIN_MENU_TEXT_ITEM, 0 );
+	
+	printC64( x+28, 24, "Circle " CIRCLE_VERSION_STRING, skinValues.SKIN_MENU_TEXT_SYSINFO, 0 );
+	
+	printSidekickLogo();
+
+	startInjectCode();
+	injectPOKE( 53280, skinValues.SKIN_MENU_BORDER_COLOR );
+	injectPOKE( 53281, skinValues.SKIN_MENU_BACKGROUND_COLOR );
+	if ( skinFontLoaded )
+		injectPOKE( 53272, 30 ); else
+		injectPOKE( 53272, 23 ); 	
+}
+
+void printSKTXScreen()
+{
+	const unsigned yOffset = 0;
+	
+	//               "012345678901234567890123456789012345XXXX"
+//	printC64( 0,  1, "          .- sidekick64-sktx -.         ", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
+//	printC64( 0, 24, "           F6/F7 Back to Menu           ", skinValues.SKIN_MENU_TEXT_HEADER, 0, 3 );
+	
+	//printC64( x+1, y1, "Welcome to SKTX!", skinValues.SKIN_MENU_TEXT_HEADER, 0,3 );
+//	printC64( 0, 2, "\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9", skinValues.SKIN_MENU_BORDER_COLOR, 0, 1 );
+//	printC64( 0, 23, "\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9", skinValues.SKIN_MENU_BORDER_COLOR, 0, 1 );
+
+	if ( pSidekickNet->IsRunning() )
+	{
+		if ( pSidekickNet->IsSktxScreenToBeCleared() ) clearC64();
+		//printC64( 0, y1+2, (char *)pSidekickNet->getSktxScreenContent(), skinValues.SKIN_MENU_TEXT_HEADER, 0, 4);//4 is undefined
+
+		if ( !pSidekickNet->IsSktxScreenUnchanged() )
+		{
+			u16 pos = 0;
+			u8 color = 0;
+			unsigned y = 0;
+			unsigned x = 0;
+			char * content;
+			while (!pSidekickNet->IsSktxScreenContentEndReached())
+			{
+				content = (char *) pSidekickNet->GetSktxScreenContentChunk( pos, color);
+				y = pos / 40;
+				x = pos % 40;
+				printC64( x, y+yOffset, content, color, 0, 4);//4 is undefined
+			}
+			pSidekickNet->ResetSktxScreenContentChunks();
+		}
+	}
+	printC64( 1, 24, pSidekickNet->getSysMonInfo(), skinValues.SKIN_MENU_TEXT_ITEM, 0 );
+
+	startInjectCode();
+	injectPOKE( 53280, skinValues.SKIN_MENU_BORDER_COLOR );
+	injectPOKE( 53281, skinValues.SKIN_MENU_BACKGROUND_COLOR );
+	if ( skinFontLoaded )
+		injectPOKE( 53272, 30 ); else
+		injectPOKE( 53272, 23 ); 
+/*	if ( skinFontLoaded )
+		injectPOKE( 53272, 28 ); else
+		injectPOKE( 53272, 21 ); */
+}
+	
+#endif
 
 void printSettingsScreen()
 {
@@ -2159,7 +2422,17 @@ void printSettingsScreen()
 		injectPOKE( 53272, 23 ); 
 }
 
-u32 showLogo = 1;
+void clearErrorMsg()
+{
+	errorMsg = NULL;
+}
+
+void setErrorMsg( char * msg )
+{
+	errorMsg = msg;
+	previousMenuScreen = menuScreen;
+	menuScreen = MENU_ERROR;
+}
 
 void renderC64()
 {
@@ -2196,19 +2469,30 @@ void renderC64()
 		if ( currentVDCMode == 2 )
 			printC64( 5, 22, "VDC output, (shift+)\x9e for VIC", 1, 0 ); 
 	} else
+#ifdef WITH_NET
+	if ( menuScreen == MENU_NETWORK )
+	{
+		printNetworkScreen();
+	}
+	if ( menuScreen == MENU_SKTX )
+	{
+		printSKTXScreen();
+	}
+#endif	
 	//if ( menuScreen == MENU_ERROR )
 	{
-		if ( errorMsg != NULL )
-		{
-			int convert = 0;
-			if ( previousMenuScreen == MENU_BROWSER )
-				convert = 3;
-
-			printC64( 0, 10, "\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9", skinValues.SKIN_ERROR_BAR, 0, 1 );
-			printC64( 0, 11, "                                        ", skinValues.SKIN_ERROR_TEXT, 0 );
-			printC64( 0, 12, errorMsg, skinValues.SKIN_ERROR_TEXT, 0, convert );
-			printC64( 0, 13, "                                        ", skinValues.SKIN_ERROR_TEXT, 0 );
-			printC64( 0, 14, "\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8", skinValues.SKIN_ERROR_BAR, 0, 1 );
-		}
+		if ( errorMsg != NULL ) renderErrorMsg();
 	}
+}
+
+void renderErrorMsg()
+{
+	int convert = 0;
+	if ( previousMenuScreen == MENU_BROWSER )
+		convert = 3;
+	printC64( 0, 10, "\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9", skinValues.SKIN_ERROR_BAR, 0, 1 );
+	printC64( 0, 11, "                                        ", skinValues.SKIN_ERROR_TEXT, 0 );
+	printC64( 0, 12, errorMsg, skinValues.SKIN_ERROR_TEXT, 0, convert );
+	printC64( 0, 13, "                                        ", skinValues.SKIN_ERROR_TEXT, 0 );
+	printC64( 0, 14, "\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8", skinValues.SKIN_ERROR_BAR, 0, 1 );
 }

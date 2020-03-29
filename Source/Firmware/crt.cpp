@@ -134,11 +134,18 @@ int readCRTHeader( CLogger *logger, CRT_HEADER *crtHeader, const char *DRIVE, co
 	return 0;
 }
 
-// .CRT reading
-void readCRTFile( CLogger *logger, CRT_HEADER *crtHeader, const char *DRIVE, const char *FILENAME, u8 *flash, volatile u8 *bankswitchType, volatile u32 *ROM_LH, volatile u32 *nBanks, bool getRAW )
+// .CRT reading / compatibility function
+void readCRTFile( CLogger *logger, CRT_HEADER * crtHeader, const char *DRIVE, const char *FILENAME, u8 *flash, volatile u8 *bankswitchType, volatile u32 *ROM_LH, volatile u32 *nBanks, bool getRAW )
 {
-	CRT_HEADER header;
+		u8 rawCRT[ 1032 * 1024 ];
+		u32 filesize = 0;
+		readCRTFileSimple( logger, (char*)DRIVE, (char*)FILENAME, rawCRT, filesize );
+		// now "parse" the file which we already have in memory
+		parseCRTInMemory( logger, crtHeader, flash, bankswitchType, ROM_LH, nBanks, getRAW, rawCRT, filesize );
+}
 
+void readCRTFileSimple( CLogger *logger, const char *DRIVE, const char *FILENAME, u8 * rawCRT, u32 & filesize )
+{
 	FATFS m_FileSystem;
 
 	// mount file system
@@ -148,7 +155,7 @@ void readCRTFile( CLogger *logger, CRT_HEADER *crtHeader, const char *DRIVE, con
 	// get filesize
 	FILINFO info;
 	u32 result = f_stat( FILENAME, &info );
-	u32 filesize = (u32)info.fsize;
+	filesize = (u32)info.fsize;
 
 	// open file
 	FIL file;
@@ -161,7 +168,6 @@ void readCRTFile( CLogger *logger, CRT_HEADER *crtHeader, const char *DRIVE, con
 
 	// read data in one big chunk
 	u32 nBytesRead;
-	u8 rawCRT[ 1032 * 1024 ];
 	result = f_read( &file, rawCRT, filesize, &nBytesRead );
 
 	if ( result != FR_OK )
@@ -173,9 +179,11 @@ void readCRTFile( CLogger *logger, CRT_HEADER *crtHeader, const char *DRIVE, con
 	// unmount file system
 	if ( f_mount( 0, DRIVE, 0 ) != FR_OK )
 		logger->Write( "RaspiFlash", LogPanic, "Cannot unmount drive: %s", DRIVE );
-
-
-	// now "parse" the file which we already have in memory
+}
+	
+void parseCRTInMemory( CLogger *logger, CRT_HEADER *crtHeader, u8 *flash, volatile u8 *bankswitchType, volatile u32 *ROM_LH, volatile u32 *nBanks, bool getRAW, u8 * rawCRT, u32 & filesize )
+{
+	CRT_HEADER header;
 	u8 *crt = rawCRT;
 	u8 *crtEnd = crt + filesize;
 

@@ -81,6 +81,10 @@ extern int screenType;
 #include "crt.h"
 #include "mygpiopinfiq.h"
 
+#ifdef WITH_NET		
+#include "net.h"
+#endif
+
 #include "oled.h"
 #include "splash_sidekick264.h"
 #include "tft_st7789.h"
@@ -107,6 +111,9 @@ public:
 #endif
 		m_InputPin( PHI2, GPIOModeInput, &m_Interrupt ),
 		m_EMMC( &m_Interrupt, &m_Timer, 0 )
+#ifdef WITH_NET		
+		,m_SidekickNet( &m_Interrupt, &m_Timer, &m_Scheduler, &m_EMMC )
+#endif		
 	{
 	}
 
@@ -142,6 +149,9 @@ public:
 #endif
 	CGPIOPinFIQ2		m_InputPin;
 	CEMMCDevice			m_EMMC;
+#ifdef WITH_NET	
+	CSidekickNet    m_SidekickNet;
+#endif
 };
 
 #endif
