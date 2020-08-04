@@ -394,7 +394,7 @@ u8 CSidekickNet::getCSDBDownloadLaunchType(){
 	u8 type = 0;
 	if ( strcmp( m_CSDBDownloadExtension, "crt") == 0 )
 	{
-		type = 9;
+		type = 10;
 		logger->Write ("CSidekickNet::getCSDBDownloadLaunchType", LogNotice, "CRT detected: >%s<",m_CSDBDownloadExtension);
 	}
 //	else if ( strcmp( m_CSDBDownloadExtension, "d64" ) == 0)
