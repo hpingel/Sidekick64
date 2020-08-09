@@ -67,10 +67,10 @@ static const char DRIVE[] = "SD:";
 static const unsigned nDocMaxSize = 2000*1024;
 static const char KERNEL_IMG_NAME[] = "kernel8.img";
 static const char KERNEL_SAVE_LOCATION[] = "SD:kernel8.img";
-static const char RPIMENU64_SAVE_LOCATION[] = "SD:C64/rpimenu.prg";
+static const char RPIMENU64_SAVE_LOCATION[] = "SD:C64/rpimenu_net.prg";
 static const char msgNoConnection[] = "Sorry, no network connection!";
 static const char msgNotFound[]     = "Message not found. :(";
-static const char * prgUpdatePath[2] = { "/sidekick64/rpimenu.prg", "/sidekick264/rpimenu.prg"};
+static const char * prgUpdatePath[2] = { "/sidekick64/rpimenu_net.prg", "/sidekick264/rpimenu_net.prg"};
 
 static const char CSDB_HOST[] = "csdb.dk";
 
@@ -111,7 +111,7 @@ CSidekickNet::CSidekickNet( CInterruptSystem * pInterruptSystem, CTimer * pTimer
 		m_isFrameQueued( false ),
 		m_isSktxKeypressQueued( false ),
 		m_isCSDBDownloadQueued( false ),
-		m_isPRGDownloadReady( false ),
+		m_isDownloadReady( false ),
 		//m_tryFilesystemRemount( false ),
 		m_networkActionStatusMsg( (char * ) ""),
 		m_sktxScreenContent( (unsigned char * ) ""),
@@ -397,14 +397,13 @@ u8 CSidekickNet::getCSDBDownloadLaunchType(){
 		type = 10;
 		logger->Write ("CSidekickNet::getCSDBDownloadLaunchType", LogNotice, "CRT detected: >%s<",m_CSDBDownloadExtension);
 	}
-//	else if ( strcmp( m_CSDBDownloadExtension, "d64" ) == 0)
-//			type = 9999;
+	else if ( strcmp( m_CSDBDownloadExtension, "d64" ) == 0)
+		type = 0; //unused, we only save the file
 	else //prg
 	{
 		type = 40;
 		logger->Write ("CSidekickNet::getCSDBDownloadLaunchType", LogNotice, "PRG detected: >%s<",m_CSDBDownloadExtension);
 	}
-	//type=9;
 	return type;
 }
 
@@ -489,20 +488,25 @@ boolean CSidekickNet::isAnyNetworkActionQueued()
 	return m_isNetworkInitQueued || m_isKernelUpdateQueued || m_isFrameQueued || m_isSktxKeypressQueued;
 }
 
-boolean CSidekickNet::isPRGDownloadReady()
+boolean CSidekickNet::isDownloadReady()
 {
-	boolean bTemp = m_isPRGDownloadReady;
-	if ( m_isPRGDownloadReady){
-		m_isPRGDownloadReady = false;
+	boolean bTemp = m_isDownloadReady;
+	if ( m_isDownloadReady){
+		m_isDownloadReady = false;
 		if ( m_bSaveCSDBDownload2SD )
 		{
-			logger->Write( "isPRGDownloadReady", LogNotice, 
-				"Now trying to write downloaded file to SD card, bytes to write: %i", prgSizeLaunch
-			);
+			CString downloadLogMsg = "Writing download to SD card, bytes to write: ";
+			CString Number;
+			Number.Format ("%02d", prgSizeLaunch);
+			downloadLogMsg.Append( Number );
+			downloadLogMsg.Append( " Bytes, path: '" );
+			downloadLogMsg.Append( m_CSDBDownloadSavePath );
+			downloadLogMsg.Append( "'" );
+			logger->Write( "isDownloadReady", LogNotice, downloadLogMsg);
 			writeFile( logger, DRIVE, m_CSDBDownloadSavePath, (u8*) prgDataLaunch, prgSizeLaunch );
 			m_CSDBDownloadSavePath = "";
 			m_CSDBDownloadPath = (char*)"";
-			m_CSDBDownloadFilename = (char*)"";
+			//m_CSDBDownloadFilename = (char*)""; // this is used from kernel_menu to display name on screen
 			m_bSaveCSDBDownload2SD = false;
 		}
 		//unmount - this is only necessary as long as we don't have the concept
@@ -628,7 +632,7 @@ boolean CSidekickNet::CheckForSidekickKernelUpdate()
 		);
 		writeFile( logger, DRIVE, RPIMENU64_SAVE_LOCATION, (u8*) pFileBuffer, iFileLength );
 		m_pScheduler->MsSleep (500);
-		logger->Write( "SidekickKernelUpdater", LogNotice, "Finished writing file rpimenu.prg to SD card");
+		logger->Write( "SidekickKernelUpdater", LogNotice, "Finished writing file rpimenu_net.prg to SD card");
 	}
 	
 	return true;
@@ -647,7 +651,7 @@ void CSidekickNet::getCSDBBinaryContent( char * filePath ){
 	unsigned iFileLength = 0;
 	unsigned char prgDataLaunchTemp[ 1025*1024 ]; // TODO do we need this?
 	if (HTTPGet ( m_CSDBServerIP, CSDB_HOST, 443, (char *) filePath, (char *) prgDataLaunchTemp, iFileLength)){
-		m_isPRGDownloadReady = true;
+		m_isDownloadReady = true;
 		prgSizeLaunch = iFileLength;
 		memcpy( prgDataLaunch, prgDataLaunchTemp, iFileLength);
 	}
@@ -755,9 +759,12 @@ void CSidekickNet::updateSktxScreenContent(){
 				//TODO add sanity checks here
 				memcpy( CSDBDownloadPath, &pResponseBuffer[ 4 + 14  ], tmpUrlLength-14 );//m_sktxResponseLength -14 +1);
 				logger->Write( "updateSktxScreenContent", LogNotice, "download path: >%s<", CSDBDownloadPath);
+				CSDBDownloadPath[tmpUrlLength-14] = '\0';
 				memcpy( CSDBFilename, &pResponseBuffer[ 4 + tmpUrlLength  ], tmpFilenameLength );
+				CSDBFilename[tmpFilenameLength] = '\0';
 				logger->Write( "updateSktxScreenContent", LogNotice, "filename: >%s<", CSDBFilename);
 				memcpy( extension, &pResponseBuffer[ m_sktxResponseLength -3 ], 3);
+				extension[3] = '\0';
 				logger->Write( "updateSktxScreenContent", LogNotice, "extension: >%s<", extension);
 
 				logger->Write( "updateSktxScreenContent", LogNotice, "filename: >%s<", CSDBFilename);
@@ -772,7 +779,7 @@ void CSidekickNet::updateSktxScreenContent(){
 						savePath.Append( (const char *) "CRT/" );
 					else if ( strcmp(extension,"d64") == 0)
 						savePath.Append( (const char *) "D64/" );
-					savePath.Append( CSDBFilename);
+					savePath.Append(CSDBFilename);
 				}
 				m_sktxResponseLength = 1;
 				m_sktxScreenContent = (unsigned char * ) pResponseBuffer;

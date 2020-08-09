@@ -36,7 +36,11 @@ Copyright (c) 2019-2021 Carsten Dachsbacher <frenetic@dachsbacher.de>
 
 // we will read these files
 static const char DRIVE[] = "SD:";
+#ifdef WITH_NET
+static const char FILENAME_PRG[] = "SD:C64/rpimenu_net.prg";		// .PRG to start
+#else
 static const char FILENAME_PRG[] = "SD:C64/rpimenu.prg";		// .PRG to start
+#endif
 static const char FILENAME_CBM80[] = "SD:C64/launch.cbm80";		// launch code (CBM80 8k cart)
 static const char FILENAME_CONFIG[] = "SD:C64/sidekick64.cfg";		
 static const char FILENAME_SIDKICK_CONFIG[] = "SD:C64/SIDKick_CFG.prg";		
@@ -533,10 +537,18 @@ void CKernelMenu::Run( void )
 		asm volatile ("wfi");
 
 		#ifdef WITH_NET
-		if ( m_SidekickNet.isPRGDownloadReady()){
-			launchKernel = m_SidekickNet.getCSDBDownloadLaunchType();
-			strcpy(FILENAME, m_SidekickNet.getCSDBDownloadFilename());
-			lastChar = 0xfffffff;
+		boolean bFilesystemHasChanged = false;
+		if ( m_SidekickNet.isDownloadReady()){
+			u32 launchKernelTmp = m_SidekickNet.getCSDBDownloadLaunchType();
+			if (launchKernelTmp > 0)
+			{
+				launchKernel = launchKernelTmp;
+				strcpy(FILENAME, m_SidekickNet.getCSDBDownloadFilename());
+				strcpy(menuItemStr, m_SidekickNet.getCSDBDownloadFilename());
+				lastChar = 0xfffffff;
+			}
+			//else
+			//	bFilesystemHasChanged = true; //only for d64
 		}
 		#endif
 		
@@ -593,6 +605,13 @@ void CKernelMenu::Run( void )
 				m_InputPin.DisableInterrupt();
 				m_InputPin.DisconnectInterrupt();
 				EnableIRQs();
+				/*if ( bFilesystemHasChanged )
+				{
+					//re-scan SD card so that the newly downloaded files show up
+					extern void scanDirectories( char *DRIVE );
+					scanDirectories( (char *)DRIVE );
+					bFilesystemHasChanged = false;
+				}*/
 				m_SidekickNet.updateSystemMonitor( m_Memory.GetHeapFreeSpace(HEAP_ANY), m_CPUThrottle.GetTemperature());
 				m_SidekickNet.handleQueuedNetworkAction();
 				DisableIRQs();
