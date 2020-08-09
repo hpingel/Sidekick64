@@ -89,7 +89,7 @@ public:
 	void getCSDBLatestReleases();
 	u8 getCSDBDownloadLaunchType();
 	boolean isAnyNetworkActionQueued();
-	boolean isPRGDownloadReady();
+	boolean isDownloadReady();
 	boolean isDevServerConfigured(){ return m_DevHttpHost != 0;};
 	boolean isWireless(){ return m_useWLAN;};
 	boolean RaspiHasOnlyWLAN();
@@ -145,7 +145,7 @@ private:
 	boolean m_isFrameQueued;
 	boolean m_isSktxKeypressQueued;
 	boolean m_isCSDBDownloadQueued;
-	boolean m_isPRGDownloadReady;
+	boolean m_isDownloadReady;
 	//boolean m_tryFilesystemRemount;
 	char * m_networkActionStatusMsg;
 	unsigned char * m_sktxScreenContent;
