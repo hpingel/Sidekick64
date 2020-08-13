@@ -170,6 +170,9 @@ boolean CSidekickNet::ConnectOnBoot (){
 	return netConnectOnBoot;
 }
 
+boolean CSidekickNet::usesWLAN (){
+	return m_useWLAN;
+}
 
 boolean CSidekickNet::Initialize()
 {
@@ -493,7 +496,8 @@ boolean CSidekickNet::isDownloadReady()
 	boolean bTemp = m_isDownloadReady;
 	if ( m_isDownloadReady){
 		m_isDownloadReady = false;
-		if ( m_bSaveCSDBDownload2SD )
+		//saving is currently disabled for WLAN kernel due to timing issues
+		if ( m_bSaveCSDBDownload2SD && !m_useWLAN)
 		{
 			CString downloadLogMsg = "Writing download to SD card, bytes to write: ";
 			CString Number;

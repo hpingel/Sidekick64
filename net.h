@@ -68,6 +68,7 @@ public:
 	};
 	CSidekickNet * GetPointer(){ return this; };
 	boolean ConnectOnBoot (void);
+	boolean usesWLAN (void);
 	boolean Initialize ( void );
 	boolean IsRunning ( void );
 	boolean CheckForSidekickKernelUpdate ();
