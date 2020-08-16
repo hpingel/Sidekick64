@@ -1909,7 +1909,7 @@ void printMainMenu()
 	//               "012345678901234567890123456789012345XXXX"
 	printC64( 0,  1, "   .- Sidekick64 -- Frenetic -.         ", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
 	#ifdef WITH_NET
-	printC64( 1, 22, pSidekickNet->getSysMonInfo(0), skinValues.SKIN_MENU_TEXT_ITEM, 0 );
+	printC64( 1, 0, pSidekickNet->getSysMonInfo(0), skinValues.SKIN_MENU_TEXT_SYSINFO, 0 );
 	#endif
 
 /*	char b[20];
