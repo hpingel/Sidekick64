@@ -111,6 +111,7 @@ CSidekickNet::CSidekickNet( CInterruptSystem * pInterruptSystem, CTimer * pTimer
 		m_isFrameQueued( false ),
 		m_isSktxKeypressQueued( false ),
 		m_isCSDBDownloadQueued( false ),
+		m_isCSDBDownloadSavingQueued( false ),
 		m_isDownloadReady( false ),
 		//m_tryFilesystemRemount( false ),
 		m_networkActionStatusMsg( (char * ) ""),
@@ -128,7 +129,7 @@ CSidekickNet::CSidekickNet( CInterruptSystem * pInterruptSystem, CTimer * pTimer
 		m_PlaygroundHttpHostPort(0),
 		m_SidekickKernelUpdatePath(0),
 		m_queueDelay(0),
-		m_effortsSinceLastEvent(0),
+		m_timestampOfLastWLANKeepAlive(0),
 		m_skipSktxRefresh(0),
 		m_sktxScreenPosition(0),
 		m_sktxResponseLength(0),
@@ -415,18 +416,35 @@ void CSidekickNet::handleQueuedNetworkAction()
 	#ifdef WITH_WLAN
 	if (m_isActive && !isAnyNetworkActionQueued())
 	{
-		m_effortsSinceLastEvent++;
-		if ( m_effortsSinceLastEvent > 200)
+		//every 8 seconds + seconds needed for request
+		if ( m_pTimer->GetUptime() - m_timestampOfLastWLANKeepAlive > 8)
 		{
 			//Circle42 offers experimental WLAN, but it seems to
 			//disconnect very quickly if there is not traffic.
 			//This can be very annoying.
 			//As a WLAN keep-alive, we auto queue a network event
 			//to avoid WLAN going into "zombie" disconnected mode
-			UpdateTime();
-			m_effortsSinceLastEvent = 0;
+			logger->Write ("CSidekickNet", LogNotice, "Triggering WLAN keep-alive request...");
+			if (isSktxSessionActive())
+			{
+				CString path = getSktxPath( 92 );
+				char pResponseBuffer[4097];
+				HTTPGet ( m_PlaygroundHttpServerIP, m_PlaygroundHttpHost, m_PlaygroundHttpHostPort, path, pResponseBuffer, m_sktxResponseLength);
+
+			}
+			else if (m_PlaygroundHttpHost != 0)
+			{
+				char pResponseBuffer[4097];
+				HTTPGet ( m_PlaygroundHttpServerIP, m_PlaygroundHttpHost, m_PlaygroundHttpHostPort,  "/givemea404response.html", pResponseBuffer, m_sktxResponseLength);
+			}
+			else
+				UpdateTime();
+			m_timestampOfLastWLANKeepAlive = m_pTimer->GetUptime();
+			logger->Write ("CSidekickNet", LogNotice, getSysMonInfo(1));
 		}
 	}
+	else if (m_isActive && isAnyNetworkActionQueued())
+		m_timestampOfLastWLANKeepAlive = m_pTimer->GetUptime();
 	#endif
 	
 	if (m_queueDelay > 0 )
@@ -444,7 +462,6 @@ void CSidekickNet::handleQueuedNetworkAction()
 			while (!UpdateTime() && tries < 3){ tries++;};
 		}
 		m_isNetworkInitQueued = false;
-		m_effortsSinceLastEvent = 0;
 		return;
 	}
 	else if (m_isActive)
@@ -453,7 +470,6 @@ void CSidekickNet::handleQueuedNetworkAction()
 		{
 			CheckForSidekickKernelUpdate();
 			m_isKernelUpdateQueued = false;
-			m_effortsSinceLastEvent = 0;
 			#ifndef WITH_RENDER
 			clearErrorMsg(); //on c64screen, kernel menu
 			#endif
@@ -465,15 +481,20 @@ void CSidekickNet::handleQueuedNetworkAction()
 			updateFrame();
 			#endif
 			m_isFrameQueued = false;
-			m_effortsSinceLastEvent = 0;
 		}
 
 		else if (m_isCSDBDownloadQueued)
 		{
-			logger->Write( "handleQueuedNetworkAction", LogNotice, "m_CSDBDownloadPath: %s", m_CSDBDownloadPath);		
+			//logger->Write( "handleQueuedNetworkAction", LogNotice, "m_CSDBDownloadPath: %s", m_CSDBDownloadPath);		
 			m_isCSDBDownloadQueued = false;
 			getCSDBBinaryContent( m_CSDBDownloadPath );
-			m_effortsSinceLastEvent = 0;
+			m_isSktxKeypressQueued = false;
+		}
+	
+		else if (m_isCSDBDownloadSavingQueued)
+		{
+			m_isCSDBDownloadSavingQueued = false;
+			saveDownload2SD();
 			m_isSktxKeypressQueued = false;
 		}
 		
@@ -481,42 +502,46 @@ void CSidekickNet::handleQueuedNetworkAction()
 		{
 			updateSktxScreenContent();
 			m_isSktxKeypressQueued = false;
-			m_effortsSinceLastEvent = 0;
 		}
 	}
 }
 
 boolean CSidekickNet::isAnyNetworkActionQueued()
 {
-	return m_isNetworkInitQueued || m_isKernelUpdateQueued || m_isFrameQueued || m_isSktxKeypressQueued;
+	return m_isNetworkInitQueued || m_isKernelUpdateQueued || m_isFrameQueued || m_isSktxKeypressQueued || m_isCSDBDownloadSavingQueued;
 }
+
+void CSidekickNet::saveDownload2SD()
+{
+	m_isCSDBDownloadSavingQueued = false;
+	CString downloadLogMsg = "Writing download to SD card, bytes to write: ";
+	CString Number;
+	Number.Format ("%02d", prgSizeLaunch);
+	downloadLogMsg.Append( Number );
+	downloadLogMsg.Append( " Bytes, path: '" );
+	downloadLogMsg.Append( m_CSDBDownloadSavePath );
+	downloadLogMsg.Append( "'" );
+	logger->Write( "saveDownload2SD", LogNotice, downloadLogMsg);
+	writeFile( logger, DRIVE, m_CSDBDownloadSavePath, (u8*) prgDataLaunch, prgSizeLaunch );
+	m_CSDBDownloadSavePath = "";
+	m_CSDBDownloadPath = (char*)"";
+	m_CSDBDownloadFilename = (char*)""; // this is used from kernel_menu to display name on screen
+	m_bSaveCSDBDownload2SD = false;
+	//unmount - this is only necessary as long as we don't have the concept
+	//to mount the filesystem once and for all during runtime
+	unmountSDDrive();
+	//m_tryFilesystemRemount = true;
+}
+
 
 boolean CSidekickNet::isDownloadReady()
 {
 	boolean bTemp = m_isDownloadReady;
 	if ( m_isDownloadReady){
 		m_isDownloadReady = false;
-		//saving is currently disabled for WLAN kernel due to timing issues
-		if ( m_bSaveCSDBDownload2SD && !m_useWLAN)
-		{
-			CString downloadLogMsg = "Writing download to SD card, bytes to write: ";
-			CString Number;
-			Number.Format ("%02d", prgSizeLaunch);
-			downloadLogMsg.Append( Number );
-			downloadLogMsg.Append( " Bytes, path: '" );
-			downloadLogMsg.Append( m_CSDBDownloadSavePath );
-			downloadLogMsg.Append( "'" );
-			logger->Write( "isDownloadReady", LogNotice, downloadLogMsg);
-			writeFile( logger, DRIVE, m_CSDBDownloadSavePath, (u8*) prgDataLaunch, prgSizeLaunch );
-			m_CSDBDownloadSavePath = "";
-			m_CSDBDownloadPath = (char*)"";
-			//m_CSDBDownloadFilename = (char*)""; // this is used from kernel_menu to display name on screen
-			m_bSaveCSDBDownload2SD = false;
-		}
-		//unmount - this is only necessary as long as we don't have the concept
-		//to mount the filesystem once and for all during runtime
-		unmountSDDrive();
-		//m_tryFilesystemRemount = true;
+		if ( m_bSaveCSDBDownload2SD )
+			m_isCSDBDownloadSavingQueued = true;
+			m_queueDelay = 900000;
 	}
 	return bTemp;
 }
@@ -537,9 +562,30 @@ CString CSidekickNet::getTimeString()
 		Buffer.Append (*pTimeString);
 	}
 	delete pTimeString;
-	//logger->Write( "getTimeString", LogDebug, "%s ", Buffer);
 	return Buffer;
 }
+
+CString CSidekickNet::getUptime()
+{
+	unsigned uptime = m_pTimer->GetUptime();
+	unsigned hours = 0, minutes = 0, seconds = 0;
+	hours = uptime / 3600;
+	minutes = (uptime % 3600) / 60;
+	seconds = (uptime % 3600) % 60;
+	CString strUptime = " ";
+	CString Number;
+	Number.Format ("%02d", hours);
+	strUptime.Append( Number );
+	strUptime.Append( "h ");
+	Number.Format ("%02d", minutes);
+	strUptime.Append( Number );
+	strUptime.Append( "m ");
+	Number.Format ("%02d", seconds);
+	strUptime.Append( Number );
+	strUptime.Append( "s");
+	return strUptime;
+}
+
 
 CString CSidekickNet::getRaspiModelName()
 {
@@ -703,6 +749,11 @@ void CSidekickNet::redrawSktxScreen(){
 		m_sktxSession	= 2;
 }
 
+boolean CSidekickNet::isSktxSessionActive(){
+	return m_sktxSession > 0;
+}
+
+
 void CSidekickNet::launchSktxSession(){
 	char * pResponseBuffer = new char[33];	// +1 for 0-termination
 	CString path = "/sktx.php?session=new";
@@ -716,22 +767,11 @@ void CSidekickNet::launchSktxSession(){
 	}
 }
 
-void CSidekickNet::updateSktxScreenContent(){
-	if (!m_isActive || m_PlaygroundHttpHost == 0)
-	{
-		m_sktxScreenContent = (unsigned char *) msgNoConnection; //FIXME: there's a memory leak in here
-		return;
-	}
-	char pResponseBuffer[4097]; //maybe turn this into member var when creating new sktx class?
-  CString path = "/sktx.php?";
-	
-	if ( m_sktxSession < 1){
-		launchSktxSession();
-		m_sktxSession = 1;
-	}
-	
+CString CSidekickNet::getSktxPath( unsigned key )
+{
+	CString path = "/sktx.php?";
 	CString Number; 
-	Number.Format ("%02X", m_sktxKey);
+	Number.Format ("%02X", key);
 	path.Append( "&key=" );
 	path.Append( Number );
 
@@ -743,6 +783,24 @@ void CSidekickNet::updateSktxScreenContent(){
 		m_sktxSession = 1;
 		path.Append( "&redraw=1" );
 	}
+	return path;
+}
+
+
+void CSidekickNet::updateSktxScreenContent(){
+	if (!m_isActive || m_PlaygroundHttpHost == 0)
+	{
+		m_sktxScreenContent = (unsigned char *) msgNoConnection; //FIXME: there's a memory leak in here
+		return;
+	}
+	char pResponseBuffer[4097]; //maybe turn this into member var when creating new sktx class?
+	
+	if ( m_sktxSession < 1){
+		launchSktxSession();
+		m_sktxSession = 1;
+	}
+	
+	CString path = getSktxPath( m_sktxKey );
 	m_sktxKey = 0;
 	if (HTTPGet ( m_PlaygroundHttpServerIP, m_PlaygroundHttpHost, m_PlaygroundHttpHostPort, path, pResponseBuffer, m_sktxResponseLength))
 	{
@@ -762,16 +820,15 @@ void CSidekickNet::updateSktxScreenContent(){
 				//cut off first 14 chars of URL: http://csdb.dk
 				//TODO add sanity checks here
 				memcpy( CSDBDownloadPath, &pResponseBuffer[ 4 + 14  ], tmpUrlLength-14 );//m_sktxResponseLength -14 +1);
-				logger->Write( "updateSktxScreenContent", LogNotice, "download path: >%s<", CSDBDownloadPath);
+//				logger->Write( "updateSktxScreenContent", LogNotice, "download path: >%s<", CSDBDownloadPath);
 				CSDBDownloadPath[tmpUrlLength-14] = '\0';
 				memcpy( CSDBFilename, &pResponseBuffer[ 4 + tmpUrlLength  ], tmpFilenameLength );
 				CSDBFilename[tmpFilenameLength] = '\0';
-				logger->Write( "updateSktxScreenContent", LogNotice, "filename: >%s<", CSDBFilename);
+//				logger->Write( "updateSktxScreenContent", LogNotice, "filename: >%s<", CSDBFilename);
 				memcpy( extension, &pResponseBuffer[ m_sktxResponseLength -3 ], 3);
 				extension[3] = '\0';
-				logger->Write( "updateSktxScreenContent", LogNotice, "extension: >%s<", extension);
+//				logger->Write( "updateSktxScreenContent", LogNotice, "extension: >%s<", extension);
 
-				logger->Write( "updateSktxScreenContent", LogNotice, "filename: >%s<", CSDBFilename);
 
 				CString savePath;
 				if (m_bSaveCSDBDownload2SD)
@@ -905,7 +962,7 @@ boolean CSidekickNet::HTTPGet ( CIPAddress ip, const char * pHost, int port, con
 		logger->Write( "HTTPGet", LogError, "HTTP request failed (status %u)", Status);
 		return false;
 	}
-	logger->Write( "HTTPGet", LogDebug, "%u bytes received", nLength);
+	//logger->Write( "HTTPGet", LogDebug, "%u bytes received", nLength);
 	assert (nLength <= nDocMaxSize);
 	pBuffer[nLength] = '\0';
 	nLengthRead = nLength;
@@ -916,21 +973,25 @@ void CSidekickNet::updateSystemMonitor( size_t freeSpace, unsigned CpuTemp)
 {
 	m_sysMonHeapFree = freeSpace;
 	m_sysMonCPUTemp = CpuTemp;
-//	if ( m_effortsSinceLastEvent > 50)
-//		logger->Write( "Net/SystemMonitor", LogNotice, "Free Heap Space: %i KB, CPU temperature: %i", freeSpace/1024, CpuTemp);
 }
 
-CString CSidekickNet::getSysMonInfo()
+CString CSidekickNet::getSysMonInfo( unsigned details )
 {
 	CString m_sysMonInfo = "";
-	m_sysMonInfo.Append("rbpi: cpu temp: ");
+	m_sysMonInfo.Append("RbPi: CPU ");
 	CString Number; 
 	Number.Format ("%02d", m_sysMonCPUTemp);
 	m_sysMonInfo.Append( Number );
-	m_sysMonInfo.Append("'c, ");
-	CString Number2; 
-	Number2.Format ("%02d", m_sysMonHeapFree/1024);
-	m_sysMonInfo.Append( Number2 );
-	m_sysMonInfo.Append(" kb free");
+	m_sysMonInfo.Append("'C, Uptime:");
+	m_sysMonInfo.Append( getUptime() );
+	
+	if ( details > 0 )
+	{
+		m_sysMonInfo.Append(", ");
+		CString Number2; 
+		Number2.Format ("%02d", m_sysMonHeapFree/1024);
+		m_sysMonInfo.Append( Number2 );
+		m_sysMonInfo.Append(" kb free");
+	}
 	return m_sysMonInfo;
 }
