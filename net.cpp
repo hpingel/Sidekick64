@@ -541,7 +541,7 @@ boolean CSidekickNet::isDownloadReady()
 		m_isDownloadReady = false;
 		if ( m_bSaveCSDBDownload2SD )
 			m_isCSDBDownloadSavingQueued = true;
-			m_queueDelay = 900000;
+			m_queueDelay = 100000;
 	}
 	return bTemp;
 }
@@ -978,7 +978,7 @@ void CSidekickNet::updateSystemMonitor( size_t freeSpace, unsigned CpuTemp)
 CString CSidekickNet::getSysMonInfo( unsigned details )
 {
 	CString m_sysMonInfo = "";
-	m_sysMonInfo.Append("RbPi: CPU ");
+	m_sysMonInfo.Append("CPU ");
 	CString Number; 
 	Number.Format ("%02d", m_sysMonCPUTemp);
 	m_sysMonInfo.Append( Number );

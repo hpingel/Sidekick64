@@ -537,7 +537,7 @@ void CKernelMenu::Run( void )
 		asm volatile ("wfi");
 
 		#ifdef WITH_NET
-		boolean bFilesystemHasChanged = false;
+		//boolean bFilesystemHasChanged = false;
 		if ( m_SidekickNet.isDownloadReady()){
 			u32 launchKernelTmp = m_SidekickNet.getCSDBDownloadLaunchType();
 			if (launchKernelTmp > 0)
