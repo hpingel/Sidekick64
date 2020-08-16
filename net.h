@@ -90,6 +90,7 @@ public:
 	void getCSDBLatestReleases();
 	u8 getCSDBDownloadLaunchType();
 	boolean isAnyNetworkActionQueued();
+	void saveDownload2SD();
 	boolean isDownloadReady();
 	boolean isDevServerConfigured(){ return m_DevHttpHost != 0;};
 	boolean isWireless(){ return m_useWLAN;};
@@ -101,14 +102,17 @@ public:
   unsigned char * getSktxScreenContent(){ return m_sktxScreenContent; };
 	unsigned char * GetSktxScreenContentChunk( u16 & startPos, u8 &color );
 	CString getTimeString();
+	CString getUptime();
 	CNetConfig * GetNetConfig();
 	CString getRaspiModelName();
-	CString getSysMonInfo();
+	CString getSysMonInfo( unsigned );
 	void ResetSktxScreenContentChunks();
 	void setErrorMsgC64( char * msg );
 	void resetSktxSession();
 	void launchSktxSession();
 	void redrawSktxScreen();
+	boolean isSktxSessionActive();
+	CString getSktxPath( unsigned key );
 	void updateSystemMonitor( size_t, unsigned);
 	char * getCSDBDownloadFilename();
 private:
@@ -146,6 +150,7 @@ private:
 	boolean m_isFrameQueued;
 	boolean m_isSktxKeypressQueued;
 	boolean m_isCSDBDownloadQueued;
+	boolean m_isCSDBDownloadSavingQueued;
 	boolean m_isDownloadReady;
 	//boolean m_tryFilesystemRemount;
 	char * m_networkActionStatusMsg;
@@ -164,7 +169,7 @@ private:
 	int m_PlaygroundHttpHostPort;
 	unsigned m_SidekickKernelUpdatePath;
 	unsigned m_queueDelay;
-	unsigned m_effortsSinceLastEvent;
+	unsigned m_timestampOfLastWLANKeepAlive;
 	unsigned m_skipSktxRefresh;
 	unsigned m_sktxScreenPosition;
 	unsigned m_sktxResponseLength;
