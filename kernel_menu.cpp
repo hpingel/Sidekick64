@@ -536,22 +536,6 @@ void CKernelMenu::Run( void )
 
 		asm volatile ("wfi");
 
-		#ifdef WITH_NET
-		//boolean bFilesystemHasChanged = false;
-		if ( m_SidekickNet.isDownloadReady()){
-			u32 launchKernelTmp = m_SidekickNet.getCSDBDownloadLaunchType();
-			if (launchKernelTmp > 0)
-			{
-				launchKernel = launchKernelTmp;
-				strcpy(FILENAME, m_SidekickNet.getCSDBDownloadFilename());
-				strcpy(menuItemStr, m_SidekickNet.getCSDBDownloadFilename());
-				lastChar = 0xfffffff;
-			}
-			//else
-			//	bFilesystemHasChanged = true; //only for d64
-		}
-		#endif
-		
 		if ( launchKernel )
 		{
 			m_InputPin.DisableInterrupt();
@@ -602,6 +586,7 @@ void CKernelMenu::Run( void )
 			doneWithHandling = 1;
 			updateMenu = 0;
 			#ifdef WITH_NET
+//			if ( pSidekickNet->IsRunning() )
 				m_InputPin.DisableInterrupt();
 				m_InputPin.DisconnectInterrupt();
 				EnableIRQs();
@@ -612,11 +597,28 @@ void CKernelMenu::Run( void )
 					scanDirectories( (char *)DRIVE );
 					bFilesystemHasChanged = false;
 				}*/
-				m_SidekickNet.updateSystemMonitor( m_Memory.GetHeapFreeSpace(HEAP_ANY), m_CPUThrottle.GetTemperature());
+				updateSystemMonitor();
 				m_SidekickNet.handleQueuedNetworkAction();
+				
+
+				//boolean bFilesystemHasChanged = false;
+				if ( m_SidekickNet.isDownloadReady()){
+					u32 launchKernelTmp = m_SidekickNet.getCSDBDownloadLaunchType();
+					if (launchKernelTmp > 0)
+					{
+						launchKernel = launchKernelTmp;
+						strcpy(FILENAME, m_SidekickNet.getCSDBDownloadFilename());
+						strcpy(menuItemStr, m_SidekickNet.getCSDBDownloadFilename());
+						lastChar = 0xfffffff;
+					}
+					//else
+					//	bFilesystemHasChanged = true; //only for d64
+				}
+				
 				DisableIRQs();
 				m_InputPin.ConnectInterrupt( this->FIQHandler, this );
 				m_InputPin.EnableInterrupt( GPIOInterruptOnRisingEdge );
+//			}
 			#endif
 			
 		}
@@ -830,6 +832,14 @@ void CKernelMenu::FIQHandler (void *pParam)
 
 	OUTPUT_LATCH_AND_FINISH_BUS_HANDLING
 }
+
+
+#ifdef WITH_NET
+void CKernelMenu::updateSystemMonitor ()
+{
+	m_SidekickNet.updateSystemMonitor( m_Memory.GetHeapFreeSpace(HEAP_ANY), m_CPUThrottle.GetTemperature());
+}
+#endif
 
 void mainMenu()
 {

@@ -540,8 +540,10 @@ boolean CSidekickNet::isDownloadReady()
 	if ( m_isDownloadReady){
 		m_isDownloadReady = false;
 		if ( m_bSaveCSDBDownload2SD )
+		{
 			m_isCSDBDownloadSavingQueued = true;
 			m_queueDelay = 100000;
+		}
 	}
 	return bTemp;
 }
