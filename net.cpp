@@ -113,7 +113,6 @@ CSidekickNet::CSidekickNet( CInterruptSystem * pInterruptSystem, CTimer * pTimer
 		m_isCSDBDownloadQueued( false ),
 		m_isCSDBDownloadSavingQueued( false ),
 		m_isDownloadReady( false ),
-		//m_tryFilesystemRemount( false ),
 		m_networkActionStatusMsg( (char * ) ""),
 		m_sktxScreenContent( (unsigned char * ) ""),
 		m_sktxSessionID( (char * ) ""),
@@ -297,12 +296,13 @@ boolean CSidekickNet::Prepare()
 		setErrorMsgC64((char*)"Error on USB init. Sorry.");
 		return false;
 	}
+	/* is already being mounted in kernel_menu.cpp
 	if (!mountSDDrive())
 	{
 		setErrorMsgC64((char*)"Can't mount SD card. Sorry.");
 		return false;
 	}	
-
+  */
 	CGlueStdioInit (m_FileSystem);
 
 	if (m_useWLAN)
@@ -372,9 +372,11 @@ void CSidekickNet::queueFrameRequest()
 
 void CSidekickNet::queueSktxKeypress( int key )
 {
+	if ( !isAnyNetworkActionQueued())
+		m_queueDelay = 0; //this could lead to disturbing an already running queuedelay
 	m_isSktxKeypressQueued = true;
 	m_sktxKey = key;
-	m_queueDelay = 0;
+	//logger->Write ("CSidekickNet::queueSktxKeypress", LogNotice, "Queuing keypress");
 }
 
 void CSidekickNet::queueSktxRefresh()
@@ -402,7 +404,10 @@ u8 CSidekickNet::getCSDBDownloadLaunchType(){
 		logger->Write ("CSidekickNet::getCSDBDownloadLaunchType", LogNotice, "CRT detected: >%s<",m_CSDBDownloadExtension);
 	}
 	else if ( strcmp( m_CSDBDownloadExtension, "d64" ) == 0)
+	{
 		type = 0; //unused, we only save the file
+		logger->Write ("CSidekickNet::getCSDBDownloadLaunchType", LogNotice, "D64 detected: >%s<",m_CSDBDownloadExtension);
+	}
 	else //prg
 	{
 		type = 40;
@@ -450,6 +455,8 @@ void CSidekickNet::handleQueuedNetworkAction()
 	if (m_queueDelay > 0 )
 	{
 		m_queueDelay--;
+		//logger->Write( "handleQueuedNetworkAction", LogNotice, "m_queueDelay: %i", m_queueDelay);		
+		
 		return;
 	}
 
@@ -485,7 +492,7 @@ void CSidekickNet::handleQueuedNetworkAction()
 
 		else if (m_isCSDBDownloadQueued)
 		{
-			//logger->Write( "handleQueuedNetworkAction", LogNotice, "m_CSDBDownloadPath: %s", m_CSDBDownloadPath);		
+			logger->Write( "handleQueuedNetworkAction", LogNotice, "m_CSDBDownloadPath: %s", m_CSDBDownloadPath);		
 			m_isCSDBDownloadQueued = false;
 			getCSDBBinaryContent( m_CSDBDownloadPath );
 			m_isSktxKeypressQueued = false;
@@ -493,11 +500,13 @@ void CSidekickNet::handleQueuedNetworkAction()
 	
 		else if (m_isCSDBDownloadSavingQueued)
 		{
+			logger->Write( "handleQueuedNetworkAction", LogNotice, "sCSDBDownloadSavingQueued");		
 			m_isCSDBDownloadSavingQueued = false;
 			saveDownload2SD();
 			m_isSktxKeypressQueued = false;
 		}
 		
+		//handle keypress anyway even if we have downloaded or saved something
 		else if (m_isSktxKeypressQueued)
 		{
 			updateSktxScreenContent();
@@ -508,11 +517,24 @@ void CSidekickNet::handleQueuedNetworkAction()
 
 boolean CSidekickNet::isAnyNetworkActionQueued()
 {
-	return m_isNetworkInitQueued || m_isKernelUpdateQueued || m_isFrameQueued || m_isSktxKeypressQueued || m_isCSDBDownloadSavingQueued;
+	return
+			m_isNetworkInitQueued || 
+			m_isKernelUpdateQueued || 
+			m_isFrameQueued || 
+			m_isSktxKeypressQueued || 
+			m_isCSDBDownloadQueued || 
+			m_isCSDBDownloadSavingQueued;
 }
 
 void CSidekickNet::saveDownload2SD()
 {
+	//if when we save a prg we can be sure that we are in the launcher kernel atm
+	//we need a waiting popup that locks the sktx screen...
+	if ( strcmp( m_CSDBDownloadExtension, "prg" ) == 0)
+	{
+		m_isSktxKeypressQueued = false;
+	}
+	
 	m_isCSDBDownloadSavingQueued = false;
 	CString downloadLogMsg = "Writing download to SD card, bytes to write: ";
 	CString Number;
@@ -527,10 +549,13 @@ void CSidekickNet::saveDownload2SD()
 	m_CSDBDownloadPath = (char*)"";
 	m_CSDBDownloadFilename = (char*)""; // this is used from kernel_menu to display name on screen
 	m_bSaveCSDBDownload2SD = false;
-	//unmount - this is only necessary as long as we don't have the concept
-	//to mount the filesystem once and for all during runtime
-	unmountSDDrive();
-	//m_tryFilesystemRemount = true;
+	#ifndef WITH_RENDER
+	if ( strcmp( m_CSDBDownloadExtension, "d64" ) == 0)
+	{
+	  clearErrorMsg(); //on c64screen, kernel menu
+	  redrawSktxScreen();
+  }
+  #endif
 }
 
 
@@ -541,8 +566,19 @@ boolean CSidekickNet::isDownloadReady()
 		m_isDownloadReady = false;
 		if ( m_bSaveCSDBDownload2SD )
 		{
+			logger->Write( "isDownloadReady", LogNotice, "Download is ready and we want to save it.");
 			m_isCSDBDownloadSavingQueued = true;
-			m_queueDelay = 100000;
+			if ( strcmp( m_CSDBDownloadExtension, "d64" ) == 0)
+			{
+				m_queueDelay = 5; //100;
+				//                    "012345678901234567890123456789012345XXXX"
+				setErrorMsgC64((char*)"   D64 file is being saved to SD card   ");
+				
+			}
+			else
+			{
+				m_queueDelay = 1000; //100000;
+			}
 		}
 	}
 	return bTemp;
@@ -788,6 +824,8 @@ CString CSidekickNet::getSktxPath( unsigned key )
 	return path;
 }
 
+//void CSidekickNet::parseSktxDownloadURL(){}
+
 
 void CSidekickNet::updateSktxScreenContent(){
 	if (!m_isActive || m_PlaygroundHttpHost == 0)
@@ -929,22 +967,7 @@ boolean CSidekickNet::HTTPGet ( CIPAddress ip, const char * pHost, int port, con
 {
 	assert (m_isActive);
 	assert (pBuffer != 0);
-	
-	//this remount stuff is only temporarily necessary as long as we don't have 
-	//the sd filesystem mounted consistently all the time during runtime
-	//it became necessary when we started to implement https requests
-	//as in case of https some certificate files are requested from sd
-	//so we can limit the remount hack to those requests where port 443 is used.
 	boolean isHTTPS = port == 443;
-	//if (m_tryFilesystemRemount){
-		//m_tryFilesystemRemount = false;
-		if (isHTTPS)
-		{
-			logger->Write( "HTTPGet", LogNotice, "Trying to remount filesystem");
-			mountSDDrive();
-		}
-	//}
-	
 	CString IPString;
 	ip.Format (&IPString);
 	if (isHTTPS )
