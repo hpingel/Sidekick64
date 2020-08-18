@@ -277,8 +277,7 @@ void CKernelLaunch::Run( void )
 				m_InputPin.DisableInterrupt();
 				m_InputPin.DisconnectInterrupt();
 				EnableIRQs();
-				//kernelMenu.updateSystemMonitor();
-				//pSidekickNet->updateSystemMonitor( m_Memory.GetHeapFreeSpace(HEAP_ANY), m_CPUThrottle.GetTemperature());
+				kernelMenu->updateSystemMonitor();
 				pSidekickNet->handleQueuedNetworkAction();
 				DisableIRQs();
 				m_InputPin.ConnectInterrupt( FIQ_HANDLER, FIQ_PARENT );
