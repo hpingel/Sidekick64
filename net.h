@@ -115,11 +115,11 @@ public:
 	CString getSktxPath( unsigned key );
 	void updateSystemMonitor( size_t, unsigned);
 	char * getCSDBDownloadFilename();
+	boolean mountSDDrive();
+	boolean unmountSDDrive();
 private:
 	
 	boolean Prepare ( void );
-	boolean mountSDDrive();
-	boolean unmountSDDrive();
 	CIPAddress getIPForHost( const char * );
 	
 	CUSBHCIDevice     m_USBHCI;
