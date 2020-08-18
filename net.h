@@ -152,7 +152,6 @@ private:
 	boolean m_isCSDBDownloadQueued;
 	boolean m_isCSDBDownloadSavingQueued;
 	boolean m_isDownloadReady;
-	//boolean m_tryFilesystemRemount;
 	char * m_networkActionStatusMsg;
 	unsigned char * m_sktxScreenContent;
 	char * m_sktxSessionID;
