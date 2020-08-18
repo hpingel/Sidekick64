@@ -418,12 +418,14 @@ u8 CSidekickNet::getCSDBDownloadLaunchType(){
 
 void CSidekickNet::handleQueuedNetworkAction()
 {
-	#ifdef WITH_WLAN
-	if (m_isActive && !isAnyNetworkActionQueued())
+	if ( m_isActive && (!isAnyNetworkActionQueued() || !usesWLAN()) )
 	{
-		//every 8 seconds + seconds needed for request
-		if ( m_pTimer->GetUptime() - m_timestampOfLastWLANKeepAlive > 8)
+		//every 10 seconds + seconds needed for request
+		//log cpu temp + uptime + free memory
+		//in wlan case do keep-alive request
+		if ( m_pTimer->GetUptime() - m_timestampOfLastWLANKeepAlive > 10)
 		{
+			#ifdef WITH_WLAN
 			//Circle42 offers experimental WLAN, but it seems to
 			//disconnect very quickly if there is not traffic.
 			//This can be very annoying.
@@ -444,13 +446,13 @@ void CSidekickNet::handleQueuedNetworkAction()
 			}
 			else
 				UpdateTime();
+			#endif
 			m_timestampOfLastWLANKeepAlive = m_pTimer->GetUptime();
 			logger->Write ("CSidekickNet", LogNotice, getSysMonInfo(1));
 		}
 	}
-	else if (m_isActive && isAnyNetworkActionQueued())
+	else if (m_isActive && isAnyNetworkActionQueued() && usesWLAN())
 		m_timestampOfLastWLANKeepAlive = m_pTimer->GetUptime();
-	#endif
 	
 	if (m_queueDelay > 0 )
 	{
