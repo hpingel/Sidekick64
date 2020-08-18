@@ -1585,20 +1585,21 @@ void handleC64( int k, u32 *launchKernel, char *FILENAME, char *filenameKernal, 
 							extern int readD64File( CLogger *logger, const char *DRIVE, const char *FILENAME, u8 *data, u32 *size );
 
 							u32 imgsize = 0;
-
+#ifndef WITH_NET
 							// mount file system
 							FATFS m_FileSystem;
 							if ( f_mount( &m_FileSystem, DRIVE, 1 ) != FR_OK )
 								logger->Write( "RaspiMenu", LogPanic, "Cannot mount drive: %s", DRIVE );
-
+#endif
 							//logger->Write( "exec", LogNotice, "path '%s'", path );
 							if ( !readD64File( logger, "", path, d64buf, &imgsize ) )
 								return;
 
+#ifndef WITH_NET
 							// unmount file system
 							if ( f_mount( 0, DRIVE, 0 ) != FR_OK )
 								logger->Write( "RaspiMenu", LogPanic, "Cannot unmount drive: %s", DRIVE );
-
+#endif
 							if ( d64ParseExtract( d64buf, imgsize, D64_GET_FILE + fileIndex, prgDataLaunch, (s32*)&prgSizeLaunch ) == 0 )
 							{
 								strcpy( FILENAME, path );

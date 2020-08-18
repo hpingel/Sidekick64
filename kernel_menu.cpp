@@ -349,6 +349,10 @@ boolean CKernelMenu::Initialize( void )
 
 	u32 size = 0;
 
+	#ifdef WITH_NET
+		m_SidekickNet.mountSDDrive();
+	#endif
+
 	u8 tempHDMI[ 640 * 480 * 3 ];
 	readFile( logger, (char*)DRIVE, (char*)FILENAME_SPLASH_HDMI, tempHDMI, &size );
 	u32 xOfs = ( screen->GetWidth() - 640 ) / 2;
