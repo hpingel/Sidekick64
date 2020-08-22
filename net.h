@@ -92,7 +92,9 @@ public:
 	u8 getCSDBDownloadLaunchType();
 	boolean isAnyNetworkActionQueued();
 	void saveDownload2SD();
+	void cleanupDownloadData();
 	boolean isDownloadReady();
+	boolean isDownloadReadyForLaunch();
 	boolean isDevServerConfigured(){ return m_DevHttpHost != 0;};
 	boolean isWireless(){ return m_useWLAN;};
 	boolean RaspiHasOnlyWLAN();
@@ -160,6 +162,7 @@ private:
 	boolean m_isCSDBDownloadQueued;
 	boolean m_isCSDBDownloadSavingQueued;
 	boolean m_isDownloadReady;
+	boolean m_isDownloadReadyForLaunch;
 	char * m_networkActionStatusMsg;
 	unsigned char * m_sktxScreenContent;
 	char * m_sktxSessionID;
