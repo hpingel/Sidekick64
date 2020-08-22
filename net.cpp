@@ -118,6 +118,7 @@ CSidekickNet::CSidekickNet( CInterruptSystem * pInterruptSystem, CTimer * pTimer
 		m_isCSDBDownloadQueued( false ),
 		m_isCSDBDownloadSavingQueued( false ),
 		m_isDownloadReady( false ),
+		m_isDownloadReadyForLaunch( false ),
 		m_networkActionStatusMsg( (char * ) ""),
 		m_sktxScreenContent( (unsigned char * ) ""),
 		m_sktxSessionID( (char * ) ""),
@@ -361,7 +362,6 @@ boolean CSidekickNet::disableActiveNetwork(){
 	);
 	
 }
-
 
 CUSBHCIDevice * CSidekickNet::getInitializedUSBHCIDevice()
 {
@@ -663,17 +663,26 @@ void CSidekickNet::saveDownload2SD()
 	downloadLogMsg.Append( "'" );
 	logger->Write( "saveDownload2SD", LogNotice, downloadLogMsg);
 	writeFile( logger, DRIVE, m_CSDBDownloadSavePath, (u8*) prgDataLaunch, prgSizeLaunch );
+	#ifndef WITH_RENDER
+	  clearErrorMsg(); //on c64screen, kernel menu
+	  redrawSktxScreen();
+  #endif
+	m_isDownloadReadyForLaunch = true;
+}
+
+void CSidekickNet::cleanupDownloadData()
+{
 	m_CSDBDownloadSavePath = "";
 	m_CSDBDownloadPath = (char*)"";
 	m_CSDBDownloadFilename = (char*)""; // this is used from kernel_menu to display name on screen
 	m_bSaveCSDBDownload2SD = false;
-	#ifndef WITH_RENDER
-	if ( strcmp( m_CSDBDownloadExtension, "d64" ) == 0)
-	{
-	  clearErrorMsg(); //on c64screen, kernel menu
-	  redrawSktxScreen();
-  }
-  #endif
+	m_isDownloadReadyForLaunch = false;
+}
+
+
+boolean CSidekickNet::isDownloadReadyForLaunch()
+{
+	return m_isDownloadReadyForLaunch;
 }
 
 
@@ -686,17 +695,23 @@ boolean CSidekickNet::isDownloadReady()
 		{
 			logger->Write( "isDownloadReady", LogNotice, "Download is ready and we want to save it.");
 			m_isCSDBDownloadSavingQueued = true;
+			m_queueDelay = 5;
 			if ( strcmp( m_CSDBDownloadExtension, "d64" ) == 0)
 			{
-				m_queueDelay = 5; //100;
 				//                    "012345678901234567890123456789012345XXXX"
-				setErrorMsgC64((char*)"   D64 file is being saved to SD card   ");
-				
+				setErrorMsgC64((char*)"       Saving D64 file to SD card       ");
 			}
-			else
+			else if ( strcmp( m_CSDBDownloadExtension, "prg" ) == 0)
 			{
-				m_queueDelay = 1000; //100000;
+				//                    "012345678901234567890123456789012345XXXX"
+				setErrorMsgC64((char*)"     Saving and launching PRG file      ");
 			}
+			else if ( strcmp( m_CSDBDownloadExtension, "crt" ) == 0)
+			{
+				//                    "012345678901234567890123456789012345XXXX"
+				setErrorMsgC64((char*)"     Saving and launching CRT file      ");
+			}
+
 		}
 	}
 	return bTemp;
