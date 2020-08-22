@@ -92,20 +92,25 @@ extern unsigned char prgDataLaunch[ 1025*1024 ];
 #endif
 
 CSidekickNet::CSidekickNet( CInterruptSystem * pInterruptSystem, CTimer * pTimer, CScheduler * pScheduler, CEMMCDevice * pEmmcDevice  )
-		:m_USBHCI (pInterruptSystem, pTimer),
+		:m_USBHCI (0),
+		m_pInterrupt(pInterruptSystem),
 		m_pScheduler(pScheduler),
 		m_pTimer (pTimer),
 		m_EMMC ( *pEmmcDevice),
+		m_Net (0),
 #ifdef WITH_WLAN		
-		m_WLAN (FIRMWARE_PATH),
-		m_Net (0, 0, 0, 0, DEFAULT_HOSTNAME, NetDeviceTypeWLAN),
-		m_WPASupplicant (CONFIG_FILE),
-#endif
-		m_DNSClient(&m_Net),
-		m_TLSSupport (&m_Net),
+		m_WLAN (0),
+		m_WPASupplicant (0),
+		m_useWLAN (true),
+#else
 		m_useWLAN (false),
+#endif
+		m_DNSClient(0),
+		m_TLSSupport(0),
+		m_isFSMounted( false ),
 		m_isActive( false ),
 		m_isPrepared( false ),
+		m_isUSBPrepared( false ),
 		m_isNetworkInitQueued( false ),
 		m_isKernelUpdateQueued( false ),
 		m_isFrameQueued( false ),
@@ -144,12 +149,6 @@ CSidekickNet::CSidekickNet( CInterruptSystem * pInterruptSystem, CTimer * pTimer
 	assert (m_pTimer != 0);
 	assert (& m_pScheduler != 0);
 	assert (& m_USBHCI != 0);
-
-	#ifdef WITH_WLAN
-		m_useWLAN = true;
-	#else
-		m_useWLAN = false;
-	#endif
 
 	//timezone is not really related to net stuff, it could go somewhere else
 	m_pTimer->SetTimeZone (nTimeZone);
@@ -193,18 +192,28 @@ boolean CSidekickNet::Initialize()
 		}
 		m_isPrepared = true;
 	}
-	while (!m_Net.IsRunning () && sleepCount < sleepLimit)
+	while (!m_Net->IsRunning () && sleepCount < sleepLimit)
 	{
 		m_pScheduler->MsSleep (100);
 		sleepCount ++;
 	}
 
-	if (!m_Net.IsRunning () && sleepCount >= sleepLimit){
-		logger->Write( "CSidekickNet::Initialize", LogNotice, 
-			"Network connection is not running - is ethernet cable not attached?"
-		);
-		//                 "012345678901234567890123456789012345XXXX"
-		setErrorMsgC64((char*)"    Is the network cable plugged in?    ");
+	if (!m_Net->IsRunning () && sleepCount >= sleepLimit){
+		if ( m_useWLAN )
+		{
+			logger->Write( "CSidekickNet::Initialize", LogNotice, 
+				"WLAN connection can't be established - maybe poor reception?"
+			);
+			//                    "012345678901234567890123456789012345XXXX"
+			setErrorMsgC64((char*)"   Wireless network connection failed!  ");
+		}
+		else{
+			logger->Write( "CSidekickNet::Initialize", LogNotice, 
+				"Network connection is not running - is ethernet cable not attached?"
+			);
+			//                 "012345678901234567890123456789012345XXXX"
+			setErrorMsgC64((char*)"    Is the network cable plugged in?    ");
+		}
 		return false;
 	}
 
@@ -213,6 +222,8 @@ boolean CSidekickNet::Initialize()
 
 	//TODO: the resolves could be postponed to the moment where the first 
 	//actual access takes place
+	logger->Write ("CSidekickNet before DNS", LogNotice, getSysMonInfo(1));
+	m_DNSClient = new CDNSClient (m_Net);
 	if ( strcmp(netUpdateHostName,"") != 0)
 	{
 		m_DevHttpHostPort = netUpdateHostPort != 0 ? netUpdateHostPort: HTTP_PORT;
@@ -239,28 +250,39 @@ boolean CSidekickNet::Initialize()
 	#ifndef WITH_RENDER
 	 clearErrorMsg(); //on c64screen, kernel menu
   #endif
+	logger->Write ("CSidekickNet before TLS", LogNotice, getSysMonInfo(1));
+	m_TLSSupport = new CTLSSimpleSupport (m_Net);
 	return true;
 }
 
 boolean CSidekickNet::mountSDDrive()
 {
+	if ( m_isFSMounted )
+	{
+		logger->Write ("CSidekickNet::mountSDDrive", LogError,
+				"Drive %s is already mounted. Skip remount.", DRIVE);
+		return true;
+	}
 	if (f_mount (&m_FileSystem, DRIVE, 1) != FR_OK)
 	{
 		logger->Write ("CSidekickNet::Initialize", LogError,
 				"Cannot mount drive: %s", DRIVE);
-		return false;
+		m_isFSMounted = false;
 	}
-	return true;
+	else
+		m_isFSMounted = true;
+	return m_isFSMounted;
 }
 
 boolean CSidekickNet::unmountSDDrive()
 {
 	if (f_mount ( 0, DRIVE, 0) != FR_OK)
 	{
-		logger->Write ("CSidekickNet::Initialize", LogError,
+		logger->Write ("CSidekickNet::unmountSDDrive", LogError,
 				"Cannot unmount drive: %s", DRIVE);
 		return false;
 	}
+	m_isFSMounted = false;
 	return true;
 }		
 
@@ -269,7 +291,7 @@ boolean CSidekickNet::RaspiHasOnlyWLAN()
 	return (m_PiModel == MachineModel3APlus );
 }
 
-boolean CSidekickNet::Prepare()
+void CSidekickNet::checkForSupportedPiModel()
 {
 	if ( m_PiModel != MachineModel3APlus && m_PiModel != MachineModel3BPlus)
 	{
@@ -277,7 +299,100 @@ boolean CSidekickNet::Prepare()
 			"Warning: The model of Raspberry Pi you are using is not a model supported by Sidekick64/264!"
 		);
 	}
+	if ( RaspiHasOnlyWLAN() && !m_useWLAN )
+	{
+		logger->Write( "CSidekickNet::Initialize", LogNotice, 
+			"Your Raspberry Pi model (3A+) doesn't have an ethernet socket. This kernel is built for cable based network. Use WLAN kernel instead."
+		);
+	}
+}
+
+boolean CSidekickNet::disableActiveNetwork(){
+	//FIXME THIS DOES NOT WORK
+	m_isActive = false;
+	m_isUSBPrepared = false;
+	m_isPrepared = false;
+	/*
+	logger->Write( "CSidekickNet", LogNotice, 
+		"disableActiveNetwork: Now deleting instance of CTLSSimpleSupport."
+	);
+	logger->Write ("CSidekickNet", LogNotice, getSysMonInfo(1));
+	delete m_TLSSupport;
+	m_TLSSupport = 0;
 	
+	/*
+	logger->Write( "CSidekickNet", LogNotice, 
+		"disableActiveNetwork: Now deleting instance of CDNSClient."
+	);
+	logger->Write ("CSidekickNet", LogNotice, getSysMonInfo(1));
+	
+	delete m_DNSClient;
+	m_DNSClient = 0;
+
+	logger->Write( "CSidekickNet", LogNotice, 
+		"disableActiveNetwork: Now deleting instance of CNetSubSystem."
+	);
+	logger->Write ("CSidekickNet", LogNotice, getSysMonInfo(1));
+	delete m_Net;
+	m_Net = 0;
+	
+	logger->Write( "CSidekickNet", LogNotice, 
+		"disableActiveNetwork: Now deleting instance of CUSBHCIDevice."
+	);
+	logger->Write ("CSidekickNet", LogNotice, getSysMonInfo(1));
+	delete m_USBHCI;
+	//m_USBHCI = 0;
+*/
+	m_isActive = false;
+	m_isUSBPrepared = false;
+	m_isPrepared = false;
+	/*
+	logger->Write( "CSidekickNet", LogNotice, 
+		"disableActiveNetwork: Setting to null."
+	);
+	
+	m_TLSSupport = 0;
+	m_DNSClient = 0;
+	m_Net = 0;
+	m_USBHCI = 0;
+	*/
+	logger->Write( "CSidekickNet", LogNotice, 
+		"disableActiveNetwork: EOM"
+	);
+	
+}
+
+
+CUSBHCIDevice * CSidekickNet::getInitializedUSBHCIDevice()
+{
+		if ( !m_isUSBPrepared)
+		{
+			if ( !initializeUSBHCIDevice() )
+				return 0;
+		}
+		return m_USBHCI;
+}
+
+boolean CSidekickNet::initializeUSBHCIDevice()
+{
+	if ( !m_isUSBPrepared)
+	{
+		m_USBHCI = new CUSBHCIDevice (m_pInterrupt, m_pTimer);
+		if (!m_USBHCI->Initialize ())
+		{
+			logger->Write( "CSidekickNet", LogNotice, 
+				"Couldn't initialize instance of CUSBHCIDevice."
+			);
+			setErrorMsgC64((char*)"Error on USB init. Sorry.");
+			return false;
+		}
+		m_isUSBPrepared = true;
+	}
+	return true;
+}
+
+boolean CSidekickNet::Prepare()
+{
 	if ( RaspiHasOnlyWLAN() && !m_useWLAN )
 	{
 		logger->Write( "CSidekickNet::Initialize", LogNotice, 
@@ -287,38 +402,38 @@ boolean CSidekickNet::Prepare()
 		setErrorMsgC64((char*)" No WLAN support in this kernel. Sorry. ");
 		return false;
 	}
-	
-	if (!m_USBHCI.Initialize ())
+
+	logger->Write ("CSidekickNet before USB", LogNotice, getSysMonInfo(1));
+	if ( !initializeUSBHCIDevice())
 	{
-		logger->Write( "CSidekickNet::Initialize", LogNotice, 
-			"Couldn't initialize instance of CUSBHCIDevice."
-		);
 		setErrorMsgC64((char*)"Error on USB init. Sorry.");
 		return false;
 	}
-	/* is already being mounted in kernel_menu.cpp
-	if (!mountSDDrive())
+	
+	if ( !m_isFSMounted && !mountSDDrive())
 	{
 		setErrorMsgC64((char*)"Can't mount SD card. Sorry.");
 		return false;
 	}	
-  */
 	CGlueStdioInit (m_FileSystem);
 
 	if (m_useWLAN)
 	{
-		#ifdef WITH_WLAN
-		if (!m_WLAN.Initialize ())
+	#ifdef WITH_WLAN
+		m_WLAN = new CBcm4343Device (FIRMWARE_PATH);
+		if (!m_WLAN->Initialize ())
 		{
 			logger->Write( "CSidekickNet::Initialize", LogNotice, 
 				"Couldn't initialize instance of WLAN."
 			);
 			return false;
 		}
-		#endif
+	#endif
 	}
-
-	if (!m_Net.Initialize (false))
+	
+	logger->Write ("CSidekickNet before NetSubSystem", LogNotice, getSysMonInfo(1));
+	m_Net = new CNetSubSystem (0, 0, 0, 0, "Sidekick64", m_useWLAN ? NetDeviceTypeWLAN : NetDeviceTypeEthernet );
+	if (!m_Net->Initialize (false))
 	{
 		logger->Write( "CSidekickNet::Initialize", LogNotice, 
 			"Couldn't initialize instance of CNetSubSystem."
@@ -329,7 +444,8 @@ boolean CSidekickNet::Prepare()
 	if (m_useWLAN)
 	{
 	#ifdef WITH_WLAN
-		if (!m_WPASupplicant.Initialize ())
+		m_WPASupplicant = new CWPASupplicant (CONFIG_FILE);
+		if (!m_WPASupplicant->Initialize ())
 		{
 			logger->Write( "CSidekickNet::Initialize", LogNotice, 
 				"Couldn't initialize instance of CWPASupplicant."
@@ -634,7 +750,7 @@ CString CSidekickNet::getRaspiModelName()
 
 CNetConfig * CSidekickNet::GetNetConfig(){
 	assert (m_isActive);
-	return m_Net.GetConfig ();
+	return m_Net->GetConfig ();
 }
 
 CIPAddress CSidekickNet::getIPForHost( const char * host )
@@ -645,7 +761,7 @@ CIPAddress CSidekickNet::getIPForHost( const char * host )
 	while ( attempts < 3)
 	{
 		attempts++;
-		if (!m_DNSClient.Resolve (host, &ip))
+		if (!m_DNSClient->Resolve (host, &ip))
 			logger->Write ("CSidekickNet::getIPForHost", LogWarning, "Cannot resolve: %s",host);
 		else
 		{
@@ -659,7 +775,7 @@ CIPAddress CSidekickNet::getIPForHost( const char * host )
 boolean CSidekickNet::UpdateTime(void)
 {
 	assert (m_isActive);
-	CNTPClient NTPClient (&m_Net);
+	CNTPClient NTPClient (m_Net);
 	unsigned nTime = NTPClient.GetTime (m_NTPServerIP);
 	if (nTime == 0)
 	{
@@ -982,7 +1098,7 @@ boolean CSidekickNet::HTTPGet ( CIPAddress ip, const char * pHost, int port, con
 		logger->Write( "HTTPGet", LogNotice, 
 			"GET to http://%s:%i%s (%s)", pHost, port, pFile, (const char *) IPString);
 	unsigned nLength = nDocMaxSize;
-	CHTTPClient Client (&m_TLSSupport, ip, port, pHost, isHTTPS); //TODO put this into member var?
+	CHTTPClient Client (m_TLSSupport, ip, port, pHost, isHTTPS); //TODO put this into member var?
 	THTTPStatus Status = Client.Get (pFile, (u8 *) pBuffer, &nLength);
 	if (Status != HTTPOK)
 	{

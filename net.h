@@ -77,6 +77,7 @@ public:
 	#ifdef WITH_RENDER
 	void updateFrame();
 	#endif
+	void checkForSupportedPiModel();
 	void updateSktxScreenContent();
 	void queueNetworkInit();
 	void queueKernelUpdate();
@@ -117,34 +118,41 @@ public:
 	char * getCSDBDownloadFilename();
 	boolean mountSDDrive();
 	boolean unmountSDDrive();
+	CUSBHCIDevice * getInitializedUSBHCIDevice();
+	boolean initializeUSBHCIDevice();
+	boolean disableActiveNetwork();
+
 private:
 	
-	boolean Prepare ( void );
+	boolean Prepare ();
 	CIPAddress getIPForHost( const char * );
 	
-	CUSBHCIDevice     m_USBHCI;
+	CUSBHCIDevice     * m_USBHCI;
 	CMachineInfo      * m_pMachineInfo; //used for c64screen to display raspi model name
 	CScheduler        * m_pScheduler;
+	CInterruptSystem	* m_pInterrupt;
 	CTimer            * m_pTimer;
 	CEMMCDevice		    m_EMMC;
 #ifdef WITH_WLAN
-	CBcm4343Device    m_WLAN;
+	CBcm4343Device    * m_WLAN;
 #endif
 	FATFS             m_FileSystem;
-	CNetSubSystem     m_Net;
+	CNetSubSystem     * m_Net;
 	CIPAddress        m_DevHttpServerIP;
 	CIPAddress        m_PlaygroundHttpServerIP;
 	CIPAddress        m_CSDBServerIP;
 	CIPAddress        m_NTPServerIP;
 #ifdef WITH_WLAN
-	CWPASupplicant    m_WPASupplicant;	
+	CWPASupplicant    * m_WPASupplicant;	
 #endif
-  CDNSClient        m_DNSClient;
-	CTLSSimpleSupport m_TLSSupport;
+  CDNSClient        * m_DNSClient;
+	CTLSSimpleSupport * m_TLSSupport;
 
 	boolean m_useWLAN;
+	boolean m_isFSMounted;
 	boolean m_isActive;
 	boolean m_isPrepared;
+	boolean m_isUSBPrepared;
 	boolean m_isNetworkInitQueued;
 	boolean m_isKernelUpdateQueued;
 	boolean m_isFrameQueued;
