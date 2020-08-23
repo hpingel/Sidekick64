@@ -107,6 +107,9 @@ CSidekickNet::CSidekickNet( CInterruptSystem * pInterruptSystem, CTimer * pTimer
 #endif
 		m_DNSClient(0),
 		m_TLSSupport(0),
+		m_CSDBHTTPClient(0),
+		m_PlaygroundHTTPClient(0),
+		m_DevServerHTTPClient(0),
 		m_isFSMounted( false ),
 		m_isActive( false ),
 		m_isPrepared( false ),
@@ -128,10 +131,8 @@ CSidekickNet::CSidekickNet( CInterruptSystem * pInterruptSystem, CTimer * pTimer
 		m_CSDBDownloadSavePath( (char *)"" ),
 		m_bSaveCSDBDownload2SD( false ),
 		m_PiModel( m_pMachineInfo->Get()->GetMachineModel () ),
-		m_DevHttpHost(0),
-		m_DevHttpHostPort(0),
-		m_PlaygroundHttpHost(0),
-		m_PlaygroundHttpHostPort(0),
+		m_DevHttpHostLoggerString((char * ) ""),
+		m_PlaygroundHttpHostLoggerString((char * ) ""),
 		m_SidekickKernelUpdatePath(0),
 		m_queueDelay(0),
 		m_timestampOfLastWLANKeepAlive(0),
@@ -149,7 +150,6 @@ CSidekickNet::CSidekickNet( CInterruptSystem * pInterruptSystem, CTimer * pTimer
 {
 	assert (m_pTimer != 0);
 	assert (& m_pScheduler != 0);
-	assert (& m_USBHCI != 0);
 
 	//timezone is not really related to net stuff, it could go somewhere else
 	m_pTimer->SetTimeZone (nTimeZone);
@@ -221,39 +221,59 @@ boolean CSidekickNet::Initialize()
 	//net connection is up and running now
 	m_isActive = true;
 
+	//logger->Write ("CSidekickNet before TLS", LogNotice, getSysMonInfo(1));
+	m_TLSSupport = new CTLSSimpleSupport (m_Net);
+
+	//logger->Write ("CSidekickNet before DNS", LogNotice, getSysMonInfo(1));
+	m_DNSClient = new CDNSClient (m_Net);
+
 	//TODO: the resolves could be postponed to the moment where the first 
 	//actual access takes place
-	logger->Write ("CSidekickNet before DNS", LogNotice, getSysMonInfo(1));
-	m_DNSClient = new CDNSClient (m_Net);
 	if ( strcmp(netUpdateHostName,"") != 0)
 	{
-		m_DevHttpHostPort = netUpdateHostPort != 0 ? netUpdateHostPort: HTTP_PORT;
-	  m_DevHttpHost = (const char *) netUpdateHostName;
-		m_DevHttpServerIP = getIPForHost(m_DevHttpHost);
+		int port = netUpdateHostPort != 0 ? netUpdateHostPort: HTTP_PORT;
+		m_DevHttpHostLoggerString = getLoggerStringForHost( netUpdateHostName, port);
+		CIPAddress devIP = getIPForHost(netUpdateHostName);
+		m_DevServerHTTPClient = new CHTTPClient( m_TLSSupport, devIP, port, netUpdateHostName, port == 443 );
 	}
-	else
-	  m_DevHttpHost = 0;
 	
 	if (strcmp(netSktxHostName,"") != 0)
 	{
-		m_PlaygroundHttpHostPort = netSktxHostPort != 0 ? netSktxHostPort: HTTP_PORT;
-		m_PlaygroundHttpHost = (const char *) netSktxHostName;
-		if ( strcmp(m_DevHttpHost, m_PlaygroundHttpHost) != 0)
-			m_PlaygroundHttpServerIP = getIPForHost(m_PlaygroundHttpHost);
+		int port = netSktxHostPort != 0 ? netSktxHostPort: HTTP_PORT;
+		m_PlaygroundHttpHostLoggerString = getLoggerStringForHost( netSktxHostName, port);
+		if ( strcmp(m_DevHttpHostLoggerString, m_PlaygroundHttpHostLoggerString) != 0)
+		{
+			CIPAddress playgroundIP = getIPForHost(netSktxHostName);
+			m_PlaygroundHTTPClient = new	CHTTPClient( m_TLSSupport, playgroundIP, port, netSktxHostName, port == 443 );
+		}
 		else
-			m_PlaygroundHttpServerIP = m_DevHttpServerIP;
+			m_PlaygroundHTTPClient = m_DevServerHTTPClient;
 	}
-	else
-		m_PlaygroundHttpHost = 0;
 			
-	m_CSDBServerIP = getIPForHost( CSDB_HOST );
+	CIPAddress csdbIP = getIPForHost( CSDB_HOST );
+	m_CSDBHTTPClient = new	CHTTPClient( m_TLSSupport, csdbIP, 443, CSDB_HOST, true );
 	m_NTPServerIP  = getIPForHost( NTPServer );
 	#ifndef WITH_RENDER
 	 clearErrorMsg(); //on c64screen, kernel menu
   #endif
-	logger->Write ("CSidekickNet before TLS", LogNotice, getSysMonInfo(1));
-	m_TLSSupport = new CTLSSimpleSupport (m_Net);
 	return true;
+}
+
+CString CSidekickNet::getLoggerStringForHost( CString hostname, int port){
+	CString s = "http";
+	s.Append( (port == 443) ? "s://" : (port == 80) ? "://" : ":");
+	if ( port != 443 && port != 80 )
+	{
+		CString Number;
+		Number.Format ("%02d", port);
+		s.Append(":");
+		s.Append(Number);
+		s.Append("//");
+	}
+	else
+		s.Append( (port == 443) ? "s://" : "://" );
+	s.Append(	hostname );
+	return s;	
 }
 
 boolean CSidekickNet::mountSDDrive()
@@ -360,7 +380,7 @@ boolean CSidekickNet::disableActiveNetwork(){
 	logger->Write( "CSidekickNet", LogNotice, 
 		"disableActiveNetwork: EOM"
 	);
-	
+	return false;
 }
 
 CUSBHCIDevice * CSidekickNet::getInitializedUSBHCIDevice()
@@ -403,7 +423,7 @@ boolean CSidekickNet::Prepare()
 		return false;
 	}
 
-	logger->Write ("CSidekickNet before USB", LogNotice, getSysMonInfo(1));
+	//logger->Write ("CSidekickNet before USB", LogNotice, getSysMonInfo(1));
 	if ( !initializeUSBHCIDevice())
 	{
 		setErrorMsgC64((char*)"Error on USB init. Sorry.");
@@ -431,7 +451,7 @@ boolean CSidekickNet::Prepare()
 	#endif
 	}
 	
-	logger->Write ("CSidekickNet before NetSubSystem", LogNotice, getSysMonInfo(1));
+	//logger->Write ("CSidekickNet before NetSubSystem", LogNotice, getSysMonInfo(1));
 	m_Net = new CNetSubSystem (0, 0, 0, 0, "Sidekick64", m_useWLAN ? NetDeviceTypeWLAN : NetDeviceTypeEthernet );
 	if (!m_Net->Initialize (false))
 	{
@@ -548,17 +568,12 @@ void CSidekickNet::handleQueuedNetworkAction()
 			//As a WLAN keep-alive, we auto queue a network event
 			//to avoid WLAN going into "zombie" disconnected mode
 			logger->Write ("CSidekickNet", LogNotice, "Triggering WLAN keep-alive request...");
-			if (isSktxSessionActive())
+			if (m_PlaygroundHTTPClient != 0)
 			{
-				CString path = getSktxPath( 92 );
-				char pResponseBuffer[4097];
-				HTTPGet ( m_PlaygroundHttpServerIP, m_PlaygroundHttpHost, m_PlaygroundHttpHostPort, path, pResponseBuffer, m_sktxResponseLength);
-
-			}
-			else if (m_PlaygroundHttpHost != 0)
-			{
-				char pResponseBuffer[4097];
-				HTTPGet ( m_PlaygroundHttpServerIP, m_PlaygroundHttpHost, m_PlaygroundHttpHostPort,  "/givemea404response.html", pResponseBuffer, m_sktxResponseLength);
+				char pResponseBuffer[4097]; //TODO: can we reuse something else existing here?
+				CString path = isSktxSessionActive() ? getSktxPath( 92 ) : "/givemea404response.html";
+				logger->Write( "netkeepalive", LogNotice, "%s%s", m_PlaygroundHttpHostLoggerString, path );
+				HTTPGet ( m_PlaygroundHTTPClient, path, pResponseBuffer, m_sktxResponseLength);
 			}
 			else
 				UpdateTime();
@@ -679,18 +694,17 @@ void CSidekickNet::cleanupDownloadData()
 	m_isDownloadReadyForLaunch = false;
 }
 
-
 boolean CSidekickNet::isDownloadReadyForLaunch()
 {
 	return m_isDownloadReadyForLaunch;
 }
 
-
-boolean CSidekickNet::isDownloadReady()
+boolean CSidekickNet::checkForFinishedDownload()
 {
 	boolean bTemp = m_isDownloadReady;
 	if ( m_isDownloadReady){
 		m_isDownloadReady = false;
+		m_isDownloadReadyForLaunch = false;
 		if ( m_bSaveCSDBDownload2SD )
 		{
 			logger->Write( "isDownloadReady", LogNotice, "Download is ready and we want to save it.");
@@ -710,6 +724,7 @@ boolean CSidekickNet::isDownloadReady()
 			{
 				//                    "012345678901234567890123456789012345XXXX"
 				setErrorMsgC64((char*)"     Saving and launching CRT file      ");
+				m_queueDelay = 15;
 			}
 
 		}
@@ -816,7 +831,7 @@ boolean CSidekickNet::UpdateTime(void)
 //file is being read and stored on the sd card
 boolean CSidekickNet::CheckForSidekickKernelUpdate()
 {
-	if ( strcmp(m_DevHttpHost, "") == 0 )
+	if ( m_DevServerHTTPClient == 0 )
 	{
 		logger->Write( "CSidekickNet::CheckForSidekickKernelUpdate", LogNotice, 
 			"Skipping check: Update server is not defined."
@@ -836,8 +851,8 @@ boolean CSidekickNet::CheckForSidekickKernelUpdate()
 	char pFileBuffer[nDocMaxSize+1];	// +1 for 0-termination
 	unsigned type = 0;
 	if ( m_SidekickKernelUpdatePath == 264 ) type = 1;
-		 
-	if ( HTTPGet ( m_DevHttpServerIP, m_DevHttpHost, m_DevHttpHostPort, kernelUpdatePath[type], pFileBuffer, iFileLength))
+	logger->Write( "CheckForSidekickKernelUpdate", LogNotice, "%s%s", m_DevHttpHostLoggerString, kernelUpdatePath[type] );
+	if ( HTTPGet ( m_DevServerHTTPClient, kernelUpdatePath[type], pFileBuffer, iFileLength))
 	{
 		logger->Write( "SidekickKernelUpdater", LogNotice, 
 			"Now trying to write kernel file to SD card, bytes to write: %i", iFileLength
@@ -846,7 +861,8 @@ boolean CSidekickNet::CheckForSidekickKernelUpdate()
 		m_pScheduler->MsSleep (500);
 		logger->Write( "SidekickKernelUpdater", LogNotice, "Finished writing kernel to SD card");
 	}
-	if ( HTTPGet ( m_DevHttpServerIP, m_DevHttpHost, m_DevHttpHostPort, prgUpdatePath[type], pFileBuffer, iFileLength))
+	logger->Write( "CheckForSidekickKernelUpdate", LogNotice, "%s%s", m_DevHttpHostLoggerString, prgUpdatePath[type] );
+	if ( HTTPGet ( m_DevServerHTTPClient, prgUpdatePath[type], pFileBuffer, iFileLength))
 	{
 		logger->Write( "SidekickKernelUpdater", LogNotice, 
 			"Now trying to write rpimenu.prg file to SD card, bytes to write: %i", iFileLength
@@ -861,9 +877,10 @@ boolean CSidekickNet::CheckForSidekickKernelUpdate()
 
 void CSidekickNet::getCSDBContent( const char * fileName, const char * filePath){
 	assert (m_isActive);
+	logger->Write( "getCSDBContent", LogNotice, "https://%s%s", CSDB_HOST, filePath );
 	unsigned iFileLength = 0;
 	char * pFileBuffer = new char[nDocMaxSize+1];	// +1 for 0-termination
-	HTTPGet ( m_CSDBServerIP, CSDB_HOST, 443, filePath, pFileBuffer, iFileLength);
+	HTTPGet ( m_CSDBHTTPClient, filePath, pFileBuffer, iFileLength);
 	logger->Write( "getCSDBContent", LogNotice, "HTTPS Document length: %i", iFileLength);
 }
 
@@ -871,7 +888,8 @@ void CSidekickNet::getCSDBBinaryContent( char * filePath ){
 	assert (m_isActive);
 	unsigned iFileLength = 0;
 	unsigned char prgDataLaunchTemp[ 1025*1024 ]; // TODO do we need this?
-	if (HTTPGet ( m_CSDBServerIP, CSDB_HOST, 443, (char *) filePath, (char *) prgDataLaunchTemp, iFileLength)){
+	logger->Write( "getCSDBBinaryContent", LogNotice, "https://%s%s", CSDB_HOST, filePath );
+	if (HTTPGet ( m_CSDBHTTPClient, (char *) filePath, (char *) prgDataLaunchTemp, iFileLength)){
 		m_isDownloadReady = true;
 		prgSizeLaunch = iFileLength;
 		memcpy( prgDataLaunch, prgDataLaunchTemp, iFileLength);
@@ -891,7 +909,7 @@ void CSidekickNet::getCSDBLatestReleases(){
 #ifdef WITH_RENDER
 
 void CSidekickNet::updateFrame(){
-	if (!m_isActive || m_PlaygroundHttpHost == 0)
+	if (!m_isActive || m_PlaygroundHTTPClient == 0)
 	{
 		return;
 	}
@@ -904,8 +922,8 @@ void CSidekickNet::updateFrame(){
 	Number.Format ("%05d", m_videoFrameCounter);
 	path.Append( Number );
 	path.Append( ".bin" );
-		
-	HTTPGet ( m_PlaygroundHttpServerIP, m_PlaygroundHttpHost, m_PlaygroundHttpHostPort, path, (char*) logo_bg_raw, iFileLength);
+	logger->Write( "updateFrame", LogNotice, "%s%s", m_PlaygroundHttpHostLoggerString, filePath );
+	HTTPGet ( m_PlaygroundHTTPClient, path, (char*) logo_bg_raw, iFileLength);
 	m_videoFrameCounter++;
 	if (m_videoFrameCounter > 1500) m_videoFrameCounter = 1;
 }
@@ -928,7 +946,8 @@ boolean CSidekickNet::isSktxSessionActive(){
 void CSidekickNet::launchSktxSession(){
 	char * pResponseBuffer = new char[33];	// +1 for 0-termination
 	CString path = "/sktx.php?session=new";
-	if (HTTPGet ( m_PlaygroundHttpServerIP, m_PlaygroundHttpHost, m_PlaygroundHttpHostPort, path, pResponseBuffer, m_sktxResponseLength))
+	logger->Write( "launchSktxSession", LogNotice, "%s%s", m_PlaygroundHttpHostLoggerString, path );
+	if (HTTPGet ( m_PlaygroundHTTPClient, path, pResponseBuffer, m_sktxResponseLength))
 	{
 		if ( m_sktxResponseLength > 25 && m_sktxResponseLength < 34){
 			m_sktxSessionID = pResponseBuffer;
@@ -961,7 +980,7 @@ CString CSidekickNet::getSktxPath( unsigned key )
 
 
 void CSidekickNet::updateSktxScreenContent(){
-	if (!m_isActive || m_PlaygroundHttpHost == 0)
+	if (!m_isActive || m_PlaygroundHTTPClient == 0)
 	{
 		m_sktxScreenContent = (unsigned char *) msgNoConnection; //FIXME: there's a memory leak in here
 		return;
@@ -975,7 +994,8 @@ void CSidekickNet::updateSktxScreenContent(){
 	
 	CString path = getSktxPath( m_sktxKey );
 	m_sktxKey = 0;
-	if (HTTPGet ( m_PlaygroundHttpServerIP, m_PlaygroundHttpHost, m_PlaygroundHttpHostPort, path, pResponseBuffer, m_sktxResponseLength))
+	logger->Write( "updateSktxScreenContent", LogNotice, "%s%s", m_PlaygroundHttpHostLoggerString, path );
+	if (HTTPGet ( m_PlaygroundHTTPClient, path, pResponseBuffer, m_sktxResponseLength))
 	{
 		if ( m_sktxResponseLength > 0 )
 		{
@@ -1096,6 +1116,7 @@ unsigned char * CSidekickNet::GetSktxScreenContentChunk( u16 & startPos, u8 &col
   return m_sktxScreenContentChunk;
 }
 
+/*
 boolean CSidekickNet::HTTPGet ( CIPAddress ip, const char * pHost, int port, const char * pFile, char *pBuffer, unsigned & nLengthRead)
 {
 	assert (m_isActive);
@@ -1121,6 +1142,22 @@ boolean CSidekickNet::HTTPGet ( CIPAddress ip, const char * pHost, int port, con
 		return false;
 	}
 	//logger->Write( "HTTPGet", LogDebug, "%u bytes received", nLength);
+	assert (nLength <= nDocMaxSize);
+	pBuffer[nLength] = '\0';
+	nLengthRead = nLength;
+	return true;
+}*/
+
+boolean CSidekickNet::HTTPGet (CHTTPClient * client, const char * pFile, char *pBuffer, unsigned & nLengthRead)
+{
+	assert (pBuffer != 0);
+	unsigned nLength = nDocMaxSize;
+	THTTPStatus Status = client->Get (pFile, (u8 *) pBuffer, &nLength);
+	if (Status != HTTPOK)
+	{
+		logger->Write( "HTTPGet", LogError, "Failed with status %u", Status);
+		return false;
+	}
 	assert (nLength <= nDocMaxSize);
 	pBuffer[nLength] = '\0';
 	nLengthRead = nLength;

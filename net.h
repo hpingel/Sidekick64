@@ -42,6 +42,7 @@
 
 #include <circle_glue.h>
 #include <circle-mbedtls/tlssimplesupport.h>
+#include <circle-mbedtls/httpclient.h>
 
 #ifdef WITH_WLAN
 //#include <fatfs/ff.h>
@@ -72,7 +73,8 @@ public:
 	boolean Initialize ( void );
 	boolean IsRunning ( void );
 	boolean CheckForSidekickKernelUpdate ();
-	boolean HTTPGet (CIPAddress, const char * pHost, int port, const char * pFile, char *pBuffer, unsigned & nLengthRead);
+	//boolean HTTPGet (CIPAddress, const char * pHost, int port, const char * pFile, char *pBuffer, unsigned & nLengthRead);
+	boolean HTTPGet (CHTTPClient * client, const char * pFile, char *pBuffer, unsigned & nLengthRead);
 	boolean UpdateTime (void);
 	#ifdef WITH_RENDER
 	void updateFrame();
@@ -93,9 +95,9 @@ public:
 	boolean isAnyNetworkActionQueued();
 	void saveDownload2SD();
 	void cleanupDownloadData();
-	boolean isDownloadReady();
+	boolean checkForFinishedDownload();
 	boolean isDownloadReadyForLaunch();
-	boolean isDevServerConfigured(){ return m_DevHttpHost != 0;};
+	boolean isDevServerConfigured(){ return m_DevServerHTTPClient != 0;};
 	boolean isWireless(){ return m_useWLAN;};
 	boolean RaspiHasOnlyWLAN();
 	boolean IsSktxScreenContentEndReached();
@@ -128,6 +130,7 @@ private:
 	
 	boolean Prepare ();
 	CIPAddress getIPForHost( const char * );
+	CString getLoggerStringForHost( CString hostname, int port);
 	
 	CUSBHCIDevice     * m_USBHCI;
 	CMachineInfo      * m_pMachineInfo; //used for c64screen to display raspi model name
@@ -140,16 +143,16 @@ private:
 #endif
 	FATFS             m_FileSystem;
 	CNetSubSystem     * m_Net;
-	CIPAddress        m_DevHttpServerIP;
-	CIPAddress        m_PlaygroundHttpServerIP;
-	CIPAddress        m_CSDBServerIP;
 	CIPAddress        m_NTPServerIP;
 #ifdef WITH_WLAN
 	CWPASupplicant    * m_WPASupplicant;	
 #endif
   CDNSClient        * m_DNSClient;
 	CTLSSimpleSupport * m_TLSSupport;
-
+	CHTTPClient       * m_CSDBHTTPClient;
+	CHTTPClient       * m_PlaygroundHTTPClient;
+	CHTTPClient       * m_DevServerHTTPClient;
+	
 	boolean m_useWLAN;
 	boolean m_isFSMounted;
 	boolean m_isActive;
@@ -173,10 +176,8 @@ private:
 	boolean m_bSaveCSDBDownload2SD;
 	TMachineModel m_PiModel;
 	unsigned char m_sktxScreenContentChunk[8192];
-	const char * m_DevHttpHost;
-	int m_DevHttpHostPort;
-	const char * m_PlaygroundHttpHost;
-	int m_PlaygroundHttpHostPort;
+	CString m_DevHttpHostLoggerString;
+	CString m_PlaygroundHttpHostLoggerString;
 	unsigned m_SidekickKernelUpdatePath;
 	unsigned m_queueDelay;
 	unsigned m_timestampOfLastWLANKeepAlive;
