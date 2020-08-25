@@ -73,8 +73,6 @@ public:
 	boolean Initialize ( void );
 	boolean IsRunning ( void );
 	boolean CheckForSidekickKernelUpdate ();
-	//boolean HTTPGet (CIPAddress, const char * pHost, int port, const char * pFile, char *pBuffer, unsigned & nLengthRead);
-	boolean HTTPGet (CHTTPClient * client, const char * pFile, char *pBuffer, unsigned & nLengthRead);
 	boolean UpdateTime (void);
 	#ifdef WITH_RENDER
 	void updateFrame();
@@ -88,16 +86,16 @@ public:
 	void queueSktxRefresh();
 	void handleQueuedNetworkAction();
 	void setSidekickKernelUpdatePath( unsigned type);
-	void getCSDBContent( const char *, const char *);
+//	void getCSDBContent( const char *, const char *);
 	void getCSDBBinaryContent( char *);
-	void getCSDBLatestReleases();
+//	void getCSDBLatestReleases();
 	u8 getCSDBDownloadLaunchType();
 	boolean isAnyNetworkActionQueued();
 	void saveDownload2SD();
 	void cleanupDownloadData();
 	boolean checkForFinishedDownload();
 	boolean isDownloadReadyForLaunch();
-	boolean isDevServerConfigured(){ return m_DevServerHTTPClient != 0;};
+	boolean isDevServerConfigured(){ return m_devServer.port != 0;};
 	boolean isWireless(){ return m_useWLAN;};
 	boolean RaspiHasOnlyWLAN();
 	boolean IsSktxScreenContentEndReached();
@@ -114,7 +112,7 @@ public:
 	void ResetSktxScreenContentChunks();
 	void setErrorMsgC64( char * msg );
 	void resetSktxSession();
-	void launchSktxSession();
+	boolean launchSktxSession();
 	void redrawSktxScreen();
 	boolean isSktxSessionActive();
 	CString getSktxPath( unsigned key );
@@ -127,10 +125,18 @@ public:
 	boolean disableActiveNetwork();
 
 private:
+
+	typedef struct  {
+		CString hostName;
+		int port;
+		CIPAddress ipAddress;
+		CString logPrefix;
+	} remoteHTTPTarget;
 	
 	boolean Prepare ();
 	CIPAddress getIPForHost( const char * );
 	CString getLoggerStringForHost( CString hostname, int port);
+	boolean HTTPGet (remoteHTTPTarget & target, const char * path, char *pBuffer, unsigned & nLengthRead);
 	
 	CUSBHCIDevice     * m_USBHCI;
 	CMachineInfo      * m_pMachineInfo; //used for c64screen to display raspi model name
@@ -149,9 +155,6 @@ private:
 #endif
   CDNSClient        * m_DNSClient;
 	CTLSSimpleSupport * m_TLSSupport;
-	CHTTPClient       * m_CSDBHTTPClient;
-	CHTTPClient       * m_PlaygroundHTTPClient;
-	CHTTPClient       * m_DevServerHTTPClient;
 	
 	boolean m_useWLAN;
 	boolean m_isFSMounted;
@@ -176,13 +179,12 @@ private:
 	boolean m_bSaveCSDBDownload2SD;
 	TMachineModel m_PiModel;
 	unsigned char m_sktxScreenContentChunk[8192];
-	CString m_DevHttpHostLoggerString;
-	CString m_PlaygroundHttpHostLoggerString;
 	unsigned m_SidekickKernelUpdatePath;
 	unsigned m_queueDelay;
 	unsigned m_timestampOfLastWLANKeepAlive;
 	unsigned m_skipSktxRefresh;
 	unsigned m_sktxScreenPosition;
+	char * m_sktxResponseBuffer[8193];
 	unsigned m_sktxResponseLength;
 	unsigned m_sktxResponseType;
 	unsigned m_sktxKey;
@@ -190,6 +192,10 @@ private:
 	unsigned m_videoFrameCounter;
 	size_t m_sysMonHeapFree;
 	unsigned m_sysMonCPUTemp;
+	
+	remoteHTTPTarget m_Playground;
+	remoteHTTPTarget m_CSDB;
+	remoteHTTPTarget m_devServer;
 };
 
 #endif
