@@ -1003,8 +1003,7 @@ void CSidekickNet::updateSktxScreenContent(){
 			return;
 		m_sktxSession = 1;
 	}
-	
-	m_sktxKey = 0;
+
 	char pResponseBuffer[4097]; //maybe turn this into member var when creating new sktx class?
 	if (HTTPGet ( m_Playground, getSktxPath( m_sktxKey ), pResponseBuffer, m_sktxResponseLength))
 	{
@@ -1069,6 +1068,7 @@ void CSidekickNet::updateSktxScreenContent(){
 	{
 		m_sktxScreenContent = (unsigned char *) msgNotFound;
 	}
+	m_sktxKey = 0;
 }
 
 boolean CSidekickNet::IsSktxScreenContentEndReached()
