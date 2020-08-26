@@ -530,7 +530,7 @@ void CSidekickNet::queueSktxRefresh()
 	//this has to be quick for multiplayer games (value 4)
 	//and can be slow for csdb browsing (value 16)
 	m_skipSktxRefresh++;
-	if ( m_skipSktxRefresh > 16 )
+	if ( m_skipSktxRefresh > 16 && !isAnyNetworkActionQueued())
 	{
 		m_skipSktxRefresh = 0;
 		queueSktxKeypress( 92 );
@@ -686,15 +686,15 @@ void CSidekickNet::saveDownload2SD()
 	downloadLogMsg.Append( "'" );
 	logger->Write( "saveDownload2SD", LogNotice, downloadLogMsg);
 	writeFile( logger, DRIVE, m_CSDBDownloadSavePath, (u8*) prgDataLaunch, prgSizeLaunch );
-	#ifndef WITH_RENDER
-	  clearErrorMsg(); //on c64screen, kernel menu
-	  redrawSktxScreen();
-  #endif
 	m_isDownloadReadyForLaunch = true;
 }
 
 void CSidekickNet::cleanupDownloadData()
 {
+	#ifndef WITH_RENDER
+	  clearErrorMsg(); //on c64screen, kernel menu
+	  redrawSktxScreen();
+  #endif
 	m_CSDBDownloadSavePath = "";
 	m_CSDBDownloadPath = (char*)"";
 	m_CSDBDownloadFilename = (char*)""; // this is used from kernel_menu to display name on screen
