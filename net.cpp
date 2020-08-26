@@ -508,7 +508,7 @@ void CSidekickNet::queueKernelUpdate()
 	m_queueDelay = 1;
 }
 
-
+//this is for kernel render
 void CSidekickNet::queueFrameRequest()
 {
  	m_isFrameQueued = true;
