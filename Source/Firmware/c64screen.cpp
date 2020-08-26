@@ -1756,12 +1756,17 @@ void handleC64( int k, u32 *launchKernel, char *FILENAME, char *filenameKernal, 
 		}
 		else if (k == 92 )
 		{
-			pSidekickNet->queueSktxRefresh();
+			//92 is pound key, this key is constantly sent by the rpimenu_net.prg
+			//automatically if the user doesn't press a key on the Commodore keyboard
+			pSidekickNet->queueSktxRefresh(); 
 			
 		}
 		else
 		{
-			pSidekickNet->queueSktxKeypress(k); //92 is pound key
+			//the user has actually manually pressed a key on the Commodore keyboard
+			//and it is not the pound key which is reserved to enable
+			//constant screen refresh
+			pSidekickNet->queueSktxKeypress(k);
 		}
 	} else
 #endif		
