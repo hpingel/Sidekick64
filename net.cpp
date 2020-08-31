@@ -903,7 +903,7 @@ void CSidekickNet::getCSDBBinaryContent( char * filePath ){
 		memcpy( prgDataLaunch, prgDataLaunchTemp, iFileLength);
 	}
 	else{
-		setErrorMsgC64((char*)"https request failed (press d).");
+		setErrorMsgC64((char*)"    HTTPS request failed (press D).");		
 	}
 	
 	logger->Write( "getCSDBBinaryContent", LogNotice, "HTTPS Document length: %i", iFileLength);
