@@ -44,16 +44,24 @@
 
 #include <circle/net/dnsclient.h>
 #include <circle/net/ntpclient.h>
+#ifdef WITH_TLS
 #include <circle-mbedtls/httpclient.h>
+#else
+#include <circle/net/httpclient.h>
+#endif
 
+#ifdef WITH_TLS
 #include <circle-mbedtls/tlssimpleclientsocket.h>
+#endif
 #include <circle/net/in.h>
 #include <circle/types.h>
 
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
+#ifdef WITH_TLS
 #include <mbedtls/error.h>
+#endif
 
 // Network configuration
 #ifndef WITH_WLAN
@@ -106,7 +114,9 @@ CSidekickNet::CSidekickNet( CInterruptSystem * pInterruptSystem, CTimer * pTimer
 		m_useWLAN (false),
 #endif
 		m_DNSClient(0),
+#ifdef WITH_TLS
 		m_TLSSupport(0),
+#endif		
 		m_isFSMounted( false ),
 		m_isActive( false ),
 		m_isPrepared( false ),
@@ -218,7 +228,9 @@ boolean CSidekickNet::Initialize()
 
 	m_DNSClient = new CDNSClient (m_Net);
 
+#ifdef WITH_TLS
 	m_TLSSupport = new CTLSSimpleSupport (m_Net);
+#endif
 
 	//TODO: the resolves could be postponed to the moment where the first 
 	//actual access takes place
@@ -1132,7 +1144,11 @@ boolean CSidekickNet::HTTPGet (remoteHTTPTarget & target, const char * path, cha
 	assert (pBuffer != 0);
 	unsigned nLength = nDocMaxSize;
 	logger->Write( "HTTPGet", LogNotice, target.logPrefix, path );
+#ifdef WITH_TLS	
 	CHTTPClient client( m_TLSSupport, target.ipAddress, target.port, target.hostName, target.port == 443 );
+#else
+	CHTTPClient client( m_Net, target.ipAddress, target.port, target.hostName );
+#endif	
 	THTTPStatus Status = client.Get (path, (u8 *) pBuffer, &nLength);
 	if (Status != HTTPOK)
 	{
