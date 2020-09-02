@@ -31,6 +31,8 @@
  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#define WITH_TLS
+
 #include <circle/interrupt.h>
 #include <circle/timer.h>
 #include <circle/logger.h>
@@ -40,12 +42,14 @@
 #include <circle/util.h>
 #include <SDCard/emmc.h>
 
+
 #include <circle_glue.h>
+#ifdef WITH_TLS
 #include <circle-mbedtls/tlssimplesupport.h>
 #include <circle-mbedtls/httpclient.h>
+#endif
 
 #ifdef WITH_WLAN
-//#include <fatfs/ff.h>
 #include <wlan/bcm4343.h>
 #include <wlan/hostap/wpa_supplicant/wpasupplicant.h>
 #endif
@@ -58,7 +62,9 @@
 
 extern CLogger *logger;
 
+#ifdef WITH_TLS
 using namespace CircleMbedTLS;
+#endif
 
 class CSidekickNet
 {
@@ -154,7 +160,10 @@ private:
 	CWPASupplicant    * m_WPASupplicant;	
 #endif
   CDNSClient        * m_DNSClient;
+#ifdef WITH_TLS	
 	CTLSSimpleSupport * m_TLSSupport;
+#endif	
+	CActLED							m_ActLED;
 	
 	boolean m_useWLAN;
 	boolean m_isFSMounted;
