@@ -241,7 +241,7 @@ boolean CSidekickNet::Initialize()
 	m_CSDB.logPrefix = getLoggerStringForHost( CSDB_HOST, 443);
 
 	m_NTPServerIP  = getIPForHost( NTPServer );
-	
+	/*
 	if ( strcmp(netUpdateHostName,"") != 0)
 	{
 		int port = netUpdateHostPort != 0 ? netUpdateHostPort: HTTP_PORT;
@@ -251,6 +251,7 @@ boolean CSidekickNet::Initialize()
 		m_devServer.logPrefix = getLoggerStringForHost( netUpdateHostName, port);
 	}
 	else
+	*/
 	{
 		m_devServer.hostName = "";
 		m_devServer.port = 0;
@@ -259,7 +260,7 @@ boolean CSidekickNet::Initialize()
 	if (strcmp(netSktxHostName,"") != 0)
 	{
 
-		if ( strcmp(netUpdateHostName, netSktxHostName) != 0)
+		//if ( strcmp(netUpdateHostName, netSktxHostName) != 0)
 		{
 			int port = netSktxHostPort != 0 ? netSktxHostPort: HTTP_PORT;
 			m_Playground.hostName = netSktxHostName;
@@ -267,8 +268,8 @@ boolean CSidekickNet::Initialize()
 			m_Playground.ipAddress = getIPForHost( netSktxHostName );
 			m_Playground.logPrefix = getLoggerStringForHost( netSktxHostName, port);
 		}
-		else
-			m_Playground = m_devServer;
+		//else
+		//	m_Playground = m_devServer;
 	}
 	else
 	{
@@ -472,8 +473,8 @@ boolean CSidekickNet::Prepare()
 		}
 	#endif
 	}
-	
-	m_Net = new CNetSubSystem (0, 0, 0, 0, "Sidekick64", m_useWLAN ? NetDeviceTypeWLAN : NetDeviceTypeEthernet );
+	CString hostname = ( strcmp( netSidekickHostname, "") != 0 ) ? netSidekickHostname : "sidekick64";
+	m_Net = new CNetSubSystem (0, 0, 0, 0, hostname, m_useWLAN ? NetDeviceTypeWLAN : NetDeviceTypeEthernet );
 	if (!m_Net->Initialize (false))
 	{
 		logger->Write( "CSidekickNet::Initialize", LogNotice, 
