@@ -128,7 +128,9 @@ public:
 	boolean unmountSDDrive();
 	CUSBHCIDevice * getInitializedUSBHCIDevice();
 	boolean initializeUSBHCIDevice();
-	boolean disableActiveNetwork();
+	boolean disableActiveNetwork(); //this doesn't work
+	boolean isRebootRequested();
+	void requestReboot();
 
 private:
 
@@ -150,11 +152,11 @@ private:
 	CInterruptSystem	* m_pInterrupt;
 	CTimer            * m_pTimer;
 	CEMMCDevice		    m_EMMC;
+	CNetSubSystem     * m_Net;
 #ifdef WITH_WLAN
 	CBcm4343Device    * m_WLAN;
 #endif
 	FATFS             m_FileSystem;
-	CNetSubSystem     * m_Net;
 	CIPAddress        m_NTPServerIP;
 #ifdef WITH_WLAN
 	CWPASupplicant    * m_WPASupplicant;	
@@ -178,6 +180,7 @@ private:
 	boolean m_isCSDBDownloadSavingQueued;
 	boolean m_isDownloadReady;
 	boolean m_isDownloadReadyForLaunch;
+	boolean m_isRebootRequested;
 	char * m_networkActionStatusMsg;
 	unsigned char * m_sktxScreenContent;
 	char * m_sktxSessionID;

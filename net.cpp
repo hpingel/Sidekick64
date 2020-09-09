@@ -129,6 +129,7 @@ CSidekickNet::CSidekickNet( CInterruptSystem * pInterruptSystem, CTimer * pTimer
 		m_isCSDBDownloadSavingQueued( false ),
 		m_isDownloadReady( false ),
 		m_isDownloadReadyForLaunch( false ),
+		m_isRebootRequested( false ),
 		m_networkActionStatusMsg( (char * ) ""),
 		m_sktxScreenContent( (unsigned char * ) ""),
 		m_sktxSessionID( (char * ) ""),
@@ -351,6 +352,25 @@ void CSidekickNet::checkForSupportedPiModel()
 		);
 	}
 }
+
+boolean CSidekickNet::isRebootRequested(){
+	if (!m_isRebootRequested)
+		return false;
+	setErrorMsgC64( (char*)"   Please wait, rebooting Sidekick...   " );
+	if ( m_queueDelay > 0 )
+		m_queueDelay--; //make sure there is one "cycle" to make error message visible
+	if ( m_queueDelay <= 0)
+		return true;
+	else
+		return false;
+}
+
+void CSidekickNet::requestReboot(){
+	m_queueDelay = 99999999;
+	m_isRebootRequested = true;
+	//setErrorMsgC64( (char*)"   Please wait, rebooting Sidekick...   " );
+}
+
 
 boolean CSidekickNet::disableActiveNetwork(){
 	//FIXME THIS DOES NOT WORK
