@@ -109,7 +109,7 @@ public:
 	boolean IsSktxScreenUnchanged();
 	char * getNetworkActionStatusMessage();
   unsigned char * getSktxScreenContent(){ return m_sktxScreenContent; };
-	unsigned char * GetSktxScreenContentChunk( u16 & startPos, u8 &color );
+	unsigned char * GetSktxScreenContentChunk( u16 & startPos, u8 &color, boolean & inverse );
 	CString getTimeString();
 	CString getUptime();
 	CNetConfig * GetNetConfig();

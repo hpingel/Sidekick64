@@ -101,10 +101,10 @@ extern unsigned char prgDataLaunch[ 1025*1024 ];
 
 CSidekickNet::CSidekickNet( CInterruptSystem * pInterruptSystem, CTimer * pTimer, CScheduler * pScheduler, CEMMCDevice * pEmmcDevice  )
 		:m_USBHCI (0),
-		m_pInterrupt(pInterruptSystem),
 		m_pScheduler(pScheduler),
-		m_pTimer (pTimer),
-		m_EMMC ( *pEmmcDevice),
+		m_pInterrupt(pInterruptSystem),
+		m_pTimer(pTimer),
+		m_EMMC( *pEmmcDevice),
 		m_Net (0),
 #ifdef WITH_WLAN		
 		m_WLAN (0),
@@ -1103,7 +1103,7 @@ void CSidekickNet::ResetSktxScreenContentChunks(){
 	m_sktxScreenPosition = 1;
 }
 
-unsigned char * CSidekickNet::GetSktxScreenContentChunk( u16 & startPos, u8 &color )
+unsigned char * CSidekickNet::GetSktxScreenContentChunk( u16 & startPos, u8 &color, boolean &inverse )
 {
 	if ( m_sktxScreenPosition >= m_sktxResponseLength ){
 		//logger->Write( "GetSktxScreenContentChunk", LogNotice, "End reached.");
@@ -1117,7 +1117,8 @@ unsigned char * CSidekickNet::GetSktxScreenContentChunk( u16 & startPos, u8 &col
 	u8 byteLength= 0;
 	u8 startPosL = m_sktxScreenContent[ m_sktxScreenPosition + 2 ];//screen pos x/y
 	u8 startPosM = m_sktxScreenContent[ m_sktxScreenPosition + 3 ];//screen pos x/y
-	color        = m_sktxScreenContent[ m_sktxScreenPosition + 4 ];//0-15, here we have some bits
+	color        = m_sktxScreenContent[ m_sktxScreenPosition + 4 ]&15;//0-15, here we have some bits
+	inverse    = m_sktxScreenContent[ m_sktxScreenPosition + 4 ]>>7;//test bit 8
 	
 	if ( type == 0)
 	 	byteLength = scrLength;
