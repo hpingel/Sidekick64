@@ -2255,13 +2255,14 @@ void printSKTXScreen()
 			u8 color = 0;
 			unsigned y = 0;
 			unsigned x = 0;
+			boolean inverse = false;
 			char * content;
 			while (!pSidekickNet->IsSktxScreenContentEndReached())
 			{
-				content = (char *) pSidekickNet->GetSktxScreenContentChunk( pos, color);
+				content = (char *) pSidekickNet->GetSktxScreenContentChunk( pos, color, inverse);
 				y = pos / 40;
 				x = pos % 40;
-				printC64( x, y+yOffset, content, color, 0, 4);//4 is undefined
+				printC64( x, y+yOffset, content, color, inverse ? 0x80 : 0, 4);//4 is undefined
 			}
 			pSidekickNet->ResetSktxScreenContentChunks();
 		}
