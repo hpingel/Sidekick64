@@ -1710,15 +1710,10 @@ void handleC64( int k, u32 *launchKernel, char *FILENAME, char *filenameKernal, 
 				setErrorMsg( pSidekickNet->getNetworkActionStatusMessage() );
 			}
 		}
-		/* THIS DOESN'T WORK AT ALL
 		else if ( k == 'q' || k == 'Q')
 		{
-			if (pSidekickNet->IsRunning())
-			{
-				pSidekickNet->disableActiveNetwork();
-				setErrorMsg( pSidekickNet->getNetworkActionStatusMessage() );
-			}
-		}*/
+			pSidekickNet->requestReboot();
+		}
 		
 		else if ( k == 'u' || k == 'U')
 		{
@@ -2203,6 +2198,7 @@ void printNetworkScreen()
 		}
 	}
 
+	printC64( x+1, y1+8, "Press >Q< for reboot ", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
 	printC64( x+1, y1+9, "Sidekick Kernel Info", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
 	printC64( x+1, y1+10, "Compiled on: " COMPILE_TIME, skinValues.SKIN_MENU_TEXT_ITEM, 0 );
 	printC64( x+1, y1+11, "Git branch : " GIT_BRANCH, skinValues.SKIN_MENU_TEXT_ITEM, 0 );
