@@ -42,6 +42,7 @@
 #include <circle/util.h>
 #include <SDCard/emmc.h>
 
+#include "webserver.h"
 
 #include <circle_glue.h>
 #ifdef WITH_TLS
@@ -166,6 +167,7 @@ private:
 	CTLSSimpleSupport * m_TLSSupport;
 #endif	
 	CActLED							m_ActLED;
+	CWebServer        * m_WebServer;
 	
 	boolean m_useWLAN;
 	boolean m_isFSMounted;
