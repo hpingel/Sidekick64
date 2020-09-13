@@ -277,7 +277,12 @@ boolean CSidekickNet::Initialize()
 		m_Playground.hostName = "";
 		m_Playground.port = 0;
 	}
-			
+	
+	if ( netEnableWebserver ){
+		logger->Write ("CSidekickNet::Initialize", LogNotice, "Starting webserver.");
+		m_WebServer = new CWebServer (m_Net, 80, KERNEL_MAX_SIZE + 2000, 0, this);
+	}
+				
 	#ifndef WITH_RENDER
 	 clearErrorMsg(); //on c64screen, kernel menu
   #endif
@@ -604,20 +609,23 @@ void CSidekickNet::handleQueuedNetworkAction()
 		if ( m_pTimer->GetUptime() - m_timestampOfLastWLANKeepAlive > 10)
 		{
 			#ifdef WITH_WLAN
-			//Circle42 offers experimental WLAN, but it seems to
-			//disconnect very quickly if there is not traffic.
-			//This can be very annoying.
-			//As a WLAN keep-alive, we auto queue a network event
-			//to avoid WLAN going into "zombie" disconnected mode
-			logger->Write ("CSidekickNet", LogNotice, "Triggering WLAN keep-alive request...");
-			if (m_Playground.port != 0)
+			if (!netEnableWebserver)
 			{
-				char pResponseBuffer[4097]; //TODO: can we reuse something else existing here?
-				CString path = isSktxSessionActive() ? getSktxPath( 92 ) : "/givemea404response.html";
-				HTTPGet ( m_Playground, path, pResponseBuffer, m_sktxResponseLength);
+				//Circle42 offers experimental WLAN, but it seems to
+				//disconnect very quickly if there is not traffic.
+				//This can be very annoying.
+				//As a WLAN keep-alive, we auto queue a network event
+				//to avoid WLAN going into "zombie" disconnected mode
+				logger->Write ("CSidekickNet", LogNotice, "Triggering WLAN keep-alive request...");
+				if (m_Playground.port != 0)
+				{
+					char pResponseBuffer[4097]; //TODO: can we reuse something else existing here?
+					CString path = isSktxSessionActive() ? getSktxPath( 92 ) : "/givemea404response.html";
+					HTTPGet ( m_Playground, path, pResponseBuffer, m_sktxResponseLength);
+				}
+				else
+					UpdateTime();
 			}
-			else
-				UpdateTime();
 			#endif
 			m_timestampOfLastWLANKeepAlive = m_pTimer->GetUptime();
 			logger->Write ("CSidekickNet", LogNotice, getSysMonInfo(1));
@@ -647,6 +655,9 @@ void CSidekickNet::handleQueuedNetworkAction()
 	}
 	else if (m_isActive)
 	{
+		if ( netEnableWebserver )
+			m_pScheduler->Yield (); // this is needed for webserver
+		
 		if ( m_isKernelUpdateQueued )
 		{
 			CheckForSidekickKernelUpdate();
