@@ -31,16 +31,16 @@
 
 // our content
 static const char s_Index[] =
-#include "index.h"
+#include "webcontent/index.h"
 ;
 
 static const u8 s_Style[] =
-#include "style.h"
+#include "webcontent/style.h"
 ;
 
 static const u8 s_Favicon[] =
 {
-#include "favicon.h"
+#include "webcontent/favicon.h"
 };
 
 static const char FromWebServer[] = "webserver";
