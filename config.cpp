@@ -164,7 +164,7 @@ int readConfig( CLogger *logger, char *DRIVE, char *FILENAME )
 					if ( strcmp( ptr, categoryNames[ i ] ) == 0 && ( ptr = strtok_r( NULL, "\"", &rest ) ) )
 					{
 						strncpy( menuText[ i ][ menuItems[ i ] ], ptr, 31 );
-						ptr = strtok_r( NULL, " \t", &rest );
+						ptr = ++rest; //take rest of string, cut off first char (blank), TODO:rtrim
 						strncpy( menuFile[ i ][ menuItems[ i ] ], ptr, 2047 );
 						menuItems[ i ] ++;
 					#ifdef DEBUG_OUT
