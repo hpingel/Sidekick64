@@ -128,7 +128,7 @@ int writeFile( CLogger *logger, const char *DRIVE, const char *FILENAME, u8 *dat
 	result = f_write( &file, data, size, &nBytesWritten );
 
 	if ( result != FR_OK )
-		logger->Write( "RaspiMenu", LogError, "Read error" );
+		logger->Write( "RaspiMenu", LogError, "Write error" );
 
 	if ( f_close( &file ) != FR_OK )
 		logger->Write( "RaspiMenu", LogPanic, "Cannot close file" );
