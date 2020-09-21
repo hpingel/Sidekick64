@@ -227,7 +227,7 @@ void CKernelLaunch::Run( void )
 	nBytesRead = 0; stage = 1;
 	u32 cycleCountC64_Stage1 = 0;
 	#ifdef WITH_NET		
-	unsigned netDelay = 90000000;
+	unsigned netDelay = 90000000; //TODO: improve this
 	#endif
 
 	// wait forever
@@ -277,6 +277,10 @@ void CKernelLaunch::Run( void )
 				m_InputPin.DisableInterrupt();
 				m_InputPin.DisconnectInterrupt();
 				EnableIRQs();
+				
+				if ( pSidekickNet->isReturnToMenuRequired())
+					return;
+				
 				kernelMenu->updateSystemMonitor();
 				pSidekickNet->handleQueuedNetworkAction();
 				DisableIRQs();
