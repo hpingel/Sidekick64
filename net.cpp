@@ -142,6 +142,7 @@ CSidekickNet::CSidekickNet( CInterruptSystem * pInterruptSystem, CTimer * pTimer
 		m_SidekickKernelUpdatePath(0),
 		m_queueDelay(0),
 		m_timestampOfLastWLANKeepAlive(0),
+		m_timeoutCounterStart(0),
 		m_skipSktxRefresh(0),
 		m_sktxScreenPosition(0),
 		m_sktxResponseLength(0),
@@ -358,20 +359,31 @@ void CSidekickNet::checkForSupportedPiModel()
 	}
 }
 
+boolean CSidekickNet::isReturnToMenuRequired(){
+	return m_isRebootRequested;
+}
+
 boolean CSidekickNet::isRebootRequested(){
 	if (!m_isRebootRequested)
 		return false;
-	setErrorMsgC64( (char*)"   Please wait, rebooting Sidekick...   " );
-	if ( m_queueDelay > 0 )
-		m_queueDelay--; //make sure there is one "cycle" to make error message visible
-	if ( m_queueDelay <= 0)
+	unsigned waitDuration = 12;
+	signed secondsLeft = waitDuration - (m_pTimer->GetUptime() - m_timeoutCounterStart);
+	if ( secondsLeft < 0 ) secondsLeft = 0;
+	CString msg = "  Please wait, rebooting Sidekick in ";
+	CString Number;
+	Number.Format ("%01d", secondsLeft-2 > 0 ? secondsLeft-2 : 0 );
+	msg.Append( Number );
+	msg.Append("  ");
+	const char * tmp = msg;
+	setErrorMsgC64( (char*) tmp );
+	if ( secondsLeft <= 0)
 		return true;
 	else
 		return false;
 }
 
 void CSidekickNet::requestReboot(){
-	m_queueDelay = 99999999;
+	m_timeoutCounterStart = m_pTimer->GetUptime();
 	m_isRebootRequested = true;
 	//setErrorMsgC64( (char*)"   Please wait, rebooting Sidekick...   " );
 }
@@ -609,7 +621,7 @@ void CSidekickNet::handleQueuedNetworkAction()
 		if ( m_pTimer->GetUptime() - m_timestampOfLastWLANKeepAlive > 10)
 		{
 			#ifdef WITH_WLAN
-			if (!netEnableWebserver)
+			//if (!netEnableWebserver)
 			{
 				//Circle42 offers experimental WLAN, but it seems to
 				//disconnect very quickly if there is not traffic.
@@ -657,7 +669,7 @@ void CSidekickNet::handleQueuedNetworkAction()
 	{
 		if ( netEnableWebserver )
 			m_pScheduler->Yield (); // this is needed for webserver
-		
+
 		if ( m_isKernelUpdateQueued )
 		{
 			CheckForSidekickKernelUpdate();
@@ -680,7 +692,7 @@ void CSidekickNet::handleQueuedNetworkAction()
 			logger->Write( "handleQueuedNetworkAction", LogNotice, "m_CSDBDownloadPath: %s", m_CSDBDownloadPath);		
 			m_isCSDBDownloadQueued = false;
 			getCSDBBinaryContent( m_CSDBDownloadPath );
-			m_isSktxKeypressQueued = false;
+			//m_isSktxKeypressQueued = false;
 		}
 	
 		else if (m_isCSDBDownloadSavingQueued)
@@ -942,9 +954,10 @@ void CSidekickNet::getCSDBBinaryContent( char * filePath ){
 	unsigned iFileLength = 0;
 	unsigned char prgDataLaunchTemp[ 1025*1024 ]; // TODO do we need this?
 	if ( HTTPGet ( m_CSDB, (char *) filePath, (char *) prgDataLaunchTemp, iFileLength)){
-		m_isDownloadReady = true;
-		prgSizeLaunch = iFileLength;
+		logger->Write( "getCSDBBinaryContent", LogNotice, "Got stuff via HTTPS, now doing memcpy");
 		memcpy( prgDataLaunch, prgDataLaunchTemp, iFileLength);
+		prgSizeLaunch = iFileLength;
+		m_isDownloadReady = true;
 	}
 	else{
 		setErrorMsgC64((char*)"    HTTPS request failed (press D).");		
@@ -1098,6 +1111,9 @@ void CSidekickNet::updateSktxScreenContent(){
 				m_CSDBDownloadExtension = extension;
 				m_CSDBDownloadFilename = CSDBFilename;
 				m_CSDBDownloadSavePath = savePath;
+			}
+			if ( m_sktxResponseType == 4) // background and border color change
+			{
 			}
 			else
 			{
