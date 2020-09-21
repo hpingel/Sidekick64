@@ -130,6 +130,7 @@ public:
 	CUSBHCIDevice * getInitializedUSBHCIDevice();
 	boolean initializeUSBHCIDevice();
 	boolean disableActiveNetwork(); //this doesn't work
+	boolean isReturnToMenuRequired();
 	boolean isRebootRequested();
 	void requestReboot();
 
@@ -196,6 +197,7 @@ private:
 	unsigned m_SidekickKernelUpdatePath;
 	unsigned m_queueDelay;
 	unsigned m_timestampOfLastWLANKeepAlive;
+	unsigned m_timeoutCounterStart;
 	unsigned m_skipSktxRefresh;
 	unsigned m_sktxScreenPosition;
 	char * m_sktxResponseBuffer[8193];
