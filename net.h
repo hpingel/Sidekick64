@@ -210,6 +210,7 @@ private:
 	unsigned m_videoFrameCounter;
 	size_t m_sysMonHeapFree;
 	unsigned m_sysMonCPUTemp;
+	unsigned m_loglevel;
 	
 	remoteHTTPTarget m_Playground;
 	remoteHTTPTarget m_CSDB;
