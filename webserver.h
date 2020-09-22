@@ -20,16 +20,12 @@
 #ifndef _webserver_h
 #define _webserver_h
 
-#include "net/httpdaemon.h"
+#include <circle/net/httpdaemon.h>
 
 class CWebServer; //forward declaration
 #include "net.h"
 
-#include <circle/actled.h>
-
 extern CLogger *logger;
-
-using namespace CircleMbedTLS;
 
 class CWebServer : public CHTTPDaemon
 {
@@ -48,7 +44,7 @@ public:
 	CHTTPDaemon *CreateWorker (CNetSubSystem *pNetSubSystem, CSocket *pSocket);
 
 	// provides our content
-	CircleMbedTLS::THTTPStatus GetContent (const char  *pPath,		// path of the file to be sent
+	::THTTPStatus GetContent (const char  *pPath,		// path of the file to be sent
 				const char  *pParams,		// parameters to GET ("" for none)
 				const char  *pFormData, 	// form data from POST ("" for none)
 			        u8	    *pBuffer,		// copy your content here

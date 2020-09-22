@@ -63,7 +63,7 @@ CHTTPDaemon *CWebServer::CreateWorker (CNetSubSystem *pNetSubSystem, CSocket *pS
 	return new CWebServer (pNetSubSystem, m_nPort, m_nMaxMultipartSize, pSocket, m_SidekickNet);
 }
 
-CircleMbedTLS::THTTPStatus CWebServer::GetContent (const char  *pPath,
+::THTTPStatus CWebServer::GetContent (const char  *pPath,
 					 const char  *pParams,
 					 const char  *pFormData,
 					 u8	     *pBuffer,
@@ -141,7 +141,7 @@ CircleMbedTLS::THTTPStatus CWebServer::GetContent (const char  *pPath,
 	}
 	else
 	{
-		return HTTPNotFound;
+		return ::HTTPNotFound;
 	}
 
 	assert (pLength != 0);
@@ -150,7 +150,7 @@ CircleMbedTLS::THTTPStatus CWebServer::GetContent (const char  *pPath,
 		CLogger::Get ()->Write (FromWebServer, LogError,
 					"Increase MAX_CONTENT_SIZE to at least %u", nLength);
 
-		return HTTPInternalServerError;
+		return ::HTTPInternalServerError;
 	}
 
 	assert (pBuffer != 0);
@@ -160,5 +160,5 @@ CircleMbedTLS::THTTPStatus CWebServer::GetContent (const char  *pPath,
 
 	*pLength = nLength;
 
-	return HTTPOK;
+	return ::HTTPOK;
 }

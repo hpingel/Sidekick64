@@ -1195,11 +1195,15 @@ boolean CSidekickNet::HTTPGet (remoteHTTPTarget & target, const char * path, cha
 	logger->Write( "HTTPGet", LogNotice, target.logPrefix, path );
 #ifdef WITH_TLS	
 	CHTTPClient client( m_TLSSupport, target.ipAddress, target.port, target.hostName, target.port == 443 );
+	CircleMbedTLS::THTTPStatus Status = client.Get (path, (u8 *) pBuffer, &nLength);
+	if (Status != CircleMbedTLS::HTTPOK)
 #else
 	CHTTPClient client( m_Net, target.ipAddress, target.port, target.hostName );
+	::THTTPStatus Status = client.Get (path, (u8 *) pBuffer, &nLength);
+	if (Status != ::HTTPOK)
+	
 #endif	
-	THTTPStatus Status = client.Get (path, (u8 *) pBuffer, &nLength);
-	if (Status != HTTPOK)
+
 	{
 		logger->Write( "HTTPGet", LogError, "Failed with status %u", Status);
 		return false;

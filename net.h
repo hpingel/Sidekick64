@@ -31,6 +31,8 @@
  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+//to use SidekickNet without circle-stdlib and without HTTPS,
+//this define WITH_TLS may be removed
 #define WITH_TLS
 
 #include <circle/interrupt.h>
