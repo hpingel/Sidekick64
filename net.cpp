@@ -152,7 +152,8 @@ CSidekickNet::CSidekickNet( CInterruptSystem * pInterruptSystem, CTimer * pTimer
 		m_videoFrameCounter(1),
 		//m_sysMonInfo(""),
 		m_sysMonHeapFree(0),
-		m_sysMonCPUTemp(0)
+		m_sysMonCPUTemp(0),
+		m_loglevel(1)
 		
 {
 	assert (m_pTimer != 0);
@@ -188,9 +189,10 @@ boolean CSidekickNet::Initialize()
 	
 	if (m_isActive)
 	{
-		logger->Write( "CSidekickNet::Initialize", LogNotice, 
-			"Strange: Network is already up and running. Skipping another init."
-		);
+		if (m_loglevel > 1)
+			logger->Write( "CSidekickNet::Initialize", LogNotice, 
+				"Strange: Network is already up and running. Skipping another init."
+			);
 		return true;
 	}
 	if ( !m_isPrepared )
@@ -209,16 +211,18 @@ boolean CSidekickNet::Initialize()
 	if (!m_Net->IsRunning () && sleepCount >= sleepLimit){
 		if ( m_useWLAN )
 		{
-			logger->Write( "CSidekickNet::Initialize", LogNotice, 
-				"WLAN connection can't be established - maybe poor reception?"
-			);
+			if (m_loglevel > 1)
+				logger->Write( "CSidekickNet::Initialize", LogNotice, 
+					"WLAN connection can't be established - maybe poor reception?"
+				);
 			//                    "012345678901234567890123456789012345XXXX"
 			setErrorMsgC64((char*)"   Wireless network connection failed!  ");
 		}
 		else{
-			logger->Write( "CSidekickNet::Initialize", LogNotice, 
-				"Network connection is not running - is ethernet cable not attached?"
-			);
+			if (m_loglevel > 1)
+				logger->Write( "CSidekickNet::Initialize", LogNotice, 
+					"Network connection is not running - is ethernet cable not attached?"
+				);
 			//                 "012345678901234567890123456789012345XXXX"
 			setErrorMsgC64((char*)"    Is the network cable plugged in?    ");
 		}
@@ -280,7 +284,8 @@ boolean CSidekickNet::Initialize()
 	}
 	
 	if ( netEnableWebserver ){
-		logger->Write ("CSidekickNet::Initialize", LogNotice, "Starting webserver.");
+		if (m_loglevel > 2)
+			logger->Write ("CSidekickNet::Initialize", LogNotice, "Starting webserver.");
 		m_WebServer = new CWebServer (m_Net, 80, KERNEL_MAX_SIZE + 2000, 0, this);
 	}
 				
@@ -302,7 +307,8 @@ CString CSidekickNet::getLoggerStringForHost( CString hostname, int port){
 		s.Append(Number);
 	}
 	s.Append("\%s");
-	logger->Write ("getLoggerStringForHost", LogNotice, s, "/dummyPath");
+	if (m_loglevel > 2)
+		logger->Write ("getLoggerStringForHost", LogNotice, s, "/dummyPath");
 	
 	return s;	
 }
@@ -311,14 +317,16 @@ boolean CSidekickNet::mountSDDrive()
 {
 	if ( m_isFSMounted )
 	{
-		logger->Write ("CSidekickNet::mountSDDrive", LogError,
-				"Drive %s is already mounted. Skip remount.", DRIVE);
+		if (m_loglevel > 1)
+			logger->Write ("CSidekickNet::mountSDDrive", LogError,
+					"Drive %s is already mounted. Skip remount.", DRIVE);
 		return true;
 	}
 	if (f_mount (&m_FileSystem, DRIVE, 1) != FR_OK)
 	{
-		logger->Write ("CSidekickNet::Initialize", LogError,
-				"Cannot mount drive: %s", DRIVE);
+		if (m_loglevel > 1)
+			logger->Write ("CSidekickNet::Initialize", LogError,
+					"Cannot mount drive: %s", DRIVE);
 		m_isFSMounted = false;
 	}
 	else
@@ -330,8 +338,9 @@ boolean CSidekickNet::unmountSDDrive()
 {
 	if (f_mount ( 0, DRIVE, 0) != FR_OK)
 	{
-		logger->Write ("CSidekickNet::unmountSDDrive", LogError,
-				"Cannot unmount drive: %s", DRIVE);
+		if (m_loglevel > 1)
+			logger->Write ("CSidekickNet::unmountSDDrive", LogError,
+					"Cannot unmount drive: %s", DRIVE);
 		return false;
 	}
 	m_isFSMounted = false;
@@ -347,15 +356,17 @@ void CSidekickNet::checkForSupportedPiModel()
 {
 	if ( m_PiModel != MachineModel3APlus && m_PiModel != MachineModel3BPlus)
 	{
-		logger->Write( "CSidekickNet::Initialize", LogWarning, 
-			"Warning: The model of Raspberry Pi you are using is not a model supported by Sidekick64/264!"
-		);
+		if (m_loglevel > 1)
+			logger->Write( "CSidekickNet::Initialize", LogWarning, 
+				"Warning: The model of Raspberry Pi you are using is not a model supported by Sidekick64/264!"
+			);
 	}
 	if ( RaspiHasOnlyWLAN() && !m_useWLAN )
 	{
-		logger->Write( "CSidekickNet::Initialize", LogNotice, 
-			"Your Raspberry Pi model (3A+) doesn't have an ethernet socket. This kernel is built for cable based network. Use WLAN kernel instead."
-		);
+		if (m_loglevel > 1)
+			logger->Write( "CSidekickNet::Initialize", LogNotice, 
+				"Your Raspberry Pi model (3A+) doesn't have an ethernet socket. This kernel is built for cable based network. Use WLAN kernel instead."
+			);
 	}
 }
 
@@ -596,17 +607,20 @@ u8 CSidekickNet::getCSDBDownloadLaunchType(){
 	if ( strcmp( m_CSDBDownloadExtension, "crt") == 0 )
 	{
 		type = 10;
-		logger->Write ("CSidekickNet::getCSDBDownloadLaunchType", LogNotice, "CRT detected: >%s<",m_CSDBDownloadExtension);
+		if (m_loglevel > 2)
+			logger->Write ("CSidekickNet::getCSDBDownloadLaunchType", LogNotice, "CRT detected: >%s<",m_CSDBDownloadExtension);
 	}
 	else if ( strcmp( m_CSDBDownloadExtension, "d64" ) == 0)
 	{
 		type = 0; //unused, we only save the file
-		logger->Write ("CSidekickNet::getCSDBDownloadLaunchType", LogNotice, "D64 detected: >%s<",m_CSDBDownloadExtension);
+		if (m_loglevel > 2)
+			logger->Write ("CSidekickNet::getCSDBDownloadLaunchType", LogNotice, "D64 detected: >%s<",m_CSDBDownloadExtension);
 	}
 	else //prg
 	{
 		type = 40;
-		logger->Write ("CSidekickNet::getCSDBDownloadLaunchType", LogNotice, "PRG detected: >%s<",m_CSDBDownloadExtension);
+		if (m_loglevel > 2)
+			logger->Write ("CSidekickNet::getCSDBDownloadLaunchType", LogNotice, "PRG detected: >%s<",m_CSDBDownloadExtension);
 	}
 	return type;
 }
@@ -628,7 +642,8 @@ void CSidekickNet::handleQueuedNetworkAction()
 				//This can be very annoying.
 				//As a WLAN keep-alive, we auto queue a network event
 				//to avoid WLAN going into "zombie" disconnected mode
-				logger->Write ("CSidekickNet", LogNotice, "Triggering WLAN keep-alive request...");
+				if (m_loglevel > 3)
+					logger->Write ("CSidekickNet", LogNotice, "Triggering WLAN keep-alive request...");
 				if (m_Playground.port != 0)
 				{
 					char pResponseBuffer[4097]; //TODO: can we reuse something else existing here?
@@ -640,7 +655,8 @@ void CSidekickNet::handleQueuedNetworkAction()
 			}
 			#endif
 			m_timestampOfLastWLANKeepAlive = m_pTimer->GetUptime();
-			logger->Write ("CSidekickNet", LogNotice, getSysMonInfo(1));
+			if (m_loglevel > 3)
+				logger->Write ("CSidekickNet", LogNotice, getSysMonInfo(1));
 		}
 	}
 	else if (m_isActive && isAnyNetworkActionQueued() && usesWLAN())
@@ -689,7 +705,8 @@ void CSidekickNet::handleQueuedNetworkAction()
 
 		else if (m_isCSDBDownloadQueued)
 		{
-			logger->Write( "handleQueuedNetworkAction", LogNotice, "m_CSDBDownloadPath: %s", m_CSDBDownloadPath);		
+			if (m_loglevel > 2)
+				logger->Write( "handleQueuedNetworkAction", LogNotice, "m_CSDBDownloadPath: %s", m_CSDBDownloadPath);		
 			m_isCSDBDownloadQueued = false;
 			getCSDBBinaryContent( m_CSDBDownloadPath );
 			//m_isSktxKeypressQueued = false;
@@ -697,7 +714,8 @@ void CSidekickNet::handleQueuedNetworkAction()
 	
 		else if (m_isCSDBDownloadSavingQueued)
 		{
-			logger->Write( "handleQueuedNetworkAction", LogNotice, "sCSDBDownloadSavingQueued");		
+			if (m_loglevel > 2)
+				logger->Write( "handleQueuedNetworkAction", LogNotice, "sCSDBDownloadSavingQueued");		
 			m_isCSDBDownloadSavingQueued = false;
 			saveDownload2SD();
 			m_isSktxKeypressQueued = false;
@@ -740,7 +758,8 @@ void CSidekickNet::saveDownload2SD()
 	downloadLogMsg.Append( " Bytes, path: '" );
 	downloadLogMsg.Append( m_CSDBDownloadSavePath );
 	downloadLogMsg.Append( "'" );
-	logger->Write( "saveDownload2SD", LogNotice, downloadLogMsg);
+	if (m_loglevel > 2)
+		logger->Write( "saveDownload2SD", LogNotice, downloadLogMsg);
 	writeFile( logger, DRIVE, m_CSDBDownloadSavePath, (u8*) prgDataLaunch, prgSizeLaunch );
 	m_isDownloadReadyForLaunch = true;
 }
@@ -771,7 +790,8 @@ boolean CSidekickNet::checkForFinishedDownload()
 		m_isDownloadReadyForLaunch = false;
 		if ( m_bSaveCSDBDownload2SD )
 		{
-			logger->Write( "isDownloadReady", LogNotice, "Download is ready and we want to save it.");
+			if (m_loglevel > 2)
+				logger->Write( "isDownloadReady", LogNotice, "Download is ready and we want to save it.");
 			m_isCSDBDownloadSavingQueued = true;
 			m_queueDelay = 5;
 			if ( strcmp( m_CSDBDownloadExtension, "d64" ) == 0)
@@ -856,12 +876,16 @@ CIPAddress CSidekickNet::getIPForHost( const char * host )
 	{
 		attempts++;
 		if (!m_DNSClient->Resolve (host, &ip))
-			logger->Write ("getIPForHost", LogWarning, "Cannot resolve: %s",host);
+		{
+			if (m_loglevel > 2)
+				logger->Write ("getIPForHost", LogWarning, "Cannot resolve: %s",host);
+		}
 		else
 		{
 			CString IPString;
 			ip.Format (&IPString);
-			logger->Write ("getIPForHost", LogNotice, "Resolved %s as %s",host, (const char* ) IPString);
+			if (m_loglevel > 2)
+				logger->Write ("getIPForHost", LogNotice, "Resolved %s as %s",host, (const char* ) IPString);
 			break;
 		}
 	}
@@ -875,20 +899,23 @@ boolean CSidekickNet::UpdateTime(void)
 	unsigned nTime = NTPClient.GetTime (m_NTPServerIP);
 	if (nTime == 0)
 	{
-		logger->Write ("CSidekickNet::UpdateTime", LogWarning, "Cannot get time from %s",
-					(const char *) NTPServer);
+		if (m_loglevel > 2)
+			logger->Write ("CSidekickNet::UpdateTime", LogWarning, "Cannot get time from %s",
+						(const char *) NTPServer);
 
 		return false;
 	}
 
 	if (CTimer::Get ()->SetTime (nTime, FALSE))
 	{
-		logger->Write ("CSidekickNet::UpdateTime", LogNotice, "System time updated");
+		if (m_loglevel > 2)
+			logger->Write ("CSidekickNet::UpdateTime", LogNotice, "System time updated");
 		return true;
 	}
 	else
 	{
-		logger->Write ("CSidekickNet::UpdateTime", LogWarning, "Cannot update system time");
+		if (m_loglevel > 1)
+			logger->Write ("CSidekickNet::UpdateTime", LogWarning, "Cannot update system time");
 	}
 	return false;
 }
@@ -954,7 +981,8 @@ void CSidekickNet::getCSDBBinaryContent( char * filePath ){
 	unsigned iFileLength = 0;
 	unsigned char prgDataLaunchTemp[ 1025*1024 ]; // TODO do we need this?
 	if ( HTTPGet ( m_CSDB, (char *) filePath, (char *) prgDataLaunchTemp, iFileLength)){
-		logger->Write( "getCSDBBinaryContent", LogNotice, "Got stuff via HTTPS, now doing memcpy");
+		if (m_loglevel > 2)
+			logger->Write( "getCSDBBinaryContent", LogNotice, "Got stuff via HTTPS, now doing memcpy");
 		memcpy( prgDataLaunch, prgDataLaunchTemp, iFileLength);
 		prgSizeLaunch = iFileLength;
 		m_isDownloadReady = true;
@@ -962,8 +990,8 @@ void CSidekickNet::getCSDBBinaryContent( char * filePath ){
 	else{
 		setErrorMsgC64((char*)"    HTTPS request failed (press D).");		
 	}
-	
-	logger->Write( "getCSDBBinaryContent", LogNotice, "HTTPS Document length: %i", iFileLength);
+	if (m_loglevel > 2)
+		logger->Write( "getCSDBBinaryContent", LogNotice, "HTTPS Document length: %i", iFileLength);
 }
 
 /*
@@ -1015,11 +1043,13 @@ boolean CSidekickNet::launchSktxSession(){
 		if ( m_sktxResponseLength > 25 && m_sktxResponseLength < 34){
 			m_sktxSessionID = pResponseBuffer;
 			m_sktxSessionID[m_sktxResponseLength] = '\0';
-			logger->Write( "launchSktxSession", LogNotice, "Got session id: %s", m_sktxSessionID);
+			if (m_loglevel > 2)
+				logger->Write( "launchSktxSession", LogNotice, "Got session id: %s", m_sktxSessionID);
 		}
 	}
 	else{
-		logger->Write( "launchSktxSession", LogError, "Could not get session id.");
+		if (m_loglevel > 1)
+			logger->Write( "launchSktxSession", LogError, "Could not get session id.");
 		m_sktxSessionID = (char*) "";
 		return false;
 	}
@@ -1192,7 +1222,8 @@ boolean CSidekickNet::HTTPGet (remoteHTTPTarget & target, const char * path, cha
 {
 	assert (pBuffer != 0);
 	unsigned nLength = nDocMaxSize;
-	logger->Write( "HTTPGet", LogNotice, target.logPrefix, path );
+	if (m_loglevel > 3)
+		logger->Write( "HTTPGet", LogNotice, target.logPrefix, path );
 #ifdef WITH_TLS	
 	CHTTPClient client( m_TLSSupport, target.ipAddress, target.port, target.hostName, target.port == 443 );
 	CircleMbedTLS::THTTPStatus Status = client.Get (path, (u8 *) pBuffer, &nLength);
@@ -1205,7 +1236,8 @@ boolean CSidekickNet::HTTPGet (remoteHTTPTarget & target, const char * path, cha
 #endif	
 
 	{
-		logger->Write( "HTTPGet", LogError, "Failed with status %u", Status);
+		if (m_loglevel > 1)
+			logger->Write( "HTTPGet", LogError, "Failed with status %u", Status);
 		return false;
 	}
 	assert (nLength <= nDocMaxSize);
