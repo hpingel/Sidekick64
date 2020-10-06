@@ -1007,7 +1007,7 @@ int main( void )
 				KernelEFRun( kernel.m_InputPin, &kernel, FILENAME, menuItemStr, false, NULL, 0 );else
 		 		KernelEFRun( kernel.m_InputPin, &kernel, FILENAME, menuItemStr, false, NULL, 0, filenameKernal ); 
 			break;
-		case 10:
+		case 11:
 			if ( subHasKernal == -1 )
 				KernelEFRun( kernel.m_InputPin, &kernel, FILENAME, menuItemStr, true, prgDataLaunch, prgSizeLaunch );else
 				KernelEFRun( kernel.m_InputPin, &kernel, FILENAME, menuItemStr, true, prgDataLaunch, prgSizeLaunch, filenameKernal );
