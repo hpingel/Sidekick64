@@ -597,31 +597,28 @@ void CKernelMenu::Run( void )
 			doneWithHandling = 1;
 			updateMenu = 0;
 			#ifdef WITH_NET
-			if ( pSidekickNet->IsRunning() )
-			{
-				m_InputPin.DisableInterrupt();
-				m_InputPin.DisconnectInterrupt();
-				EnableIRQs();
-				updateSystemMonitor();
-				m_SidekickNet.checkForFinishedDownload();
-				m_SidekickNet.handleQueuedNetworkAction();
-				
-				if ( m_SidekickNet.isDownloadReadyForLaunch()){
-					u32 launchKernelTmp = m_SidekickNet.getCSDBDownloadLaunchType();
-					if (launchKernelTmp > 0)
-					{
-						launchKernel = launchKernelTmp;
-						strcpy(FILENAME, m_SidekickNet.getCSDBDownloadFilename());
-						strcpy(menuItemStr, m_SidekickNet.getCSDBDownloadFilename());
-						lastChar = 0xfffffff;
-					}
-					m_SidekickNet.cleanupDownloadData();
+			m_InputPin.DisableInterrupt();
+			m_InputPin.DisconnectInterrupt();
+			EnableIRQs();
+			updateSystemMonitor();
+			m_SidekickNet.checkForFinishedDownload();
+			m_SidekickNet.handleQueuedNetworkAction();
+			
+			if ( m_SidekickNet.isDownloadReadyForLaunch()){
+				u32 launchKernelTmp = m_SidekickNet.getCSDBDownloadLaunchType();
+				if (launchKernelTmp > 0)
+				{
+					launchKernel = launchKernelTmp;
+					strcpy(FILENAME, m_SidekickNet.getCSDBDownloadFilename());
+					strcpy(menuItemStr, m_SidekickNet.getCSDBDownloadFilename());
+					lastChar = 0xfffffff;
 				}
-				
-				DisableIRQs();
-				m_InputPin.ConnectInterrupt( this->FIQHandler, this );
-				m_InputPin.EnableInterrupt( GPIOInterruptOnRisingEdge );
+				m_SidekickNet.cleanupDownloadData();
 			}
+			
+			DisableIRQs();
+			m_InputPin.ConnectInterrupt( this->FIQHandler, this );
+			m_InputPin.EnableInterrupt( GPIOInterruptOnRisingEdge );
 			#endif
 			
 		}
