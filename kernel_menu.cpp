@@ -592,28 +592,20 @@ void CKernelMenu::Run( void )
 			handleC64( lastChar, &launchKernel, FILENAME, filenameKernal, menuItemStr, &startForC128 );
 			lastChar = 0xfffffff;
 			refresh++;
-			//temperature = m_CPUThrottle.GetTemperature();
 			renderC64();
 			warmCache( pFIQ );
 			doneWithHandling = 1;
 			updateMenu = 0;
 			#ifdef WITH_NET
-//			if ( pSidekickNet->IsRunning() )
+			if ( pSidekickNet->IsRunning() )
+			{
 				m_InputPin.DisableInterrupt();
 				m_InputPin.DisconnectInterrupt();
 				EnableIRQs();
-				/*if ( bFilesystemHasChanged )
-				{
-					//re-scan SD card so that the newly downloaded files show up
-					extern void scanDirectories( char *DRIVE );
-					scanDirectories( (char *)DRIVE );
-					bFilesystemHasChanged = false;
-				}*/
 				updateSystemMonitor();
 				m_SidekickNet.checkForFinishedDownload();
 				m_SidekickNet.handleQueuedNetworkAction();
 				
-				//boolean bFilesystemHasChanged = false;
 				if ( m_SidekickNet.isDownloadReadyForLaunch()){
 					u32 launchKernelTmp = m_SidekickNet.getCSDBDownloadLaunchType();
 					if (launchKernelTmp > 0)
@@ -624,14 +616,12 @@ void CKernelMenu::Run( void )
 						lastChar = 0xfffffff;
 					}
 					m_SidekickNet.cleanupDownloadData();
-					//else
-					//	bFilesystemHasChanged = true; //only for d64
 				}
 				
 				DisableIRQs();
 				m_InputPin.ConnectInterrupt( this->FIQHandler, this );
 				m_InputPin.EnableInterrupt( GPIOInterruptOnRisingEdge );
-//			}
+			}
 			#endif
 			
 		}
