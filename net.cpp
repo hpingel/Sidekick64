@@ -204,7 +204,9 @@ boolean CSidekickNet::Initialize()
 	}
 	while (!m_Net->IsRunning () && sleepCount < sleepLimit)
 	{
-		m_pScheduler->MsSleep (100);
+		m_USBHCI->UpdatePlugAndPlay ();
+		m_pScheduler->Yield ();
+		m_pScheduler->MsSleep(100);
 		sleepCount ++;
 	}
 
@@ -469,7 +471,7 @@ boolean CSidekickNet::initializeUSBHCIDevice()
 {
 	if ( !m_isUSBPrepared)
 	{
-		m_USBHCI = new CUSBHCIDevice (m_pInterrupt, m_pTimer);
+		m_USBHCI = new CUSBHCIDevice (m_pInterrupt, m_pTimer, TRUE);
 		if (!m_USBHCI->Initialize ())
 		{
 			logger->Write( "CSidekickNet", LogNotice, 
