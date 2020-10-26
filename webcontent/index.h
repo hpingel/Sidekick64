@@ -20,7 +20,7 @@
 "\t\t\t\t<td><input type=\"file\" name=\"kernelimg\" /></td>\n"
 "\t\t\t</tr>\n"
 "\t\t\t<tr>\n"
-"\t\t\t\t<td><input type=\"submit\" value=\"Boot now!\" /></td>\n"
+"\t\t\t\t<td><input type=\"submit\" value=\"Upload and reboot\" /></td>\n"
 "\t\t\t</tr>\n"
 "\t\t\t</table>\n"
 "\t\t</form>\n"
