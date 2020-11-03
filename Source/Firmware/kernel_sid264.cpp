@@ -61,7 +61,7 @@ u32 CLOCKFREQ = 2*985248;
 u32 CLOCKFREQ_ADJ = 985248;
 
 //MUX zum TESTEN auf IO1
-//IO1 kann man sp�ter einsparen, in dem man verODERt mit ROMH (C1low und C1high) und dann die Adresse ausdekodiert
+//IO1 kann man spaeter einsparen, in dem man verODERt mit ROMH (C1low und C1high) und dann die Adresse ausdekodiert
 
 // SID types and digi boost (only for MOS8580)
 unsigned int SID_MODEL[2] = { 8580, 8580 };
@@ -1209,11 +1209,15 @@ void CKernel::FIQHandler (void *pParam)
 			u16 s1 = s & 65535;
 			u16 s2 = s >> 16;
 		
-			s32 d1 = (s32)( ( *(s16*)&s1 + 32768 ) * PWMRange ) >> 17;
-			s32 d2 = (s32)( ( *(s16*)&s2 + 32768 ) * PWMRange ) >> 17;
-			write32( ARM_PWM_DAT1, d1 );
-			write32( ARM_PWM_DAT2, d2 );
-		}
+		s32 d1 = (s32)( ( *(s16*)&s1 + 32768 ) * PWMRange ) >> 17;
+		s32 d2 = (s32)( ( *(s16*)&s2 + 32768 ) * PWMRange ) >> 17;
+		#if RASPPI >= 4
+		write32( ARM_PWM1_DAT1, d1 );
+		write32( ARM_PWM1_DAT2, d2 );
+		#else
+		write32( ARM_PWM_DAT1, d1 );
+		write32( ARM_PWM_DAT2, d2 );
+		#endif		
 		goto get_out;
 	} 
 	#endif

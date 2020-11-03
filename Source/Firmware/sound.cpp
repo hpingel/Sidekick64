@@ -105,7 +105,11 @@ u32 smpLast, smpCur;
 
 #ifdef USE_PWM_DIRECT
 
+#if RASPI >= 4
+#define CLOCK_FREQ			250000000
+#else
 #define CLOCK_FREQ			500000000
+#endif
 #define CLOCK_DIVIDER		2 
 
 // PWM control register
@@ -155,12 +159,20 @@ void initPWMOutput()
 
 	m_Clock->Start( CLOCK_DIVIDER );
 	CTimer::SimpleusDelay( 2000 );
-
+  #if RASPI >= 4
+	write32( ARM_PWM1_RNG1, PWMRange );
+	write32( ARM_PWM1_RNG2, PWMRange );
+	#else
 	write32( ARM_PWM_RNG1, PWMRange );
 	write32( ARM_PWM_RNG2, PWMRange );
+	#endif
 
 	u32 nControl = ARM_PWM_CTL_PWEN1 | ARM_PWM_CTL_PWEN2;
+	#if RASPI >= 4
+	write32( ARM_PWM1_CTL, nControl );
+	#else
 	write32( ARM_PWM_CTL, nControl );
+	#endif
 
 	CTimer::SimpleusDelay( 2000 );
 
@@ -257,4 +269,3 @@ void clearSoundBuffer()
 	memset( PCMBuffer, 0, sizeof( short ) * PCMBufferSize );
 #endif
 }
-

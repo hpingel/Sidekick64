@@ -1756,9 +1756,17 @@ void CKernel::FIQHandler (void *pParam)
 
 			s32 d1 = (s32)( ( *(s16*)&s1 + 32768 ) * PWMRange ) >> 17;
 			s32 d2 = (s32)( ( *(s16*)&s2 + 32768 ) * PWMRange ) >> 17;
+			/*if ( d1 < 0 ) d1 = 0;
+			if ( d1 >= (s32)PWMRange ) d1 = (s32)PWMRange - 1;
+			if ( d2 < 0 ) d2 = 0;
+			if ( d2 >= (s32)PWMRange ) d2 = (s32)PWMRange - 1;*/
+			#if RASPI >= 4
+			write32( ARM_PWM1_DAT1, d1 );
+			write32( ARM_PWM1_DAT2, d2 );
+			#else
 			write32( ARM_PWM_DAT1, d1 );
 			write32( ARM_PWM_DAT2, d2 );
-			RESET_CPU_CYCLE_COUNTER
+			#endif			RESET_CPU_CYCLE_COUNTER
 			return;
 		} 
 	}
