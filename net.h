@@ -94,7 +94,7 @@ public:
 	void queueSktxKeypress( int );
 	void queueSktxRefresh();
 	void handleQueuedNetworkAction();
-	void setSidekickKernelUpdatePath( unsigned type);
+//	void setSidekickKernelUpdatePath( unsigned type);
 //	void getCSDBContent( const char *, const char *);
 	void getCSDBBinaryContent( char *);
 //	void getCSDBLatestReleases();

@@ -169,10 +169,11 @@ void CSidekickNet::setErrorMsgC64( char * msg ){
 	#endif
 };
 
+/*
 void CSidekickNet::setSidekickKernelUpdatePath( unsigned type)
 {
 	m_SidekickKernelUpdatePath = type;
-};
+};*/
 
 boolean CSidekickNet::ConnectOnBoot (){
 	return netConnectOnBoot;
@@ -523,8 +524,9 @@ boolean CSidekickNet::Prepare()
 		}
 	#endif
 	}
-	CString hostname = ( strcmp( netSidekickHostname, "") != 0 ) ? netSidekickHostname : "sidekick64";
-	m_Net = new CNetSubSystem (0, 0, 0, 0, hostname, m_useWLAN ? NetDeviceTypeWLAN : NetDeviceTypeEthernet );
+	if ( strcmp( netSidekickHostname, "") == 0 )
+		strncpy( netSidekickHostname, "sidekick64", 255 );
+	m_Net = new CNetSubSystem (0, 0, 0, 0, netSidekickHostname, m_useWLAN ? NetDeviceTypeWLAN : NetDeviceTypeEthernet );
 	if (!m_Net->Initialize (false))
 	{
 		logger->Write( "CSidekickNet::Initialize", LogNotice, 

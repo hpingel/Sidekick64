@@ -353,7 +353,6 @@ boolean CKernelMenu::Initialize( void )
 	#ifdef WITH_NET
 		logger->Write ("SidekickKernel", LogNotice, "Compiled on: " COMPILE_TIME ", Git branch: " GIT_BRANCH ", Git hash: " GIT_HASH);
 		//TODO: this should be done in constructor of SideKickNet
-		m_SidekickNet.setSidekickKernelUpdatePath( 64 );
 		m_SidekickNet.checkForSupportedPiModel();	
 		m_SidekickNet.mountSDDrive();
 	#endif
@@ -409,7 +408,6 @@ boolean CKernelMenu::Initialize( void )
 		if ( m_SidekickNet.ConnectOnBoot() ){
 			boolean bNetOK = bOK ? m_SidekickNet.Initialize() : false;
 			if (bNetOK){
-				//m_SidekickNet.CheckForSidekickKernelUpdate();
 			  m_SidekickNet.UpdateTime();
 			}
 		}
