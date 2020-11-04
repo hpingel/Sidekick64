@@ -30,8 +30,8 @@
 
 #include "../config.h"
 #include "SidTuneCfg.h"
-#include "../SidPlay/SidTune.h"
-#include "../SidPlay/sidendian.h"
+#include "../sidplay/SidTune.h"
+#include "../sidplay/sidendian.h"
 
 #define PSID_ID 0x50534944
 #define RSID_ID 0x52534944

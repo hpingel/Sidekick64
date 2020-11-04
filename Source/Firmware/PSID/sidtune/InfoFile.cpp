@@ -40,9 +40,9 @@
 #   include <strstream>
 #endif
 
-#include "../SidPlay/SidTune.h"
+#include "../sidplay/SidTune.h"
 #include "SidTuneTools.h"
-#include "../SidPlay/sidendian.h"
+#include "../sidplay/sidendian.h"
 
 
 static const char text_format[] = "Raw plus SIDPLAY ASCII text file (SID)";

@@ -27,7 +27,7 @@
 #define TOOLS_H
 
 #include "SidTuneCfg.h"
-#include "../SidPlay/sidtypes.h"
+#include "../sidplay/sidtypes.h"
 
 #include "linux/kernel.h"
 #include <circle/util.h>
