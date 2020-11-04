@@ -25,9 +25,9 @@
 
 #include "../config.h"
 #include "SidTuneCfg.h"
-#include "../SidPlay/SidTune.h"
+#include "../sidplay/SidTune.h"
 #include "SidTuneTools.h"
-#include "../SidPlay/sidendian.h"
+#include "../sidplay/sidendian.h"
 #include "PP20.h"
 
 #ifdef HAVE_EXCEPTIONS

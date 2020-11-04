@@ -28,10 +28,10 @@
  */
 
 #include "../config.h"
-#include "../SidPlay/SidTune.h"
-#include "../SidPlay/SmartPtr.h"
+#include "../sidplay/SidTune.h"
+#include "../sidplay/SmartPtr.h"
 #include "SidTuneTools.h"
-#include "../SidPlay/sidendian.h"
+#include "../sidplay/sidendian.h"
 
 #ifdef HAVE_EXCEPTIONS
 #   include <new>

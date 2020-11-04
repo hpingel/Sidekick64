@@ -17,7 +17,7 @@
  */
 
 #include "SidTuneCfg.h"
-#include "../SidPlay/SidTune.h"
+#include "../sidplay/SidTune.h"
 #include "SidTuneTools.h"
 
 #define X00_ID_LEN   8

@@ -23,7 +23,7 @@
  */
 
 #include "SidTuneCfg.h"
-#include "../SidPlay/SidTune.h"
+#include "../sidplay/SidTune.h"
 #include "SidTuneTools.h"
 
 static const char _sidtune_format_prg[] = "Tape image file (PRG)";
