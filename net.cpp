@@ -73,12 +73,12 @@ static const int nTimeZone       = 2*60;		// minutes diff to UTC
 static const char DRIVE[] = "SD:";
 //nDocMaxSize reserved 2 MB as the maximum size of the kernel file
 static const unsigned nDocMaxSize = 2000*1024;
-static const char KERNEL_IMG_NAME[] = "kernel8.img";
-static const char KERNEL_SAVE_LOCATION[] = "SD:kernel8.img";
-static const char RPIMENU64_SAVE_LOCATION[] = "SD:C64/rpimenu_net.prg";
+//static const char KERNEL_IMG_NAME[] = "kernel8.img";
+//static const char KERNEL_SAVE_LOCATION[] = "SD:kernel8.img";
+//static const char RPIMENU64_SAVE_LOCATION[] = "SD:C64/rpimenu_net.prg";
 static const char msgNoConnection[] = "Sorry, no network connection!";
 static const char msgNotFound[]     = "Message not found. :(";
-static const char * prgUpdatePath[2] = { "/sidekick64/rpimenu_net.prg", "/sidekick264/rpimenu_net.prg"};
+//static const char * prgUpdatePath[2] = { "/sidekick64/rpimenu_net.prg", "/sidekick264/rpimenu_net.prg"};
 
 static const char CSDB_HOST[] = "csdb.dk";
 
@@ -86,9 +86,9 @@ static const char CSDB_HOST[] = "csdb.dk";
 #define DRIVE		"SD:"
 #define FIRMWARE_PATH	DRIVE "/firmware/"		// firmware files must be provided here
 #define CONFIG_FILE	DRIVE "/wpa_supplicant.conf"
-static const char * kernelUpdatePath[2] = { "/sidekick64/kernel8.wlan.img", "/sidekick264/kernel8.wlan.img"};
-#else
-static const char * kernelUpdatePath[2] = { "/sidekick64/kernel8.img", "/sidekick264/kernel8.img"};
+//static const char * kernelUpdatePath[2] = { "/sidekick64/kernel8.wlan.img", "/sidekick264/kernel8.wlan.img"};
+//#else
+//static const char * kernelUpdatePath[2] = { "/sidekick64/kernel8.img", "/sidekick264/kernel8.img"};
 #endif
 
 //temporary hack
@@ -122,7 +122,7 @@ CSidekickNet::CSidekickNet( CInterruptSystem * pInterruptSystem, CTimer * pTimer
 		m_isPrepared( false ),
 		m_isUSBPrepared( false ),
 		m_isNetworkInitQueued( false ),
-		m_isKernelUpdateQueued( false ),
+		//m_isKernelUpdateQueued( false ),
 		m_isFrameQueued( false ),
 		m_isSktxKeypressQueued( false ),
 		m_isCSDBDownloadQueued( false ),
@@ -139,7 +139,7 @@ CSidekickNet::CSidekickNet( CInterruptSystem * pInterruptSystem, CTimer * pTimer
 		m_CSDBDownloadSavePath( (char *)"" ),
 		m_bSaveCSDBDownload2SD( false ),
 		m_PiModel( m_pMachineInfo->Get()->GetMachineModel () ),
-		m_SidekickKernelUpdatePath(0),
+		//m_SidekickKernelUpdatePath(0),
 		m_queueDelay(0),
 		m_timestampOfLastWLANKeepAlive(0),
 		m_timeoutCounterStart(0),
@@ -565,13 +565,14 @@ void CSidekickNet::queueNetworkInit()
 	m_queueDelay = 1;
 }
 
+/*
 void CSidekickNet::queueKernelUpdate()
 { 
 	m_isKernelUpdateQueued = true; 
 	//                                 "012345678901234567890123456789012345XXXX"
 	m_networkActionStatusMsg = (char*) "  Trying to update kernel. Please wait. ";
 	m_queueDelay = 1;
-}
+}*/
 
 //this is for kernel render
 void CSidekickNet::queueFrameRequest()
@@ -689,16 +690,16 @@ void CSidekickNet::handleQueuedNetworkAction()
 	{
 		if ( netEnableWebserver )
 			m_pScheduler->Yield (); // this is needed for webserver
-
+/*
 		if ( m_isKernelUpdateQueued )
 		{
-			CheckForSidekickKernelUpdate();
+			//CheckForSidekickKernelUpdate();
 			m_isKernelUpdateQueued = false;
 			#ifndef WITH_RENDER
 			clearErrorMsg(); //on c64screen, kernel menu
 			#endif
 		}
-		
+*/		
 		else if (m_isFrameQueued)
 		{
 			#ifdef WITH_RENDER
@@ -738,7 +739,7 @@ boolean CSidekickNet::isAnyNetworkActionQueued()
 {
 	return
 			m_isNetworkInitQueued || 
-			m_isKernelUpdateQueued || 
+			//m_isKernelUpdateQueued || 
 			m_isFrameQueued || 
 			m_isSktxKeypressQueued || 
 			m_isCSDBDownloadQueued || 
@@ -926,6 +927,7 @@ boolean CSidekickNet::UpdateTime(void)
 
 //looks for the presence of a file on a pre-defined HTTP Server
 //file is being read and stored on the sd card
+/*
 boolean CSidekickNet::CheckForSidekickKernelUpdate()
 {
 	if ( m_devServer.port == 0 )
@@ -935,14 +937,14 @@ boolean CSidekickNet::CheckForSidekickKernelUpdate()
 		);
 		return false;
 	}
-	/*
+	
 	if ( strcmp( m_SidekickKernelUpdatePath,"") == 0 )
 	{
 		logger->Write( "CSidekickNet::CheckForSidekickKernelUpdate", LogNotice, 
 			"Skipping check: HTTP update path is not defined."
 		);
 		return false;
-	}*/
+	}
 	assert (m_isActive);
 	unsigned iFileLength = 0;
 	char pFileBuffer[nDocMaxSize+1];	// +1 for 0-termination
@@ -968,7 +970,7 @@ boolean CSidekickNet::CheckForSidekickKernelUpdate()
 	}
 	
 	return true;
-}
+}*/
 
 /*
 void CSidekickNet::getCSDBContent( const char * fileName, const char * filePath){
