@@ -81,7 +81,7 @@ public:
 	boolean usesWLAN (void);
 	boolean Initialize ( void );
 	boolean IsRunning ( void );
-	boolean CheckForSidekickKernelUpdate ();
+	//boolean CheckForSidekickKernelUpdate ();
 	boolean UpdateTime (void);
 	#ifdef WITH_RENDER
 	void updateFrame();
@@ -89,7 +89,7 @@ public:
 	void checkForSupportedPiModel();
 	void updateSktxScreenContent();
 	void queueNetworkInit();
-	void queueKernelUpdate();
+	//void queueKernelUpdate();
 	void queueFrameRequest();
 	void queueSktxKeypress( int );
 	void queueSktxRefresh();
@@ -178,7 +178,7 @@ private:
 	boolean m_isPrepared;
 	boolean m_isUSBPrepared;
 	boolean m_isNetworkInitQueued;
-	boolean m_isKernelUpdateQueued;
+	//boolean m_isKernelUpdateQueued;
 	boolean m_isFrameQueued;
 	boolean m_isSktxKeypressQueued;
 	boolean m_isCSDBDownloadQueued;
@@ -196,7 +196,7 @@ private:
 	boolean m_bSaveCSDBDownload2SD;
 	TMachineModel m_PiModel;
 	unsigned char m_sktxScreenContentChunk[8192];
-	unsigned m_SidekickKernelUpdatePath;
+	//unsigned m_SidekickKernelUpdatePath;
 	unsigned m_queueDelay;
 	unsigned m_timestampOfLastWLANKeepAlive;
 	unsigned m_timeoutCounterStart;
