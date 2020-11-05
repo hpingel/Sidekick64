@@ -184,7 +184,7 @@ endif
 
 ifeq ($(net), on)
 
-CONTENT	= webcontent/index.h webcontent/style.h webcontent/favicon.h
+CONTENT	= webcontent/index.h webcontent/tuning.h webcontent/style.h webcontent/favicon.h
 
 webserver.o: $(CONTENT)
 
