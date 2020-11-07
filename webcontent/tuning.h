@@ -9,7 +9,7 @@
 "<body>\n"
 "\t<h1>Sidekick64 Tuning</h1>\n"
 "\n"
-"\t\t<form action=\"tuning.html\" method=\"post\" enctype=\"multipart/form-data\">\n"
+"\t\t<form action=\"tuning.html\" method=\"post\" enctype=\"application/x-www-form-urlencoded\">\n"
 "\t\t<table>\n"
 "\t\t\t%s\n"
 "\t\t</table>\n"

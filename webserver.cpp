@@ -26,12 +26,18 @@
 #include <circle/version.h>
 #include <assert.h>
 #include "helpers.h"
+#include "config.h"
+#include "lowlevel_arm64.h"
 
 #define MAX_CONTENT_SIZE	4000
 
 // our content
 static const char s_Index[] =
 #include "webcontent/index.h"
+;
+
+static const char s_Tuning[] =
+#include "webcontent/tuning.h"
 ;
 
 static const u8 s_Style[] =
@@ -106,7 +112,7 @@ CHTTPDaemon *CWebServer::CreateWorker (CNetSubSystem *pNetSubSystem, CSocket *pS
 				m_SidekickNet->requestReboot();
 				//logger->Write( FromWebServer, LogNotice, "Reboot was requested.");
 				
-				pMsg = "Now booting...";
+				pMsg = "Now rebooting into new kernel...";
 			}
 			else
 			{
@@ -122,6 +128,149 @@ CHTTPDaemon *CWebServer::CreateWorker (CNetSubSystem *pNetSubSystem, CSocket *pS
 		assert (pMsg != 0);
 		String.Format (s_Index, pMsg, CIRCLE_VERSION_STRING,
 			       CMachineInfo::Get ()->GetMachineName ());
+
+		pContent = (const u8 *) (const char *) String;
+		nLength = String.GetLength ();
+		*ppContentType = "text/html; charset=UTF-8";
+	}
+	else if (strcmp (pPath, "/tuning.html") == 0)
+	{
+		const char *pMsg = 0;
+
+		const char *pPartHeader;
+		const u8 *pPartData;
+		unsigned nPartLength;
+		if (strcmp (pFormData, "") != 0)
+		{
+			unsigned l = strlen(pFormData);
+			pMsg = pFormData;
+			unsigned mode = 0;
+			unsigned key = 0;
+			unsigned vl = 0;
+			char *value;
+			for (unsigned c = 0; c <= l; c++)
+			{
+				if (mode == 0 )
+				{
+					if (c+1 < l && pFormData[c+1] == '=')
+					{
+						key = atoi( & pFormData[c]);
+						//logger->Write( FromWebServer, LogNotice, "Parsing form data: Key detected: %i", key);
+						value = "";
+						vl = 0;
+						mode = 1;
+					}
+					else
+					{
+						logger->Write( FromWebServer, LogNotice, "Parsing form data: Error on finding key. %i / %i", c,l);
+					}
+				}
+				if (mode == 1 && pFormData[c] == '=')
+				{
+					if ( c+1 < l)
+					{
+						//logger->Write( FromWebServer, LogNotice, "Parsing form data: Found = where we wanted it.");
+						mode = 2;
+					}
+					else
+					{
+						logger->Write( FromWebServer, LogNotice, "Parsing form data: Error looking for =.");
+						mode = 0;
+						break; //end of string, no value left after key =
+					}
+				}
+				else if (mode == 2)
+				{
+					if ( c == l || pFormData[c] == '&') //pFormData[c] == '\0')
+					{
+						logger->Write( FromWebServer, LogNotice, "Parsing form data: Assigning timingValue key=%i value=%i", key, atoi(value));
+						
+						if ( atoi(value) > 0)
+						switch( key )
+						{
+							case 0:
+								WAIT_FOR_SIGNALS = atoi(value);
+								break;
+							case 1:
+								WAIT_CYCLE_READ = atoi(value);
+								break;
+							case 2:
+								WAIT_CYCLE_WRITEDATA = atoi(value);
+								break;
+							case 3:
+								WAIT_CYCLE_READ_BADLINE = atoi(value);
+								break;
+							case 4:
+								WAIT_CYCLE_READ_VIC2 = atoi(value);
+								break;
+							case 5:
+								WAIT_CYCLE_WRITEDATA_VIC2 = atoi(value);
+								break;
+							case 6:
+								WAIT_CYCLE_MULTIPLEXER = atoi(value);
+								break;
+							case 7:
+								WAIT_CYCLE_MULTIPLEXER_VIC2 = atoi(value);
+								break;
+							case 8:
+								WAIT_TRIGGER_DMA = atoi(value);
+								break;
+							case 9:
+								WAIT_RELEASE_DMA = atoi(value);
+								break;
+						}
+						value = "";
+						vl = 0;
+						mode = 0;
+					}
+					else
+					{
+						value[vl] = pFormData[c];
+						value[++vl] = '\0';
+						mode = 2;
+					}
+				}
+			}
+		}
+		else
+		{
+			pMsg = "Please change params to your needs.";
+		}
+
+		
+		int timingValues[ 10 ] = { 40, 475, 470, 400, 425, 505, 200, 265, 600, 600 };
+
+		timingValues[ 0 ] = WAIT_FOR_SIGNALS;
+		timingValues[ 1 ] = WAIT_CYCLE_READ;
+		timingValues[ 2 ] = WAIT_CYCLE_WRITEDATA;
+		timingValues[ 3 ] = WAIT_CYCLE_READ_BADLINE;
+		timingValues[ 4 ] = WAIT_CYCLE_READ_VIC2;
+		timingValues[ 5 ] = WAIT_CYCLE_WRITEDATA_VIC2;
+		timingValues[ 6 ] = WAIT_CYCLE_MULTIPLEXER;
+		timingValues[ 7 ] = WAIT_CYCLE_MULTIPLEXER_VIC2;
+		timingValues[ 8 ] = WAIT_TRIGGER_DMA;
+		timingValues[ 9 ] = WAIT_RELEASE_DMA;
+
+		CString formMarkup = "";
+		formMarkup.Append("<pre>");
+		formMarkup.Append(pMsg);
+		formMarkup.Append("</pre>");
+		for ( int i = 0; i < 10; i++ )
+		{
+			formMarkup.Append("<tr><td>");
+			formMarkup.Append(timingNames[ i ]);
+			formMarkup.Append("</td><td><input type=\"text\" name=\"");
+			CString Number;
+			Number.Format ("%01d", i);
+			formMarkup.Append( Number );
+			formMarkup.Append("\" value=\"");
+			Number.Format ("%02d", timingValues[ i ]);
+			formMarkup.Append(Number);
+			formMarkup.Append("\"/></td></tr>\n");
+		}
+
+		assert (formMarkup != 0);
+		String.Format (s_Tuning, (const char *) formMarkup );
 
 		pContent = (const u8 *) (const char *) String;
 		nLength = String.GetLength ();
