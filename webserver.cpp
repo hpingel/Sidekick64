@@ -100,14 +100,15 @@ CHTTPDaemon *CWebServer::CreateWorker (CNetSubSystem *pNetSubSystem, CSocket *pS
 			    && nPartLength > 0)
 			{
 				assert (pPartData != 0);
-				
+				const char * filename = m_SidekickNet->usesWLAN() ? "SD:kernel_sk64_wlan.img" : "SD:kernel_sk64_net.img";
 				logger->Write( FromWebServer, LogNotice, "Saving kernel image to SD card, length: %u", nPartLength);
 				//logger->Write( FromWebServer, LogNotice, "Unlink.");
-				f_unlink("SD:kernel_sk64_net.img.old");
+				//f_unlink("SD:kernel_sk64_net.img.old");
 				//logger->Write( FromWebServer, LogNotice, "Rename.");
-				f_rename("SD:kernel_sk64_net.img","SD:kernel_sk64_net.img.old");
+				//f_rename("SD:kernel_sk64_net.img","SD:kernel_sk64_net.img.old");
 				//logger->Write( FromWebServer, LogNotice, "Write.");
-				writeFile( logger, "SD:", (const char *) "SD:kernel_sk64_net.img", (u8*) pPartData, nPartLength );
+				//writeFile( logger, "SD:", (const char *) "SD:kernel_sk64_net.img", (u8*) pPartData, nPartLength );
+				writeFile( logger, "SD:", filename, (u8*) pPartData, nPartLength );
 				//logger->Write( FromWebServer, LogNotice, "Written, now reboot requested.");
 				m_SidekickNet->requestReboot();
 				//logger->Write( FromWebServer, LogNotice, "Reboot was requested.");
