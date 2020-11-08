@@ -1043,8 +1043,13 @@ boolean CSidekickNet::isSktxSessionActive(){
 }
 
 boolean CSidekickNet::launchSktxSession(){
-	char * pResponseBuffer = new char[33];	// +1 for 0-termination	
-	if (HTTPGet ( m_Playground, "/sktx.php?session=new", pResponseBuffer, m_sktxResponseLength))
+	if (HTTPGet ( m_Playground, "/sktx.php?session=new", pResponseBuffer, m_sktxResponseLength))	
+	char * pResponseBuffer = new char[33];	// +1 for 0-termination
+//  use hostname as username for testing purposes
+//	CString urlSuffix = "/sktx.php?session=new&username=";
+//	urlSuffix.Append(netSidekickHostname);
+//	if (HTTPGet ( m_Playground, urlSuffix, pResponseBuffer, m_sktxResponseLength))
+	if (HTTPGet ( m_Playground, "/sktx.php?session=new", pResponseBuffer, m_sktxResponseLength))	
 	{
 		if ( m_sktxResponseLength > 25 && m_sktxResponseLength < 34){
 			m_sktxSessionID = pResponseBuffer;
