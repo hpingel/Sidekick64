@@ -700,7 +700,7 @@ void CSidekickNet::handleQueuedNetworkAction()
 			#endif
 		}
 */		
-		else if (m_isFrameQueued)
+		if (m_isFrameQueued)
 		{
 			#ifdef WITH_RENDER
 			updateFrame();
@@ -1043,7 +1043,6 @@ boolean CSidekickNet::isSktxSessionActive(){
 }
 
 boolean CSidekickNet::launchSktxSession(){
-	if (HTTPGet ( m_Playground, "/sktx.php?session=new", pResponseBuffer, m_sktxResponseLength))	
 	char * pResponseBuffer = new char[33];	// +1 for 0-termination
 //  use hostname as username for testing purposes
 //	CString urlSuffix = "/sktx.php?session=new&username=";
