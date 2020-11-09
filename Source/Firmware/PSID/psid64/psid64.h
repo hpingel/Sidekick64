@@ -36,9 +36,7 @@
 
 //#include "../sidplay/utils/SidDatabase.h"
 #include "../sidplay/utils/SidTuneMod.h"
-
-#define size_t int
-
+#include <circle/types.h>
 
 //////////////////////////////////////////////////////////////////////////////
 //                   F O R W A R D   D E C L A R A T O R S

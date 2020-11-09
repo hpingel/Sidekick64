@@ -33,6 +33,7 @@
 
 #include "net.h"
 #include "helpers.h"
+
 #ifndef IS264
 #include "c64screen.h"
 #include "config.h"
@@ -62,6 +63,9 @@
 #ifdef WITH_TLS
 #include <mbedtls/error.h>
 #endif
+
+#include "PSID/psid64/psid64.h"
+
 
 // Network configuration
 #ifndef WITH_WLAN
@@ -621,6 +625,39 @@ u8 CSidekickNet::getCSDBDownloadLaunchType(){
 		if (m_loglevel > 2)
 			logger->Write ("CSidekickNet::getCSDBDownloadLaunchType", LogNotice, "D64 detected: >%s<",m_CSDBDownloadExtension);
 	}
+	else if ( strcmp( m_CSDBDownloadExtension, "sid" ) == 0)
+	{
+		//FIXME: This was just copied from c64screen.cpp. Put this into a method.
+		Psid64 *psid64 = new Psid64();
+
+		psid64->setVerbose(false);
+		psid64->setUseGlobalComment(false);
+		psid64->setBlankScreen(false);
+		psid64->setNoDriver(false);
+
+		if ( !psid64->load( prgDataLaunch, prgSizeLaunch ) )
+		{
+			//return false;
+		}
+		//logger->Write( "exec", LogNotice, "psid loaded" );
+
+		// convert the PSID file
+		if ( !psid64->convert() ) 
+		{
+			//return false;
+		}
+		//logger->Write( "exec", LogNotice, "psid converted, prg size %d", psid64->m_programSize );
+
+		memcpy( &prgDataLaunch[0], psid64->m_programData, psid64->m_programSize );
+		prgSizeLaunch = psid64->m_programSize;
+
+		delete psid64;
+		//FIXME: End of copy
+		
+		type = 41;
+		if (m_loglevel > 2)
+			logger->Write ("CSidekickNet::getCSDBDownloadLaunchType", LogNotice, "SID detected: >%s<",m_CSDBDownloadExtension);
+	}
 	else //prg
 	{
 		type = 40;
@@ -808,6 +845,11 @@ boolean CSidekickNet::checkForFinishedDownload()
 			{
 				//                    "012345678901234567890123456789012345XXXX"
 				setErrorMsgC64((char*)"     Saving and launching PRG file      ");
+			}
+			else if ( strcmp( m_CSDBDownloadExtension, "sid" ) == 0)
+			{
+				//                    "012345678901234567890123456789012345XXXX"
+				setErrorMsgC64((char*)"     Saving and launching SID file      ");
 			}
 			else if ( strcmp( m_CSDBDownloadExtension, "crt" ) == 0)
 			{
@@ -1140,6 +1182,8 @@ void CSidekickNet::updateSktxScreenContent(){
 						savePath.Append( (const char *) "CRT/" );
 					else if ( strcmp(extension,"d64") == 0)
 						savePath.Append( (const char *) "D64/" );
+					else if ( strcmp(extension,"sid") == 0)
+						savePath.Append( (const char *) "SID/" );
 					savePath.Append(CSDBFilename);
 				}
 				m_sktxResponseLength = 1;
