@@ -95,12 +95,16 @@ CHTTPDaemon *CWebServer::CreateWorker (CNetSubSystem *pNetSubSystem, CSocket *pS
 		{
 			assert (pPartHeader != 0);
 			if (   strstr (pPartHeader, "name=\"kernelimg\"") != 0
-			    && strstr (pPartHeader, "filename=\"kernel") != 0
+			    && ( strstr (pPartHeader, "filename=\"kernel") != 0 || strstr (pPartHeader, "filename=\"rpi4_kernel") != 0 )
 			    && strstr (pPartHeader, ".img\"") != 0
 			    && nPartLength > 0)
 			{
 				assert (pPartData != 0);
-				const char * filename = m_SidekickNet->usesWLAN() ? "SD:kernel_sk64_wlan.img" : "SD:kernel_sk64_net.img";
+				#if RASPI >= 4
+  				const char * filename = m_SidekickNet->usesWLAN() ? "SD:rpi4_kernel_sk64_wlan.img" : "SD:rpi4_kernel_sk64_net.img";
+				#else
+  				const char * filename = m_SidekickNet->usesWLAN() ? "SD:kernel_sk64_wlan.img" : "SD:kernel_sk64_net.img";
+				#endif
 				logger->Write( FromWebServer, LogNotice, "Saving kernel image to SD card, length: %u", nPartLength);
 				//logger->Write( FromWebServer, LogNotice, "Unlink.");
 				//f_unlink("SD:kernel_sk64_net.img.old");
