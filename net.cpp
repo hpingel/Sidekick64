@@ -621,7 +621,17 @@ u8 CSidekickNet::getCSDBDownloadLaunchType(){
 	}
 	else if ( strcmp( m_CSDBDownloadExtension, "d64" ) == 0)
 	{
-		type = 0; //unused, we only save the file
+		//with the new d2ef approach available within Sidekick we try to launch the D64
+		//as an dynamically created EF crt!
+		type = 11;
+		extern int createD2EF( unsigned char *diskimage, int imageSize, unsigned char *cart, int build, int mode, int autostart );
+		unsigned char *cart = new unsigned char[ 1024 * 1025 ];
+		u32 crtSize = createD2EF( prgDataLaunch, prgSizeLaunch, cart, 2, 0, true );
+		memcpy( &prgDataLaunch[0], cart, crtSize );
+		prgSizeLaunch = crtSize;
+		m_CSDBDownloadFilename = "SD:C64/temp.crt"; //this is only an irrelevant dummy name ending wih crt
+		
+		//type = 0; //unused, we only save the file
 		if (m_loglevel > 2)
 			logger->Write ("CSidekickNet::getCSDBDownloadLaunchType", LogNotice, "D64 detected: >%s<",m_CSDBDownloadExtension);
 	}
