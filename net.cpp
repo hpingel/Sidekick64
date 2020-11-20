@@ -98,17 +98,18 @@ static const char CSDB_HOST[] = "csdb.dk";
 //temporary hack
 
 extern u32 prgSizeLaunch;
-extern unsigned char prgDataLaunch[ 1025*1024 ];
+extern unsigned char prgDataLaunch[ 1025*1024 ] AAA;
 #ifdef WITH_RENDER
   extern unsigned char logo_bg_raw[32000];
 #endif
 
-CSidekickNet::CSidekickNet( CInterruptSystem * pInterruptSystem, CTimer * pTimer, CScheduler * pScheduler, CEMMCDevice * pEmmcDevice  )
+CSidekickNet::CSidekickNet( CInterruptSystem * pInterruptSystem, CTimer * pTimer, CScheduler * pScheduler, CEMMCDevice * pEmmcDevice, CKernelMenu * pKernelMenu  )
 		:m_USBHCI (0),
 		m_pScheduler(pScheduler),
 		m_pInterrupt(pInterruptSystem),
 		m_pTimer(pTimer),
 		m_EMMC( *pEmmcDevice),
+		m_kMenu(pKernelMenu),
 		m_Net (0),
 #ifdef WITH_WLAN		
 		m_WLAN (0),
@@ -384,7 +385,7 @@ boolean CSidekickNet::isReturnToMenuRequired(){
 boolean CSidekickNet::isRebootRequested(){
 	if (!m_isRebootRequested)
 		return false;
-	unsigned waitDuration = 12;
+	unsigned waitDuration = 8;
 	signed secondsLeft = waitDuration - (m_pTimer->GetUptime() - m_timeoutCounterStart);
 	if ( secondsLeft < 0 ) secondsLeft = 0;
 	CString msg = "  Please wait, rebooting Sidekick in ";
@@ -600,7 +601,7 @@ void CSidekickNet::queueSktxRefresh()
 	//this has to be quick for multiplayer games (value 4)
 	//and can be slow for csdb browsing (value 16)
 	m_skipSktxRefresh++;
-	if ( m_skipSktxRefresh > 16 && !isAnyNetworkActionQueued())
+	if ( m_skipSktxRefresh >8 && !isAnyNetworkActionQueued())
 	{
 		m_skipSktxRefresh = 0;
 		queueSktxKeypress( 92 );
@@ -754,7 +755,6 @@ void CSidekickNet::handleQueuedNetworkAction()
 			#endif
 			m_isFrameQueued = false;
 		}
-
 		else if (m_isCSDBDownloadQueued)
 		{
 			if (m_loglevel > 2)
@@ -763,6 +763,7 @@ void CSidekickNet::handleQueuedNetworkAction()
 			getCSDBBinaryContent( m_CSDBDownloadPath );
 			//m_isSktxKeypressQueued = false;
 		}
+		/*
 	
 		else if (m_isCSDBDownloadSavingQueued)
 		{
@@ -772,7 +773,7 @@ void CSidekickNet::handleQueuedNetworkAction()
 			saveDownload2SD();
 			m_isSktxKeypressQueued = false;
 		}
-		
+*/		
 		//handle keypress anyway even if we have downloaded or saved something
 		else if (m_isSktxKeypressQueued)
 		{
@@ -780,6 +781,19 @@ void CSidekickNet::handleQueuedNetworkAction()
 			m_isSktxKeypressQueued = false;
 		}
 	}
+}
+
+boolean CSidekickNet::checkForSaveableDownload(){
+	if (m_isCSDBDownloadSavingQueued)
+	{
+		if (m_loglevel > 0)
+			logger->Write( "checkForSaveableDownload", LogNotice, "sCSDBDownloadSavingQueued");		
+		m_isCSDBDownloadSavingQueued = false;
+		saveDownload2SD();
+		m_isSktxKeypressQueued = false;
+		return true;
+	}
+	return false;
 }
 
 boolean CSidekickNet::isAnyNetworkActionQueued()
@@ -803,16 +817,19 @@ void CSidekickNet::saveDownload2SD()
 	}
 	
 	m_isCSDBDownloadSavingQueued = false;
-	CString downloadLogMsg = "Writing download to SD card, bytes to write: ";
-	CString Number;
-	Number.Format ("%02d", prgSizeLaunch);
-	downloadLogMsg.Append( Number );
-	downloadLogMsg.Append( " Bytes, path: '" );
-	downloadLogMsg.Append( m_CSDBDownloadSavePath );
-	downloadLogMsg.Append( "'" );
 	if (m_loglevel > 2)
+	{
+		CString downloadLogMsg = "Writing download to SD card, bytes to write: ";
+		CString Number;
+		Number.Format ("%02d", prgSizeLaunch);
+		downloadLogMsg.Append( Number );
+		downloadLogMsg.Append( " Bytes, path: '" );
+		downloadLogMsg.Append( m_CSDBDownloadSavePath );
+		downloadLogMsg.Append( "'" );
 		logger->Write( "saveDownload2SD", LogNotice, downloadLogMsg);
+	}
 	writeFile( logger, DRIVE, m_CSDBDownloadSavePath, (u8*) prgDataLaunch, prgSizeLaunch );
+	logger->Write( "saveDownload2SD", LogNotice, "Finished writing.");
 	m_isDownloadReadyForLaunch = true;
 }
 
@@ -1037,13 +1054,17 @@ void CSidekickNet::getCSDBContent( const char * fileName, const char * filePath)
 void CSidekickNet::getCSDBBinaryContent( char * filePath ){
 	assert (m_isActive);
 	unsigned iFileLength = 0;
+
+
 	unsigned char prgDataLaunchTemp[ 1025*1024 ]; // TODO do we need this?
 	if ( HTTPGet ( m_CSDB, (char *) filePath, (char *) prgDataLaunchTemp, iFileLength)){
-		if (m_loglevel > 2)
+		if (m_loglevel > 3)
 			logger->Write( "getCSDBBinaryContent", LogNotice, "Got stuff via HTTPS, now doing memcpy");
 		memcpy( prgDataLaunch, prgDataLaunchTemp, iFileLength);
 		prgSizeLaunch = iFileLength;
 		m_isDownloadReady = true;
+		if (m_loglevel > 3)
+			logger->Write( "getCSDBBinaryContent", LogNotice, "memcpy finished.");
 	}
 	else{
 		setErrorMsgC64((char*)"    HTTPS request failed (press D).");		
@@ -1335,4 +1356,8 @@ CString CSidekickNet::getSysMonInfo( unsigned details )
 		m_sysMonInfo.Append(" kb free");
 	}
 	return m_sysMonInfo;
+}
+
+void CSidekickNet::requireCacheWellnessTreatment(){
+	m_kMenu->doCacheWellnessTreatment();
 }

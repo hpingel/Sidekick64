@@ -599,10 +599,9 @@ void CKernelMenu::Run( void )
 			m_InputPin.DisconnectInterrupt();
 			EnableIRQs();
 			updateSystemMonitor();
-			m_SidekickNet.checkForFinishedDownload();
 			m_SidekickNet.handleQueuedNetworkAction();
-			
 			if ( m_SidekickNet.isDownloadReadyForLaunch()){
+				logger->Write( "RaspiMenu", LogNotice, "Download is ready for launch" );
 				u32 launchKernelTmp = m_SidekickNet.getCSDBDownloadLaunchType();
 				if (launchKernelTmp > 0)
 				{
@@ -611,9 +610,19 @@ void CKernelMenu::Run( void )
 					strcpy(menuItemStr, m_SidekickNet.getCSDBDownloadFilename());
 					lastChar = 0xfffffff;
 				}
-				m_SidekickNet.cleanupDownloadData();
+				m_SidekickNet.cleanupDownloadData(); //this also removes the status message
+				doCacheWellnessTreatment();
 			}
-			
+			if ( m_SidekickNet.checkForFinishedDownload())
+			{
+				//HTTP download is finished, but we haven't saved it yet
+				//a status message is being put onto the screen for the user
+				doCacheWellnessTreatment();
+			}
+
+ 			//if there is an unsaved download we save it to sd card
+			m_SidekickNet.checkForSaveableDownload();
+
 			DisableIRQs();
 			m_InputPin.ConnectInterrupt( this->FIQHandler, this );
 			m_InputPin.EnableInterrupt( GPIOInterruptOnRisingEdge );
@@ -627,6 +636,19 @@ void CKernelMenu::Run( void )
 
 	// and we'll never reach this...
 	//m_InputPin.DisableInterrupt();
+}
+
+void CKernelMenu::doCacheWellnessTreatment(){
+	logger->Write( "RaspiMenu", LogNotice, "doCacheWellnessTreatment" );
+	
+	CleanDataCache();
+	InvalidateDataCache();
+	InvalidateInstructionCache();
+	pFIQ = (void*)this->FIQHandler;
+	warmCache( pFIQ );
+	DELAY(1<<18);
+	warmCache( pFIQ );
+	DELAY(1<<18);
 }
 
 void CKernelMenu::FIQHandler (void *pParam)

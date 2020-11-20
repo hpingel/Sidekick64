@@ -60,6 +60,10 @@
 #include <circle/net/netsubsystem.h>
 #include <circle/net/dnsclient.h>
 
+#include "lowlevel_arm64.h"
+class CKernelMenu;
+#include "kernel_menu.h"
+
 #ifndef _sidekicknet_h
 #define _sidekicknet_h
 
@@ -72,7 +76,7 @@ using namespace CircleMbedTLS;
 class CSidekickNet
 {
 public:
-	CSidekickNet( CInterruptSystem *, CTimer *, CScheduler *, CEMMCDevice * );
+	CSidekickNet( CInterruptSystem *, CTimer *, CScheduler *, CEMMCDevice *, CKernelMenu * );
 	~CSidekickNet( void )
 	{
 	};
@@ -103,6 +107,7 @@ public:
 	void saveDownload2SD();
 	void cleanupDownloadData();
 	boolean checkForFinishedDownload();
+	boolean checkForSaveableDownload();
 	boolean isDownloadReadyForLaunch();
 	boolean isDevServerConfigured(){ return m_devServer.port != 0;};
 	boolean isWireless(){ return m_useWLAN;};
@@ -135,6 +140,7 @@ public:
 	boolean isReturnToMenuRequired();
 	boolean isRebootRequested();
 	void requestReboot();
+	void requireCacheWellnessTreatment();
 
 private:
 
@@ -156,6 +162,7 @@ private:
 	CInterruptSystem	* m_pInterrupt;
 	CTimer            * m_pTimer;
 	CEMMCDevice		    m_EMMC;
+	CKernelMenu       * m_kMenu;
 	CNetSubSystem     * m_Net;
 #ifdef WITH_WLAN
 	CBcm4343Device    * m_WLAN;
@@ -215,6 +222,7 @@ private:
 	remoteHTTPTarget m_Playground;
 	remoteHTTPTarget m_CSDB;
 	remoteHTTPTarget m_devServer;
+	
 };
 
 #endif
