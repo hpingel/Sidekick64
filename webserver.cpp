@@ -100,6 +100,9 @@ CHTTPDaemon *CWebServer::CreateWorker (CNetSubSystem *pNetSubSystem, CSocket *pS
 			    && nPartLength > 0)
 			{
 				assert (pPartData != 0);
+				
+				m_SidekickNet->requireCacheWellnessTreatment();
+				
 				#if RASPI >= 4
   				const char * filename = m_SidekickNet->usesWLAN() ? "SD:rpi4_kernel_sk64_wlan.img" : "SD:rpi4_kernel_sk64_net.img";
 				#else
@@ -114,6 +117,8 @@ CHTTPDaemon *CWebServer::CreateWorker (CNetSubSystem *pNetSubSystem, CSocket *pS
 				//writeFile( logger, "SD:", (const char *) "SD:kernel_sk64_net.img", (u8*) pPartData, nPartLength );
 				writeFile( logger, "SD:", filename, (u8*) pPartData, nPartLength );
 				//logger->Write( FromWebServer, LogNotice, "Written, now reboot requested.");
+				m_SidekickNet->requireCacheWellnessTreatment();
+				
 				m_SidekickNet->requestReboot();
 				//logger->Write( FromWebServer, LogNotice, "Reboot was requested.");
 				
