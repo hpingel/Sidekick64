@@ -29,7 +29,7 @@
 */
 #include "kernel_launch.h"
 
-#ifdef WITH_NET
+#ifdef WITH_NET2
 extern CSidekickNet * pSidekickNet;
 #endif
 
@@ -224,10 +224,15 @@ void CKernelLaunch::Run( void )
 	CACHE_PRELOADL2KEEP( &prgData[ prgSizeBelowA000 + 2 ] );
 	CACHE_PRELOADL2KEEP( &prgData[ 0 ] );
 
+<<<<<<< HEAD:Source/Firmware/kernel_launch.cpp
 	nBytesRead = 0; stage = 1;
 	u32 cycleCountC64_Stage1 = 0;
-	#ifdef WITH_NET		
+	#ifdef WITH_NET2
 	unsigned netDelay = 90000000; //TODO: improve this
+=======
+	#ifdef WITH_NET2
+	unsigned netDelay = 900000000; //TODO: improve this
+>>>>>>> 9dca5ba... disable all net interference in kernel_launch to get more stability:kernel_launch.cpp
 	#endif
 
 	// wait forever
@@ -265,9 +270,8 @@ void CKernelLaunch::Run( void )
 		}
 		#endif
 
-		asm volatile ("wfi");
 
-		#ifdef WITH_NET
+		#ifdef WITH_NET2
 		if ( pSidekickNet->IsRunning() )
 		{
 			netDelay--;
@@ -289,6 +293,8 @@ void CKernelLaunch::Run( void )
 			}
 		}
 		#endif
+
+		asm volatile ("wfi");
 		
 	}
 
