@@ -2170,7 +2170,7 @@ void printNetworkScreen()
 		printC64( x+1, y1+4, strDhcpUsed,   skinValues.SKIN_MENU_TEXT_SYSINFO, 0 );
 		printC64( x+1, y1+5, strDefGateway, skinValues.SKIN_MENU_TEXT_SYSINFO, 0 );
 		printC64( x+1, y1+6, strDNSServer,  skinValues.SKIN_MENU_TEXT_SYSINFO, 0 );
-		printC64( x+1, y1+7, "Press >X< for CSDB launcher demo ", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
+		printC64( x+1, y1+7, "Press >X< to launch SKTP browser", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
 	}
 	else{
 		printC64( x+1, y1+4, "Network connection is inactive", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
