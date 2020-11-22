@@ -1054,8 +1054,6 @@ void CSidekickNet::getCSDBContent( const char * fileName, const char * filePath)
 void CSidekickNet::getCSDBBinaryContent( char * filePath ){
 	assert (m_isActive);
 	unsigned iFileLength = 0;
-
-
 	unsigned char prgDataLaunchTemp[ 1025*1024 ]; // TODO do we need this?
 	if ( HTTPGet ( m_CSDB, (char *) filePath, (char *) prgDataLaunchTemp, iFileLength)){
 		if (m_loglevel > 3)
@@ -1065,6 +1063,7 @@ void CSidekickNet::getCSDBBinaryContent( char * filePath ){
 		m_isDownloadReady = true;
 		if (m_loglevel > 3)
 			logger->Write( "getCSDBBinaryContent", LogNotice, "memcpy finished.");
+		requireCacheWellnessTreatment();
 	}
 	else{
 		setErrorMsgC64((char*)"    HTTPS request failed (press D).");		
