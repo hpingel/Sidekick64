@@ -44,8 +44,6 @@ int screenType;
 
 #ifdef WITH_NET
 	char netSidekickHostname[ 256 ];
-	//char netUpdateHostName[ 256 ];
-	//u32  netUpdateHostPort = 0;
 	char netSktxHostName[ 256 ];
 	u32  netSktxHostPort = 0;
 	char netSktxHostUser[ 64 ];
@@ -222,25 +220,7 @@ int readConfig( CLogger *logger, char *DRIVE, char *FILENAME )
 					logger->Write( "RaspiMenu", LogNotice, " sidekick hostname >%s<", netUpdateHostName );
 				#endif
 				}
-/*				
-				if ( strcmp( ptr, "NET_UPDATEHOST_NAME" ) == 0 )
-				{
-					ptr = strtok_r( NULL, "\"", &rest );
-					strncpy( netUpdateHostName, ptr, 255 );
-				#ifdef DEBUG_OUT
-					logger->Write( "RaspiMenu", LogNotice, " update host name >%s<", netUpdateHostName );
-				#endif
-				}
 
-				if ( strcmp( ptr, "NET_UPDATEHOST_PORT" ) == 0 )
-				{
-					ptr = strtok_r( NULL, "\"", &rest );
-					netUpdateHostPort = atoi( ptr );
-				#ifdef DEBUG_OUT
-					logger->Write( "RaspiMenu", LogNotice, " update host port  >%i<", netUpdateHostPort );
-				#endif
-				}
-*/				
 				if ( strcmp( ptr, "NET_SKTXHOST_NAME" ) == 0 )
 				{
 					ptr = strtok_r( NULL, "\"", &rest );
@@ -291,7 +271,7 @@ int readConfig( CLogger *logger, char *DRIVE, char *FILENAME )
 					ptr = strtok_r( NULL, "\"", &rest );
 					netEnableWebserver = (atoi( ptr ) == 1);
 				#ifdef DEBUG_OUT
-					logger->Write( "RaspiMenu", LogNotice, " enable webserver  >%i<", netConnectOnBoot );
+					logger->Write( "RaspiMenu", LogNotice, " enable webserver  >%i<", netEnableWebserver );
 				#endif
 				}
 #endif

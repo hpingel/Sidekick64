@@ -43,13 +43,13 @@ union T_SKIN_VALUES	skinValues;
 int screenType, screenRotation;
 
 #ifdef WITH_NET
-	char netUpdateHostName[ 256 ];
-	u32  netUpdateHostPort = 0;
+	char netSidekickHostname[ 256 ];
 	char netSktxHostName[ 256 ];
 	u32  netSktxHostPort = 0;
 	char netSktxHostUser[ 64 ];
 	char netSktxHostPassword[ 64 ];
 	boolean netConnectOnBoot = false;
+	boolean netEnableWebserver = false;
 #endif
 
 void setSkinDefaultValues()
@@ -218,24 +218,15 @@ int readConfig( CLogger *logger, char *DRIVE, char *FILENAME )
 					}
 				}
 #ifdef WITH_NET
-				if ( strcmp( ptr, "NET_UPDATEHOST_NAME" ) == 0 )
+				if ( strcmp( ptr, "NET_SIDEKICK_HOSTNAME" ) == 0 )
 				{
 					ptr = strtok_r( NULL, "\"", &rest );
-					strncpy( netUpdateHostName, ptr, 255 );
+					strncpy( netSidekickHostname, ptr, 255 );
 				#ifdef DEBUG_OUT
-					logger->Write( "RaspiMenu", LogNotice, " update host name >%s<", netUpdateHostName );
+					logger->Write( "RaspiMenu", LogNotice, " sidekick hostname >%s<", netUpdateHostName );
 				#endif
 				}
-				
-				if ( strcmp( ptr, "NET_UPDATEHOST_PORT" ) == 0 )
-				{
-					ptr = strtok_r( NULL, "\"", &rest );
-					netUpdateHostPort = atoi( ptr );
-				#ifdef DEBUG_OUT
-					logger->Write( "RaspiMenu", LogNotice, " update host port  >%i<", netUpdateHostPort );
-				#endif
-				}
-				
+
 				if ( strcmp( ptr, "NET_SKTXHOST_NAME" ) == 0 )
 				{
 					ptr = strtok_r( NULL, "\"", &rest );
@@ -278,6 +269,15 @@ int readConfig( CLogger *logger, char *DRIVE, char *FILENAME )
 					netConnectOnBoot = (atoi( ptr ) == 1);
 				#ifdef DEBUG_OUT
 					logger->Write( "RaspiMenu", LogNotice, " connect on boot  >%i<", netConnectOnBoot );
+				#endif
+				}
+
+				if ( strcmp( ptr, "NET_ENABLE_WEBSERVER" ) == 0 )
+				{
+					ptr = strtok_r( NULL, "\"", &rest );
+					netEnableWebserver = (atoi( ptr ) == 1);
+				#ifdef DEBUG_OUT
+					logger->Write( "RaspiMenu", LogNotice, " enable webserver  >%i<", netEnableWebserver );
 				#endif
 				}
 #endif

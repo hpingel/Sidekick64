@@ -873,17 +873,6 @@ void CKernelMenu::updateSystemMonitor ()
 }
 #endif
 
-/*
-void mainMenu()
-{
-	CKernelMenu kernel;
-	if ( kernel.Initialize() )
-		kernel.Run();
-	//setLatchFIQ( LATCH_LEDO );
-	prepareOutputLatch();
-	outputLatch();
-}*/
-
 int main( void )
 {
 	CKernelMenu kernel;
