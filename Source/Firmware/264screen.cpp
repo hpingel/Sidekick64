@@ -96,6 +96,8 @@ char errorMessages[5][41] = {
 #define MENU_CONFIG  0x03
 #ifdef WITH_NET
 #define MENU_NETWORK 0x04
+#define MENU_SKTX 0x05
+#define MENU_SYSTEMINFO 0x06
 #endif
 
 u32 menuScreen = 0, 
@@ -761,19 +763,19 @@ void handleC64( int k, u32 *launchKernel, char *FILENAME, char *filenameKernal )
 					extern int readD64File( CLogger *logger, const char *DRIVE, const char *FILENAME, u8 *data, u32 *size );
 
 					u32 imgsize = 0;
-
+#ifndef WITH_NET
 					// mount file system
 					FATFS m_FileSystem;
 					if ( f_mount( &m_FileSystem, DRIVE, 1 ) != FR_OK )
 						logger->Write( "RaspiMenu", LogPanic, "Cannot mount drive: %s", DRIVE );
-
+#endif
 					if ( !readD64File( logger, "", path, d64buf, &imgsize ) )
 						return;
-
+#ifndef WITH_NET
 					// unmount file system
 					if ( f_mount( 0, DRIVE, 0 ) != FR_OK )
 						logger->Write( "RaspiMenu", LogPanic, "Cannot unmount drive: %s", DRIVE );
-
+#endif
 					if ( d64ParseExtract( d64buf, imgsize, D64_GET_FILE + fileIndex, prgDataLaunch, (s32*)&prgSizeLaunch ) == 0 )
 					{
 						strcpy( FILENAME, path );
@@ -785,27 +787,108 @@ void handleC64( int k, u32 *launchKernel, char *FILENAME, char *filenameKernal )
 			}
 		}
 	} else
-	#ifdef WITH_NET
-		if ( menuScreen == MENU_NETWORK )
+#ifdef WITH_NET
+	if ( menuScreen == MENU_NETWORK )
+	{
+		//keypress handling while inside of open menu
+		if ( k == KEY_F7 || k == KEY_F6 )
 		{
-			//keypress handling while inside of open menu
-			if ( k == KEY_F7 || k == KEY_F6 )
+			menuScreen = MENU_MAIN;
+			handleC64( 0xffffffff, launchKernel, FILENAME, filenameKernal );
+			return;
+		}
+		if ( k == 'x' || k == 'X')
+		{
+			if (pSidekickNet->IsRunning())
 			{
-				menuScreen = MENU_MAIN;
+				pSidekickNet->redrawSktxScreen();
+				menuScreen = MENU_SKTX;
 				handleC64( 0xffffffff, launchKernel, FILENAME, filenameKernal );
 				return;
 			}
-	/*
-	TODO: add real functionality here
-			if ( k == 'z' || k == 'Z')
+		}
+		else if ( k == 's' || k == 'S')
+		{
+			//if (pSidekickNet->IsRunning())
 			{
-				menuScreen = MENU_MAIN;
+				menuScreen = MENU_SYSTEMINFO;
 				handleC64( 0xffffffff, launchKernel, FILENAME, filenameKernal );
 				return;
 			}
-	*/		
-		} else
-	#endif		
+		}
+		else if ( k == 'c' || k == 'C')
+		{
+			if (!pSidekickNet->IsRunning())
+			{
+				pSidekickNet->queueNetworkInit();
+				setErrorMsg( pSidekickNet->getNetworkActionStatusMessage() );
+			}
+		}
+		/*
+		else if ( k == 'q' || k == 'Q')
+		{
+			pSidekickNet->requestReboot();
+		}
+		else if ( k == 'u' || k == 'U')
+		{
+			if (pSidekickNet->IsRunning())
+			{
+				pSidekickNet->queueKernelUpdate();
+				setErrorMsg( pSidekickNet->getNetworkActionStatusMessage() );
+			}
+		}*/
+		//get rid of this after implementing a proper error msg dialog
+		else if ( k == 'd' || k == 'D')
+		{
+				if ( errorMsg != NULL ) errorMsg = NULL;
+		}
+	} else
+	if ( menuScreen == MENU_SKTX )
+	{
+	
+		if ( k == KEY_F7 || k == KEY_F6 )
+		{
+			menuScreen = MENU_MAIN;
+			handleC64( 0xffffffff, launchKernel, FILENAME, filenameKernal );
+			return;
+		}
+		/*
+		else if ( k == 'n' || k == 'N')
+		{
+			//only needed temporarily for testing purposes
+			pSidekickNet->resetSktxSession();
+		}*/
+		else if ( k == 'd' || k == 'D')
+		{
+				//http errors might be displayed on top of sktx screen
+				//this assignment is a cheap trick to get rid of error popups
+				if ( errorMsg != NULL ) errorMsg = NULL;
+		}
+		else if (k == 92 )
+		{
+			//92 is pound key, this key is constantly sent by the rpimenu_net.prg
+			//automatically if the user doesn't press a key on the Commodore keyboard
+			pSidekickNet->queueSktxRefresh(); 
+			
+		}
+		else
+		{
+			//the user has actually manually pressed a key on the Commodore keyboard
+			//and it is not the pound key which is reserved to enable
+			//constant screen refresh
+			pSidekickNet->queueSktxKeypress(k);
+		}
+	} else
+	if ( menuScreen == MENU_SYSTEMINFO )
+	{
+		if ( k == KEY_F7)
+		{
+			menuScreen = MENU_MAIN;
+			handleC64( 0xffffffff, launchKernel, FILENAME, filenameKernal );
+			return;
+		}
+	} else
+#endif		
 	if ( menuScreen == MENU_CONFIG )
 	{
 		if ( k == KEY_HELP )
@@ -823,6 +906,7 @@ void handleC64( int k, u32 *launchKernel, char *FILENAME, char *filenameKernal )
 #ifdef WITH_NET
 		if ( k == KEY_F6 )
 		{
+			//jump to network menu from config menu - do we really need this?
 			menuScreen = MENU_NETWORK;
 			handleC64( 0xffffffff, launchKernel, FILENAME, filenameKernal );
 			return;
@@ -1062,63 +1146,101 @@ void printNetworkScreen()
 	CString strTimeDate = "";
 	strTimeDate.Append( pSidekickNet->getTimeString());
 	
-	CString strIpAdress   = "IP address:      "; 
+	CString strHostName   = "Hostname:        "; 
+	CString strIpAddress  = "IP address:      "; 
 	CString strNetMask    = "Netmask:         "; 
 	CString strDefGateway = "Default Gateway: "; 
 	CString strDNSServer  = "DNS Server:      ";
 	CString strDhcpUsed   = "DHCP active:     ";
-	CString strKernelCV   = "Circle version:  ";
-	CString strKernelTS   = "Compiled on:     ";
-	CString strKernelTS2  = "                 ";
 	CString strHelper;
-	
 	if ( pSidekickNet->IsRunning() )
 	{
 		pSidekickNet->GetNetConfig()->GetIPAddress ()->Format (&strHelper);
-		strIpAdress.Append( strHelper );
-
+		strIpAddress.Append( strHelper );
+	
 		pSidekickNet->GetNetConfig()->GetDefaultGateway ()->Format (&strHelper);
 		strDefGateway.Append( strHelper );
-
+	
 		pSidekickNet->GetNetConfig()->GetDNSServer ()->Format (&strHelper);
 		strDNSServer.Append( strHelper );
-
+	
 		strDhcpUsed.Append( pSidekickNet->GetNetConfig()->IsDHCPUsed() ? "Yes" : "No" );
 	}
 	else
 	{
-		strIpAdress.Append( "-" );
+		strIpAddress.Append( "-" );
 		strDefGateway.Append( "-" );
 		strDNSServer.Append( "-" );
 		strDhcpUsed.Append( "-" );
 	}
 
-	strKernelCV.Append( CIRCLE_VERSION_STRING );
-	strKernelTS.Append( __DATE__ );
-	strKernelTS2.Append( __TIME__ );
-
 	printC64( x+1, y1+2, "Network settings", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
-	printC64( x+1, y1+3, strIpAdress,   skinValues.SKIN_MENU_TEXT_ITEM, 0 );
-	printC64( x+1, y1+4, strDhcpUsed,   skinValues.SKIN_MENU_TEXT_SYSINFO, 0 );
-	printC64( x+1, y1+5, strDefGateway, skinValues.SKIN_MENU_TEXT_SYSINFO, 0 );
-	printC64( x+1, y1+6, strDNSServer,  skinValues.SKIN_MENU_TEXT_SYSINFO, 0 );
+	printC64( x+1, y1+8, "Press >S< to display system infos", skinValues.SKIN_MENU_TEXT_HEADER, 0 );	
+	if ( pSidekickNet->IsRunning() )
+	{
+		printC64( x+1, y1+3, strIpAddress,   skinValues.SKIN_MENU_TEXT_ITEM, 0 );
+		printC64( x+1, y1+4, strDhcpUsed,   skinValues.SKIN_MENU_TEXT_SYSINFO, 0 );
+		printC64( x+1, y1+5, strDefGateway, skinValues.SKIN_MENU_TEXT_SYSINFO, 0 );
+		printC64( x+1, y1+6, strDNSServer,  skinValues.SKIN_MENU_TEXT_SYSINFO, 0 );
+		printC64( x+1, y1+7, "Press >X< to launch SKTP browser", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
+	}
+	else{
+		printC64( x+1, y1+4, "Network connection is inactive", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
+		if (pSidekickNet->isWireless())
+		{
+			//                   "012345678901234567890123456789012345XXXX"
+			printC64( x+1, y1+5, "Press >C< to enable WIFI. (Config",   skinValues.SKIN_MENU_TEXT_ITEM, 0 );
+			printC64( x+1, y1+6, "file with SSID and passphrase is",   skinValues.SKIN_MENU_TEXT_ITEM, 0 );
+			printC64( x+1, y1+7, "needed on the SD card.)"          ,   skinValues.SKIN_MENU_TEXT_ITEM, 0 );
+		}
+		else if (pSidekickNet->RaspiHasOnlyWLAN())
+		{
+			//                   "012345678901234567890123456789012345XXXX"
+			printC64( x+1, y1+5, "This Sidekick kernel does not",   skinValues.SKIN_MENU_TEXT_ITEM, 0 );
+			printC64( x+1, y1+6, "support WLAN. Use a Raspberry Pi",   skinValues.SKIN_MENU_TEXT_ITEM, 0 );
+			printC64( x+1, y1+7, "that has a network socket.",   skinValues.SKIN_MENU_TEXT_ITEM, 0 );
+		}
+		else
+		{
+			//                   "012345678901234567890123456789012345XXXX"
+			printC64( x+1, y1+5, "Press >C< to establish a",   skinValues.SKIN_MENU_TEXT_ITEM, 0 );
+			printC64( x+1, y1+6, "network connection!",   skinValues.SKIN_MENU_TEXT_ITEM, 0 );
+			printC64( x+1, y1+7, "(Plug in a network cable first.)",   skinValues.SKIN_MENU_TEXT_ITEM, 0 );
+		}
+	}
 
-	printC64( x+1, y1+ 8, "Sidekick Kernel Info", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
-	#ifdef NET_DEV_SERVER
-		printC64( x+1, y1+9, "Update via HTTP: On (during boot)", skinValues.SKIN_MENU_TEXT_ITEM, 0 );
-		y1 = 3;
-	#endif
-	printC64( x+1, y1+ 9, strKernelTS, skinValues.SKIN_MENU_TEXT_ITEM, 0 );
-	printC64( x+1, y1+10, strKernelTS2, skinValues.SKIN_MENU_TEXT_ITEM, 0 );
-	printC64( x+1, y1+11, strKernelCV, skinValues.SKIN_MENU_TEXT_ITEM, 0 );
 	
-	y1=2;
-	
+	printSidekickLogo();
+
+	c64screen[ 1000 ] = ((0x6800 >> 8) & 0xFC);
+	c64screen[ 1001 ] = skinValues.SKIN_MENU_BACKGROUND_COLOR;
+	c64screen[ 1002 ] = skinValues.SKIN_MENU_BORDER_COLOR;
+}
+
+void printSystemInfoScreen()
+{
+	clearC64();
+	//               "012345678901234567890123456789012345XXXX"
+	printC64( 0,  1, "   .- Sidekick64 -- Frenetic -.         ", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
+	printC64( 0, 23, "           F6/F7 Back to Menu           ", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
+
+	const u32 x = 1;
+	u32 y1 = 2;
+	//printC64( x+1, y1+8, "Press >Q< for reboot ", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
+	printC64( x+1, y1+9, "Sidekick Kernel Info", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
+	printC64( x+1, y1+10, "Compiled on: " COMPILE_TIME, skinValues.SKIN_MENU_TEXT_ITEM, 0 );
+	printC64( x+1, y1+11, "Git branch : " GIT_BRANCH, skinValues.SKIN_MENU_TEXT_ITEM, 0 );
+	printC64( x+1, y1+12, "Git hash   : " GIT_HASH, skinValues.SKIN_MENU_TEXT_ITEM, 0 );
+
 	printC64( x+1, y1+15, "You are running Sidekick on a", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
 	printC64( x+1, y1+16, pSidekickNet->getRaspiModelName(), skinValues.SKIN_MENU_TEXT_ITEM, 0 );
-	
 	printC64( x+1, y1+18, "System time", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
-	printC64( x+1, y1+19, strTimeDate, skinValues.SKIN_MENU_TEXT_ITEM, 0 );
+	//printC64( x+1, y1+18, "System time           Uptime", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
+	printC64( x+1, y1+17, pSidekickNet->getSysMonInfo(0), skinValues.SKIN_MENU_TEXT_ITEM, 0 );
+	printC64( x+1, y1+19, pSidekickNet->getTimeString(), skinValues.SKIN_MENU_TEXT_ITEM, 0 );
+	//printC64(x+22, y1+19, pSidekickNet->getUptime(), skinValues.SKIN_MENU_TEXT_ITEM, 0 );
+	
+	printC64( x+28, 24, "Circle " CIRCLE_VERSION_STRING, skinValues.SKIN_MENU_TEXT_SYSINFO, 0 );
 
 	printSidekickLogo();
 	
@@ -1126,8 +1248,43 @@ void printNetworkScreen()
 	c64screen[ 1001 ] = skinValues.SKIN_MENU_BACKGROUND_COLOR;
 	c64screen[ 1002 ] = skinValues.SKIN_MENU_BORDER_COLOR;
 }
-#endif
 
+
+void printSKTXScreen()
+{
+	const unsigned yOffset = 0;
+	
+	if ( pSidekickNet->IsRunning() )
+	{
+		if ( pSidekickNet->IsSktxScreenToBeCleared() ) clearC64();
+
+		if ( !pSidekickNet->IsSktxScreenUnchanged() )
+		{
+			u16 pos = 0;
+			u8 color = 0;
+			unsigned y = 0;
+			unsigned x = 0;
+			boolean inverse = false;
+			char * content;
+			while (!pSidekickNet->IsSktxScreenContentEndReached())
+			{
+				content = (char *) pSidekickNet->GetSktxScreenContentChunk( pos, color, inverse);
+				y = pos / 40;
+				x = pos % 40;
+				printC64( x, y+yOffset, content, color, inverse ? 0x80 : 0, 4);//4 is undefined
+			}
+			pSidekickNet->ResetSktxScreenContentChunks();
+		}
+	}
+	//printC64( 1, 24, pSidekickNet->getSysMonInfo(0), skinValues.SKIN_MENU_TEXT_ITEM, 0 );
+
+	c64screen[ 1000 ] = ((0x6800 >> 8) & 0xFC);
+	c64screen[ 1001 ] = skinValues.SKIN_MENU_BACKGROUND_COLOR;
+	c64screen[ 1002 ] = skinValues.SKIN_MENU_BORDER_COLOR;
+
+}
+	
+#endif
 
 void printSettingsScreen()
 {
@@ -1282,8 +1439,16 @@ void renderC64()
 	if ( menuScreen == MENU_NETWORK )
 	{
 		printNetworkScreen();
-	} else
-#endif		
+	}
+	if ( menuScreen == MENU_SKTX )
+	{
+		printSKTXScreen();
+	}
+	if ( menuScreen == MENU_SYSTEMINFO )
+	{
+		printSystemInfoScreen();
+	}
+#endif	
 	//if ( menuScreen == MENU_ERROR )
 	{
 		if ( errorMsg != NULL ) renderErrorMsg();
