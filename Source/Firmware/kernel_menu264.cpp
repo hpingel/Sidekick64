@@ -305,7 +305,6 @@ boolean CKernelMenu::Initialize( void )
 
 	u32 size = 0;
 
-<<<<<<< HEAD:Source/Firmware/kernel_menu264.cpp
 #if 1
 	u8 tempHDMI[ 640 * 480 * 3 ];
 	readFile( logger, (char*)DRIVE, (char*)FILENAME_SPLASH_HDMI, tempHDMI, &size );
@@ -333,15 +332,6 @@ boolean CKernelMenu::Initialize( void )
 	m_SidekickNet.mountSDDrive();
 #endif
 	// read launch code
-=======
-	#ifdef WITH_NET
-		logger->Write ("SidekickKernel", LogNotice, "Compiled on: " COMPILE_TIME ", Git branch: " GIT_BRANCH ", Git hash: " GIT_HASH);
-		//TODO: this should be done in constructor of SideKickNet
-		m_SidekickNet.checkForSupportedPiModel();	
-		m_SidekickNet.mountSDDrive();
-	#endif
-
->>>>>>> 9447909... nursing sidekick264 make towards network - part 1:kernel_menu264.cpp
 	readFile( logger, (char*)DRIVE, (char*)FILENAME_CBM80, cartCBM80, &size );
 
 	cartL1 = (unsigned char *)( ((u64)&cart_pool+64) & ~63 );
