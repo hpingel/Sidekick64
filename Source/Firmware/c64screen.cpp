@@ -2242,12 +2242,7 @@ void printSystemInfoScreen()
 	printC64( x+1, y1+10, "Compiled on: " COMPILE_TIME, skinValues.SKIN_MENU_TEXT_ITEM, 0 );
 	printC64( x+1, y1+11, "Git branch : " GIT_BRANCH, skinValues.SKIN_MENU_TEXT_ITEM, 0 );
 	printC64( x+1, y1+12, "Git hash   : " GIT_HASH, skinValues.SKIN_MENU_TEXT_ITEM, 0 );
-	/*
-	if ( pSidekickNet->IsRunning() && pSidekickNet->isDevServerConfigured())
-	{
-		printC64( x+1, y1+13, "Press >U< for kernel update via HTTP", skinValues.SKIN_MENU_TEXT_ITEM, 0 );
-	}
-	*/
+	
 	printC64( x+1, y1+15, "You are running Sidekick on a", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
 	printC64( x+1, y1+16, pSidekickNet->getRaspiModelName(), skinValues.SKIN_MENU_TEXT_ITEM, 0 );
 	printC64( x+1, y1+18, "System time", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
@@ -2273,18 +2268,9 @@ void printSKTXScreen()
 {
 	const unsigned yOffset = 0;
 	
-	//               "012345678901234567890123456789012345XXXX"
-//	printC64( 0,  1, "          .- sidekick64-sktx -.         ", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
-//	printC64( 0, 24, "           F6/F7 Back to Menu           ", skinValues.SKIN_MENU_TEXT_HEADER, 0, 3 );
-	
-	//printC64( x+1, y1, "Welcome to SKTX!", skinValues.SKIN_MENU_TEXT_HEADER, 0,3 );
-//	printC64( 0, 2, "\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9", skinValues.SKIN_MENU_BORDER_COLOR, 0, 1 );
-//	printC64( 0, 23, "\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9", skinValues.SKIN_MENU_BORDER_COLOR, 0, 1 );
-
 	if ( pSidekickNet->IsRunning() )
 	{
 		if ( pSidekickNet->IsSktxScreenToBeCleared() ) clearC64();
-		//printC64( 0, y1+2, (char *)pSidekickNet->getSktxScreenContent(), skinValues.SKIN_MENU_TEXT_HEADER, 0, 4);//4 is undefined
 
 		if ( !pSidekickNet->IsSktxScreenUnchanged() )
 		{
