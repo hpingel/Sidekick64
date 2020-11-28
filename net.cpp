@@ -37,6 +37,7 @@
 #ifndef IS264
 #include "c64screen.h"
 #include "config.h"
+#include "PSID/psid64/psid64.h"
 #else
 #include "264screen.h"
 #include "264config.h"
@@ -63,9 +64,6 @@
 #ifdef WITH_TLS
 #include <mbedtls/error.h>
 #endif
-
-#include "PSID/psid64/psid64.h"
-
 
 // Network configuration
 #ifndef WITH_WLAN
@@ -622,6 +620,7 @@ u8 CSidekickNet::getCSDBDownloadLaunchType(){
 	}
 	else if ( strcmp( m_CSDBDownloadExtension, "d64" ) == 0)
 	{
+#ifndef IS264		
 		//with the new d2ef approach available within Sidekick we try to launch the D64
 		//as an dynamically created EF crt!
 		type = 11;
@@ -631,13 +630,15 @@ u8 CSidekickNet::getCSDBDownloadLaunchType(){
 		memcpy( &prgDataLaunch[0], cart, crtSize );
 		prgSizeLaunch = crtSize;
 		m_CSDBDownloadFilename = "SD:C64/temp.crt"; //this is only an irrelevant dummy name ending wih crt
-		
-		//type = 0; //unused, we only save the file
+#else
+		type = 0; //unused, we only save the file
+#endif
 		if (m_loglevel > 2)
 			logger->Write ("CSidekickNet::getCSDBDownloadLaunchType", LogNotice, "D64 detected: >%s<",m_CSDBDownloadExtension);
 	}
 	else if ( strcmp( m_CSDBDownloadExtension, "sid" ) == 0)
 	{
+#ifndef IS264
 		//FIXME: This was just copied from c64screen.cpp. Put this into a method.
 		Psid64 *psid64 = new Psid64();
 
@@ -664,6 +665,7 @@ u8 CSidekickNet::getCSDBDownloadLaunchType(){
 
 		delete psid64;
 		//FIXME: End of copy
+#endif
 		
 		type = 41;
 		if (m_loglevel > 2)
