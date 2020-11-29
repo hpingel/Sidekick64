@@ -71,7 +71,7 @@
 #endif
 // Time configuration
 static const char NTPServer[]    = "pool.ntp.org";
-static const int nTimeZone       = 2*60;		// minutes diff to UTC
+static const int nTimeZone       = 1*60;		// minutes diff to UTC
 static const char DRIVE[] = "SD:";
 //nDocMaxSize reserved 2 MB as the maximum size of the kernel file
 static const unsigned nDocMaxSize = 2000*1024;
