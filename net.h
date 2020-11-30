@@ -93,15 +93,11 @@ public:
 	void checkForSupportedPiModel();
 	void updateSktxScreenContent();
 	void queueNetworkInit();
-	//void queueKernelUpdate();
 	void queueFrameRequest();
 	void queueSktxKeypress( int );
 	void queueSktxRefresh();
 	void handleQueuedNetworkAction();
-//	void setSidekickKernelUpdatePath( unsigned type);
-//	void getCSDBContent( const char *, const char *);
-	void getCSDBBinaryContent( char *);
-//	void getCSDBLatestReleases();
+	void getCSDBBinaryContent();
 	u8 getCSDBDownloadLaunchType();
 	boolean isAnyNetworkActionQueued();
 	void saveDownload2SD();
@@ -109,7 +105,6 @@ public:
 	boolean checkForFinishedDownload();
 	boolean checkForSaveableDownload();
 	boolean isDownloadReadyForLaunch();
-	boolean isDevServerConfigured(){ return m_devServer.port != 0;};
 	boolean isWireless(){ return m_useWLAN;};
 	boolean RaspiHasOnlyWLAN();
 	boolean IsSktxScreenContentEndReached();
@@ -199,6 +194,7 @@ private:
 	char * m_CSDBDownloadPath;
 	char * m_CSDBDownloadExtension;
 	char * m_CSDBDownloadFilename;
+	remoteHTTPTarget m_CSDBDownloadHost;
 	CString m_CSDBDownloadSavePath;
 	boolean m_bSaveCSDBDownload2SD;
 	TMachineModel m_PiModel;
@@ -221,7 +217,6 @@ private:
 	
 	remoteHTTPTarget m_Playground;
 	remoteHTTPTarget m_CSDB;
-	remoteHTTPTarget m_devServer;
 	
 };
 

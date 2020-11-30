@@ -253,35 +253,14 @@ boolean CSidekickNet::Initialize()
 	m_CSDB.logPrefix = getLoggerStringForHost( CSDB_HOST, 443);
 
 	m_NTPServerIP  = getIPForHost( NTPServer );
-	/*
-	if ( strcmp(netUpdateHostName,"") != 0)
-	{
-		int port = netUpdateHostPort != 0 ? netUpdateHostPort: HTTP_PORT;
-		m_devServer.hostName = netUpdateHostName;
-		m_devServer.port = port;
-		m_devServer.ipAddress = getIPForHost( netUpdateHostName );
-		m_devServer.logPrefix = getLoggerStringForHost( netUpdateHostName, port);
-	}
-	else
-	*/
-	{
-		m_devServer.hostName = "";
-		m_devServer.port = 0;
-	}
-	
+
 	if (strcmp(netSktxHostName,"") != 0)
 	{
-
-		//if ( strcmp(netUpdateHostName, netSktxHostName) != 0)
-		{
-			int port = netSktxHostPort != 0 ? netSktxHostPort: HTTP_PORT;
-			m_Playground.hostName = netSktxHostName;
-			m_Playground.port = port;
-			m_Playground.ipAddress = getIPForHost( netSktxHostName );
-			m_Playground.logPrefix = getLoggerStringForHost( netSktxHostName, port);
-		}
-		//else
-		//	m_Playground = m_devServer;
+		int port = netSktxHostPort != 0 ? netSktxHostPort: HTTP_PORT;
+		m_Playground.hostName = netSktxHostName;
+		m_Playground.port = port;
+		m_Playground.ipAddress = getIPForHost( netSktxHostName );
+		m_Playground.logPrefix = getLoggerStringForHost( netSktxHostName, port);
 	}
 	else
 	{
@@ -383,7 +362,7 @@ boolean CSidekickNet::isReturnToMenuRequired(){
 boolean CSidekickNet::isRebootRequested(){
 	if (!m_isRebootRequested)
 		return false;
-	unsigned waitDuration = 8;
+	unsigned waitDuration = 5;
 	signed secondsLeft = waitDuration - (m_pTimer->GetUptime() - m_timeoutCounterStart);
 	if ( secondsLeft < 0 ) secondsLeft = 0;
 	CString msg = "  Please wait, rebooting Sidekick in ";
@@ -762,7 +741,7 @@ void CSidekickNet::handleQueuedNetworkAction()
 			if (m_loglevel > 2)
 				logger->Write( "handleQueuedNetworkAction", LogNotice, "m_CSDBDownloadPath: %s", m_CSDBDownloadPath);		
 			m_isCSDBDownloadQueued = false;
-			getCSDBBinaryContent( m_CSDBDownloadPath );
+			getCSDBBinaryContent();
 			//m_isSktxKeypressQueued = false;
 		}
 		/*
@@ -996,68 +975,11 @@ boolean CSidekickNet::UpdateTime(void)
 	return false;
 }
 
-//looks for the presence of a file on a pre-defined HTTP Server
-//file is being read and stored on the sd card
-/*
-boolean CSidekickNet::CheckForSidekickKernelUpdate()
-{
-	if ( m_devServer.port == 0 )
-	{
-		logger->Write( "CSidekickNet::CheckForSidekickKernelUpdate", LogNotice, 
-			"Skipping check: Update server is not defined."
-		);
-		return false;
-	}
-	
-	if ( strcmp( m_SidekickKernelUpdatePath,"") == 0 )
-	{
-		logger->Write( "CSidekickNet::CheckForSidekickKernelUpdate", LogNotice, 
-			"Skipping check: HTTP update path is not defined."
-		);
-		return false;
-	}
-	assert (m_isActive);
-	unsigned iFileLength = 0;
-	char pFileBuffer[nDocMaxSize+1];	// +1 for 0-termination
-	unsigned type = 0;
-	if ( m_SidekickKernelUpdatePath == 264 ) type = 1;
-	if ( HTTPGet ( m_devServer, kernelUpdatePath[type], pFileBuffer, iFileLength))
-	{
-		logger->Write( "SidekickKernelUpdater", LogNotice, 
-			"Now trying to write kernel file to SD card, bytes to write: %i", iFileLength
-		);
-		writeFile( logger, DRIVE, KERNEL_SAVE_LOCATION, (u8*) pFileBuffer, iFileLength );
-		m_pScheduler->MsSleep (500);
-		logger->Write( "SidekickKernelUpdater", LogNotice, "Finished writing kernel to SD card");
-	}
-	if ( HTTPGet ( m_devServer, prgUpdatePath[type], pFileBuffer, iFileLength))
-	{
-		logger->Write( "SidekickKernelUpdater", LogNotice, 
-			"Now trying to write rpimenu.prg file to SD card, bytes to write: %i", iFileLength
-		);
-		writeFile( logger, DRIVE, RPIMENU64_SAVE_LOCATION, (u8*) pFileBuffer, iFileLength );
-		m_pScheduler->MsSleep (500);
-		logger->Write( "SidekickKernelUpdater", LogNotice, "Finished writing file rpimenu_net.prg to SD card");
-	}
-	
-	return true;
-}*/
-
-/*
-void CSidekickNet::getCSDBContent( const char * fileName, const char * filePath){
-	assert (m_isActive);
-	unsigned iFileLength = 0;
-	char * pFileBuffer = new char[nDocMaxSize+1];	// +1 for 0-termination
-	HTTPGet ( m_CSDB, filePath, pFileBuffer, iFileLength);
-	logger->Write( "getCSDBContent", LogNotice, "HTTPS Document length: %i", iFileLength);
-}
-*/
-
-void CSidekickNet::getCSDBBinaryContent( char * filePath ){
+void CSidekickNet::getCSDBBinaryContent( ){
 	assert (m_isActive);
 	unsigned iFileLength = 0;
 	unsigned char prgDataLaunchTemp[ 1025*1024 ]; // TODO do we need this?
-	if ( HTTPGet ( m_CSDB, (char *) filePath, (char *) prgDataLaunchTemp, iFileLength)){
+	if ( HTTPGet ( m_CSDBDownloadHost, (char *) m_CSDBDownloadPath, (char *) prgDataLaunchTemp, iFileLength)){
 		if (m_loglevel > 3)
 			logger->Write( "getCSDBBinaryContent", LogNotice, "Got stuff via HTTPS, now doing memcpy");
 		memcpy( prgDataLaunch, prgDataLaunchTemp, iFileLength);
@@ -1067,18 +989,13 @@ void CSidekickNet::getCSDBBinaryContent( char * filePath ){
 			logger->Write( "getCSDBBinaryContent", LogNotice, "memcpy finished.");
 		requireCacheWellnessTreatment();
 	}
-	else{
-		setErrorMsgC64((char*)"    HTTPS request failed (press D).");		
-	}
+	else if (m_CSDBDownloadHost.port == 443)
+		setErrorMsgC64((char*)"    HTTPS request failed (press D).");
+	else
+		setErrorMsgC64((char*)"     HTTP request failed (press D).");
 	if (m_loglevel > 2)
 		logger->Write( "getCSDBBinaryContent", LogNotice, "HTTPS Document length: %i", iFileLength);
 }
-
-/*
-void CSidekickNet::getCSDBLatestReleases(){
-	getCSDBContent( "latestreleases.php", "/rss/latestreleases.php" );
-}
-*/
 
 //for kernel render example
 #ifdef WITH_RENDER
@@ -1184,25 +1101,59 @@ void CSidekickNet::updateSktxScreenContent(){
 			m_sktxResponseType = pResponseBuffer[0];
 			if ( m_sktxResponseType == 2) // url for binary download, e. g. csdb
 			{
-				
 				u8 tmpUrlLength = pResponseBuffer[1];
 				u8 tmpFilenameLength = pResponseBuffer[2];
 				m_bSaveCSDBDownload2SD = ((int)pResponseBuffer[3] == 1);
 				char CSDBDownloadPath[256];
 				char CSDBFilename[256];
 				char extension[3];
-				//cut off first 14 chars of URL: http://csdb.dk
-				//TODO add sanity checks here
-				memcpy( CSDBDownloadPath, &pResponseBuffer[ 4 + 14  ], tmpUrlLength-14 );//m_sktxResponseLength -14 +1);
+				char hostName[256];
+				u8 pathStart;
+				u8 pathStartSuffix = 0;
+				//TODO add more sanity checks here
+				if ( pResponseBuffer[ 4 + 4 ] == ':')      // ....http
+					pathStartSuffix = 8+3;                   // ....http://
+				else if ( pResponseBuffer[ 4 + 4 ] == 's') // ....https
+					pathStartSuffix = 8+4;                   // ....https://
+				else
+					logger->Write( "updateSktxScreenContent", LogNotice, "Error: wrong char");
+
+				for ( pathStart = pathStartSuffix; pathStart < tmpUrlLength; pathStart++ ){
+					if ( pResponseBuffer[ pathStart ] == '/' || pResponseBuffer[ pathStart ] == ':')
+						break;
+					hostName[ pathStart - pathStartSuffix] = pResponseBuffer[ pathStart ];
+				}
+				hostName[pathStart] = '\0';
+				
+				if ( pResponseBuffer[ pathStart ] == ':' ){
+					while( pResponseBuffer[ pathStart ] != '/')
+					{
+						pathStart++;
+					}
+				}
+				
+				if (strcmp(hostName, m_CSDB.hostName) == 0){
+					m_CSDBDownloadHost = m_CSDB;
+					//logger->Write( "updateSktxScreenContent", LogNotice, "host is csdb");
+				}
+				else if ( strcmp(hostName, m_Playground.hostName) == 0){
+					m_CSDBDownloadHost = m_Playground;
+					//logger->Write( "updateSktxScreenContent", LogNotice, "host is sktxserver");
+				}
+				else{
+					logger->Write( "updateSktxScreenContent", LogNotice, "Error: Unknown host: >%s<", hostName);
+					m_CSDBDownloadHost = m_CSDB;
+				}
+
+				memcpy( CSDBDownloadPath, &pResponseBuffer[ pathStart ], tmpUrlLength - pathStart + 4);
+				CSDBDownloadPath[tmpUrlLength - pathStart + 4] = '\0';
 //				logger->Write( "updateSktxScreenContent", LogNotice, "download path: >%s<", CSDBDownloadPath);
-				CSDBDownloadPath[tmpUrlLength-14] = '\0';
 				memcpy( CSDBFilename, &pResponseBuffer[ 4 + tmpUrlLength  ], tmpFilenameLength );
 				CSDBFilename[tmpFilenameLength] = '\0';
 //				logger->Write( "updateSktxScreenContent", LogNotice, "filename: >%s<", CSDBFilename);
 				memcpy( extension, &pResponseBuffer[ m_sktxResponseLength -3 ], 3);
 				extension[3] = '\0';
 //				logger->Write( "updateSktxScreenContent", LogNotice, "extension: >%s<", extension);
-
 
 				CString savePath;
 				if (m_bSaveCSDBDownload2SD)
@@ -1228,9 +1179,14 @@ void CSidekickNet::updateSktxScreenContent(){
 				m_CSDBDownloadFilename = CSDBFilename;
 				m_CSDBDownloadSavePath = savePath;
 			}
+			/*
+			if ( m_sktxResponseType == 3) // background and border color change
+			{
+			}
 			if ( m_sktxResponseType == 4) // background and border color change
 			{
 			}
+			*/
 			else
 			{
 				m_sktxScreenContent = (unsigned char * ) pResponseBuffer;
