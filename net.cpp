@@ -1123,7 +1123,7 @@ void CSidekickNet::updateSktxScreenContent(){
 						break;
 					hostName[ pathStart - pathStartSuffix] = pResponseBuffer[ pathStart ];
 				}
-				hostName[pathStart] = '\0';
+				hostName[pathStart - pathStartSuffix] = '\0';
 				
 				if ( pResponseBuffer[ pathStart ] == ':' ){
 					while( pResponseBuffer[ pathStart ] != '/')
