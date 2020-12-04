@@ -1725,18 +1725,18 @@ void handleC64( int k, u32 *launchKernel, char *FILENAME, char *filenameKernal, 
 		{
 			pSidekickNet->requestReboot();
 		}
-		else if ( k == 'u' || k == 'U')
-		{
-			if (pSidekickNet->IsRunning())
-			{
-				pSidekickNet->queueKernelUpdate();
-				setErrorMsg( pSidekickNet->getNetworkActionStatusMessage() );
-			}
-		}*/
+		*/
 		//get rid of this after implementing a proper error msg dialog
 		else if ( k == 'd' || k == 'D')
 		{
 				if ( errorMsg != NULL ) errorMsg = NULL;
+				if (pSidekickNet->IsRunning() && menuScreen == MENU_SKTX)
+				{
+					pSidekickNet->redrawSktxScreen();
+					handleC64( 0xffffffff, launchKernel, FILENAME, filenameKernal, menuItemStr );
+					return;
+				}
+				
 		}
 	} else
 	if ( menuScreen == MENU_SKTX )
