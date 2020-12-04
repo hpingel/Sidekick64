@@ -613,15 +613,17 @@ void CKernelMenu::Run( void )
 				m_SidekickNet.cleanupDownloadData(); //this also removes the status message
 				doCacheWellnessTreatment();
 			}
+			
+			//if there is an unsaved download we save it to sd card
+			//after the status message was rendered by checkForFinishedDownload
+			m_SidekickNet.checkForSaveableDownload();
+			
 			if ( m_SidekickNet.checkForFinishedDownload())
 			{
 				//HTTP download is finished, but we haven't saved it yet
 				//a status message is being put onto the screen for the user
 				doCacheWellnessTreatment();
 			}
-
- 			//if there is an unsaved download we save it to sd card
-			m_SidekickNet.checkForSaveableDownload();
 
 			DisableIRQs();
 			m_InputPin.ConnectInterrupt( this->FIQHandler, this );
