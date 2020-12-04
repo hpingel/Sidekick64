@@ -990,9 +990,12 @@ void CSidekickNet::getCSDBBinaryContent( ){
 		requireCacheWellnessTreatment();
 	}
 	else if (m_CSDBDownloadHost.port == 443)
-		setErrorMsgC64((char*)"    HTTPS request failed (press D).");
+		setErrorMsgC64((char*)"    HTTPS request failed (press D).     ");
+		//                    "012345678901234567890123456789012345XXXX"
+		
 	else
-		setErrorMsgC64((char*)"     HTTP request failed (press D).");
+		setErrorMsgC64((char*)"     HTTP request failed (press D).     ");
+		//                    "012345678901234567890123456789012345XXXX"
 	if (m_loglevel > 2)
 		logger->Write( "getCSDBBinaryContent", LogNotice, "HTTPS Document length: %i", iFileLength);
 }
@@ -1278,8 +1281,8 @@ boolean CSidekickNet::HTTPGet (remoteHTTPTarget & target, const char * path, cha
 #endif	
 
 	{
-		if (m_loglevel > 1)
-			logger->Write( "HTTPGet", LogError, "Failed with status %u", Status);
+		if (m_loglevel > 0)
+			logger->Write( "HTTPGet", LogError, "Failed with status %u, >%s<", Status, path);
 		return false;
 	}
 	assert (nLength <= nDocMaxSize);
