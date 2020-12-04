@@ -441,6 +441,13 @@ __attribute__( ( always_inline ) ) inline void warmCache( void *fiqh, bool scree
 	FORCE_READ_LINEARa( (void*)fiqh, 2048*2, 65536 );
 }
 
+void CKernelMenu::RelaxInterrupts( void )
+{
+	m_InputPin.DisableInterrupt();
+	m_InputPin.DisconnectInterrupt();
+	EnableIRQs();
+}
+
 void CKernelMenu::Run( void )
 {
 	nBytesRead		= 0;
@@ -594,9 +601,12 @@ void CKernelMenu::Run( void )
 		}
 	#endif
 	}
+	
+	RelaxInterrupts();
+	pScheduler->Sleep (1);
 
 	// and we'll never reach this...
-	m_InputPin.DisableInterrupt();
+	//m_InputPin.DisableInterrupt();
 }
 
 void CKernelMenu::doCacheWellnessTreatment(){
