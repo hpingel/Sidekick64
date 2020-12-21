@@ -356,9 +356,9 @@ int getMainMenuSelection( int key, char **FILE, char **FILE2, int *addIdx )
 	if ( key == KEY_HELP ) { resetMenuState(3); return 2;/* Browser */ } else
 	if ( key == KEY_F1 ) { resetMenuState(1); return 3;/* GEORAM */ } else
 	if ( key == KEY_F2 ) { resetMenuState(2); return 4;/* SID */ } else
-	#ifdef WITH_NET
-	if ( key == KEY_F6 ) { resetMenuState(4); return 5;/* Network */ } else //hp: don't have a clue about these numbers here
-	#endif
+	//#ifdef WITH_NET
+	//if ( key == KEY_F6 ) { resetMenuState(4); return 5;/* Network */ } else //hp: don't have a clue about these numbers here
+	//#endif
 	{
 		if ( key >= 'A' && key < 'A' + menuItems[ 1 ] ) // PRG
 		{
@@ -420,7 +420,6 @@ void writeSettingsFile()
 
 	writeFile( logger, DRIVE, SETTINGS_FILE, (u8*)cfg, cfgBytes );
 }
-
 
 void readSettingsFile()
 {
@@ -829,18 +828,17 @@ void handleC64( int k, u32 *launchKernel, char *FILENAME, char *filenameKernal )
 		{
 			pSidekickNet->requestReboot();
 		}
-		else if ( k == 'u' || k == 'U')
-		{
-			if (pSidekickNet->IsRunning())
-			{
-				pSidekickNet->queueKernelUpdate();
-				setErrorMsg( pSidekickNet->getNetworkActionStatusMessage() );
-			}
-		}*/
 		//get rid of this after implementing a proper error msg dialog
 		else if ( k == 'd' || k == 'D')
 		{
 				if ( errorMsg != NULL ) errorMsg = NULL;
+				if (pSidekickNet->IsRunning() && menuScreen == MENU_SKTX)
+				{
+					pSidekickNet->redrawSktxScreen();
+					handleC64( 0xffffffff, launchKernel, FILENAME, filenameKernal );
+					return;
+				}
+			
 		}
 	} else
 	if ( menuScreen == MENU_SKTX )
@@ -1141,10 +1139,6 @@ void printNetworkScreen()
 	printC64( 0, 23, "           F6/F7 Back to Menu           ", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
 
 	const u32 x = 1;
-	u32 y1 = 2;
-
-	CString strTimeDate = "";
-	strTimeDate.Append( pSidekickNet->getTimeString());
 	
 	CString strHostName   = "Hostname:        "; 
 	CString strIpAddress  = "IP address:      "; 
@@ -1173,6 +1167,8 @@ void printNetworkScreen()
 		strDNSServer.Append( "-" );
 		strDhcpUsed.Append( "-" );
 	}
+
+	u32 y1 = 2;
 
 	printC64( x+1, y1+2, "Network settings", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
 	printC64( x+1, y1+8, "Press >S< to display system infos", skinValues.SKIN_MENU_TEXT_HEADER, 0 );	
@@ -1271,7 +1267,7 @@ void printSKTXScreen()
 				content = (char *) pSidekickNet->GetSktxScreenContentChunk( pos, color, inverse);
 				y = pos / 40;
 				x = pos % 40;
-				printC64( x, y+yOffset, content, color + 64+32, inverse ? 0x80 : 0, 4);//4 is undefined
+				printC64( x, y+yOffset, content, color + 96, inverse ? 0x80 : 0, 4);//4 is undefined
 			}
 			pSidekickNet->ResetSktxScreenContentChunks();
 		}

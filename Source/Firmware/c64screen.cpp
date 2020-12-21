@@ -455,9 +455,9 @@ int getMainMenuSelection( int key, char **FILE, int *addIdx, char *menuItemStr )
 	if ( key == VK_F1 ) { resetMenuState(1); return ACT_GEORAM;/* GEORAM */ } else
 	if ( key == VK_F6 ) { return ACT_SIDKICK_CFG; } else
 	if ( key == VK_F3 ) { resetMenuState(2); return ACT_SID;/* SID */ } else
-	#ifdef WITH_NET
+	//#ifdef WITH_NET
 	//if ( key == VK_F6 ) { resetMenuState(3); return ACT_NETWORK;/* Network */ } else
-	#endif	
+	//#endif	
 	{
 		if ( key >= 'A' && key < 'A' + menuItems[ 2 ] ) // CRT
 		{
@@ -893,7 +893,7 @@ void handleC64( int k, u32 *launchKernel, char *FILENAME, char *filenameKernal, 
 
 #ifdef WITH_NET
 		//entering the network menu from the main menu via F6
-		if ( k == 139 /* F6 */ )
+		if ( k == VK_F6 )
 		{
 			menuScreen = MENU_NETWORK;
 			handleC64( 0xffffffff, launchKernel, FILENAME, filenameKernal, menuItemStr );
@@ -2242,7 +2242,7 @@ void printSystemInfoScreen()
 	printC64( x+1, y1+10, "Compiled on: " COMPILE_TIME, skinValues.SKIN_MENU_TEXT_ITEM, 0 );
 	printC64( x+1, y1+11, "Git branch : " GIT_BRANCH, skinValues.SKIN_MENU_TEXT_ITEM, 0 );
 	printC64( x+1, y1+12, "Git hash   : " GIT_HASH, skinValues.SKIN_MENU_TEXT_ITEM, 0 );
-	
+
 	printC64( x+1, y1+15, "You are running Sidekick on a", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
 	printC64( x+1, y1+16, pSidekickNet->getRaspiModelName(), skinValues.SKIN_MENU_TEXT_ITEM, 0 );
 	printC64( x+1, y1+18, "System time", skinValues.SKIN_MENU_TEXT_HEADER, 0 );

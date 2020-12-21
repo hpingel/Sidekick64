@@ -1326,6 +1326,6 @@ void CSidekickNet::requireCacheWellnessTreatment(){
 void CSidekickNet::getNetRAM( u8 * content, u32 * size){
 	CString path = "/getNetRam.php";
 	if (!HTTPGet ( m_Playground, path, (char*) content, *size)){
-		logger->Write( "getNetRAM", LogError, "Failed with status %u, >%s<", Status, path);
+		logger->Write( "getNetRAM", LogError, "Failed with path >%s<", path);
 	}
 }
