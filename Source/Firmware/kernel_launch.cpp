@@ -29,7 +29,7 @@
 */
 #include "kernel_launch.h"
 
-#ifdef WITH_NET2
+#ifdef WITH_NET
 extern CSidekickNet * pSidekickNet;
 #endif
 
@@ -224,15 +224,10 @@ void CKernelLaunch::Run( void )
 	CACHE_PRELOADL2KEEP( &prgData[ prgSizeBelowA000 + 2 ] );
 	CACHE_PRELOADL2KEEP( &prgData[ 0 ] );
 
-<<<<<<< HEAD:Source/Firmware/kernel_launch.cpp
 	nBytesRead = 0; stage = 1;
 	u32 cycleCountC64_Stage1 = 0;
 	#ifdef WITH_NET2
 	unsigned netDelay = 90000000; //TODO: improve this
-=======
-	#ifdef WITH_NET2
-	unsigned netDelay = 900000000; //TODO: improve this
->>>>>>> 9dca5ba... disable all net interference in kernel_launch to get more stability:kernel_launch.cpp
 	#endif
 
 	// wait forever
@@ -271,13 +266,14 @@ void CKernelLaunch::Run( void )
 		#endif
 
 
-		#ifdef WITH_NET2
+		#ifdef WITH_NET
 		if ( pSidekickNet->IsRunning() )
 		{
-			netDelay--;
+			if ( disableCart && transferStarted)
+				netDelay--;
 			if (netDelay == 0 )
 			{
-				netDelay = 30;
+				netDelay = _playingPSID ? 3000: 300;
 				m_InputPin.DisableInterrupt();
 				m_InputPin.DisconnectInterrupt();
 				EnableIRQs();
@@ -287,6 +283,17 @@ void CKernelLaunch::Run( void )
 				
 				kernelMenu->updateSystemMonitor();
 				pSidekickNet->handleQueuedNetworkAction();
+				//pSidekickNet->requireCacheWellnessTreatment();
+
+				// warm caches
+				prepareOnReset( true );
+				DELAY(1<<18);
+				prepareOnReset( true );
+				DELAY(1<<18);
+				prepareOnReset( true );
+				
+				
+				
 				DisableIRQs();
 				m_InputPin.ConnectInterrupt( FIQ_HANDLER, FIQ_PARENT );
 				m_InputPin.EnableInterrupt( GPIOInterruptOnRisingEdge );
