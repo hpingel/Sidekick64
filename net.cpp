@@ -790,8 +790,6 @@ boolean CSidekickNet::isAnyNetworkActionQueued()
 
 void CSidekickNet::saveDownload2SD()
 {
-	//if when we save a prg we can be sure that we are in the launcher kernel atm
-	//we need a waiting popup that locks the sktx screen...
 	if ( strcmp( m_CSDBDownloadExtension, "prg" ) == 0)
 	{
 		m_isSktxKeypressQueued = false;
@@ -809,7 +807,9 @@ void CSidekickNet::saveDownload2SD()
 		downloadLogMsg.Append( "'" );
 		logger->Write( "saveDownload2SD", LogNotice, downloadLogMsg);
 	}
+	requireCacheWellnessTreatment();
 	writeFile( logger, DRIVE, m_CSDBDownloadSavePath, (u8*) prgDataLaunch, prgSizeLaunch );
+	requireCacheWellnessTreatment();
 	logger->Write( "saveDownload2SD", LogNotice, "Finished writing.");
 	m_isDownloadReadyForLaunch = true;
 }
@@ -825,6 +825,7 @@ void CSidekickNet::cleanupDownloadData()
 	m_CSDBDownloadFilename = (char*)""; // this is used from kernel_menu to display name on screen
 	m_bSaveCSDBDownload2SD = false;
 	m_isDownloadReadyForLaunch = false;
+	requireCacheWellnessTreatment();
 }
 
 boolean CSidekickNet::isDownloadReadyForLaunch()
@@ -865,7 +866,7 @@ boolean CSidekickNet::checkForFinishedDownload()
 				setErrorMsgC64((char*)"     Saving and launching CRT file      ");
 				m_queueDelay = 15;
 			}
-
+			requireCacheWellnessTreatment();
 		}
 	}
 	return bTemp;
@@ -1320,4 +1321,11 @@ CString CSidekickNet::getSysMonInfo( unsigned details )
 
 void CSidekickNet::requireCacheWellnessTreatment(){
 	m_kMenu->doCacheWellnessTreatment();
+}
+
+void CSidekickNet::getNetRAM( u8 * content, u32 * size){
+	CString path = "/getNetRam.php";
+	if (!HTTPGet ( m_Playground, path, (char*) content, *size)){
+		logger->Write( "getNetRAM", LogError, "Failed with status %u, >%s<", Status, path);
+	}
 }

@@ -136,6 +136,7 @@ public:
 	boolean isRebootRequested();
 	void requestReboot();
 	void requireCacheWellnessTreatment();
+	void getNetRAM( u8 *, u32 *);
 
 private:
 

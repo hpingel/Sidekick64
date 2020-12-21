@@ -599,7 +599,9 @@ void CKernelMenu::Run( void )
 			m_InputPin.DisconnectInterrupt();
 			EnableIRQs();
 			updateSystemMonitor();
+			//the order of the following function calls is done like this on purpose
 			m_SidekickNet.handleQueuedNetworkAction();
+			
 			if ( m_SidekickNet.isDownloadReadyForLaunch()){
 				logger->Write( "RaspiMenu", LogNotice, "Download is ready for launch" );
 				u32 launchKernelTmp = m_SidekickNet.getCSDBDownloadLaunchType();
@@ -611,19 +613,15 @@ void CKernelMenu::Run( void )
 					lastChar = 0xfffffff;
 				}
 				m_SidekickNet.cleanupDownloadData(); //this also removes the status message
-				doCacheWellnessTreatment();
 			}
 			
 			//if there is an unsaved download we save it to sd card
 			//after the status message was rendered by checkForFinishedDownload
 			m_SidekickNet.checkForSaveableDownload();
 			
-			if ( m_SidekickNet.checkForFinishedDownload())
-			{
-				//HTTP download is finished, but we haven't saved it yet
-				//a status message is being put onto the screen for the user
-				doCacheWellnessTreatment();
-			}
+			//when HTTP download is finished but we haven't saved it yet
+			//a status message is being put onto the screen for the user
+			m_SidekickNet.checkForFinishedDownload();
 
 			DisableIRQs();
 			m_InputPin.ConnectInterrupt( this->FIQHandler, this );
@@ -881,7 +879,7 @@ int main( void )
 	kernel.Initialize();
 
 	extern void KernelKernalRun( CGPIOPinFIQ m_InputPin, CKernelMenu *kernelMenu, char *FILENAME );
-	extern void KernelGeoRAMRun( CGPIOPinFIQ m_InputPin, CKernelMenu *kernelMenu );
+	//extern void KernelGeoRAMRun( CGPIOPinFIQ m_InputPin, CKernelMenu *kernelMenu ); unused
 	extern void KernelLaunchRun( CGPIOPinFIQ m_InputPin, CKernelMenu *kernelMenu, const char *FILENAME, bool hasData = false, u8 *prgDataExt = NULL, u32 prgSizeExt = 0, u32 c128PRG = 0, u32 playingPSID = 0 );
 	extern void KernelEFRun( CGPIOPinFIQ m_InputPin, CKernelMenu *kernelMenu, const char *FILENAME, const char *menuItemStr, , bool hasData = false, u8 *crtDataExt = NULL, u32 crtSizeExt = 0, const char *FILENAME_KERNAL = NULL );
 	extern void KernelFC3Run( CGPIOPinFIQ m_InputPin, CKernelMenu *kernelMenu, char *FILENAME = NULL, const char *FILENAME_KERNAL = NULL );
