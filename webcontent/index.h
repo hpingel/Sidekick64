@@ -17,7 +17,7 @@
 "\t\t\t<div class=\"form-group\">\n"
 "\t\t\t\t\n"
 "\t\t\t\t<div class=\"custom-file\">\n"
-"\t\t\t\t  <input type=\"file\" class=\"custom-file-input\" id=\"customFile\">\n"
+"\t\t\t\t  <input type=\"file\" class=\"custom-file-input\" id=\"customFile\" name=\"kernelimg\" >\n"
 "\t\t\t\t  <label class=\"custom-file-label\" for=\"customFile\">Kernel image file (kernel*.img)</label>\n"
 "\t\t\t\t</div>\n"
 "\t\t\t\t\n"
