@@ -137,6 +137,7 @@ public:
 	void requestReboot();
 	void requireCacheWellnessTreatment();
 	void getNetRAM( u8 *, u32 *);
+	void prepareLaunchOfUpload( char * );
 
 private:
 
@@ -189,6 +190,7 @@ private:
 	boolean m_isDownloadReady;
 	boolean m_isDownloadReadyForLaunch;
 	boolean m_isRebootRequested;
+	boolean m_isReturnToMenuRequested;
 	char * m_networkActionStatusMsg;
 	unsigned char * m_sktxScreenContent;
 	char * m_sktxSessionID;
