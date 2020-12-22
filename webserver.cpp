@@ -31,6 +31,9 @@
 
 #define MAX_CONTENT_SIZE	4000
 
+extern u32 prgSizeLaunch;
+extern unsigned char prgDataLaunch[ 1025*1024 ] AAA;
+
 // our content
 static const char s_Index[] =
 #include "webcontent/index.h"
@@ -126,7 +129,6 @@ CHTTPDaemon *CWebServer::CreateWorker (CNetSubSystem *pNetSubSystem, CSocket *pS
 				writeFile( logger, "SD:", filename, (u8*) pPartData, nPartLength );
 				//logger->Write( FromWebServer, LogNotice, "Written, now reboot requested.");
 				m_SidekickNet->requireCacheWellnessTreatment();
-				
 				m_SidekickNet->requestReboot();
 				//logger->Write( FromWebServer, LogNotice, "Reboot was requested.");
 				
@@ -134,7 +136,27 @@ CHTTPDaemon *CWebServer::CreateWorker (CNetSubSystem *pNetSubSystem, CSocket *pS
 			}
 			else
 			{
-				pMsg = "Invalid request";
+				char * type = "";
+				if ( strstr (pPartHeader, ".PRG\"") || strstr (pPartHeader, ".prg\""))
+				 	type = "prg";
+				if ( strstr (pPartHeader, ".d64\"") || strstr (pPartHeader, ".D64\""))
+					type = "d64";
+				if ( strstr (pPartHeader, ".crt\"") || strstr (pPartHeader, ".CRT\""))
+					type = "crt";
+				if ( strstr (pPartHeader, ".sid\"") || strstr (pPartHeader, ".SID\""))
+					type = "sid";
+					
+				if (strcmp(type,"") != 0)
+				{
+					prgSizeLaunch = nPartLength;
+					memcpy( prgDataLaunch, pPartData, nPartLength);
+					m_SidekickNet->prepareLaunchOfUpload( type );
+					pMsg = "Now launching PRG/SID/D64/CRT...";
+				}
+				else
+				{
+					pMsg = "Invalid request";
+				}
 			}
 		}
 		else

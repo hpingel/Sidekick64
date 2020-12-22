@@ -133,6 +133,7 @@ CSidekickNet::CSidekickNet( CInterruptSystem * pInterruptSystem, CTimer * pTimer
 		m_isDownloadReady( false ),
 		m_isDownloadReadyForLaunch( false ),
 		m_isRebootRequested( false ),
+		m_isReturnToMenuRequested( false ),
 		m_networkActionStatusMsg( (char * ) ""),
 		m_sktxScreenContent( (unsigned char * ) ""),
 		m_sktxSessionID( (char * ) ""),
@@ -356,7 +357,9 @@ void CSidekickNet::checkForSupportedPiModel()
 }
 
 boolean CSidekickNet::isReturnToMenuRequired(){
-	return m_isRebootRequested;
+	boolean result =  m_isRebootRequested || m_isReturnToMenuRequested;
+	m_isReturnToMenuRequested = false;
+	return result;
 }
 
 boolean CSidekickNet::isRebootRequested(){
@@ -790,11 +793,6 @@ boolean CSidekickNet::isAnyNetworkActionQueued()
 
 void CSidekickNet::saveDownload2SD()
 {
-	if ( strcmp( m_CSDBDownloadExtension, "prg" ) == 0)
-	{
-		m_isSktxKeypressQueued = false;
-	}
-	
 	m_isCSDBDownloadSavingQueued = false;
 	if (m_loglevel > 2)
 	{
@@ -812,6 +810,15 @@ void CSidekickNet::saveDownload2SD()
 	requireCacheWellnessTreatment();
 	logger->Write( "saveDownload2SD", LogNotice, "Finished writing.");
 	m_isDownloadReadyForLaunch = true;
+}
+
+void CSidekickNet::prepareLaunchOfUpload( char * ext ){
+	m_isDownloadReadyForLaunch = true;
+	m_CSDBDownloadExtension = ext;
+	m_CSDBDownloadFilename = "http_upload";
+  //TODO:
+	//m_CSDBDownloadSavePath
+	//m_isReturnToMenuRequested = true;
 }
 
 void CSidekickNet::cleanupDownloadData()
