@@ -57,6 +57,7 @@
 #endif
 #include <circle/net/in.h>
 #include <circle/types.h>
+#include <ctype.h>
 
 #include <assert.h>
 #include <stdio.h>
@@ -88,13 +89,9 @@ static const char CSDB_HOST[] = "csdb.dk";
 #define DRIVE		"SD:"
 #define FIRMWARE_PATH	DRIVE "/firmware/"		// firmware files must be provided here
 #define CONFIG_FILE	DRIVE "/wpa_supplicant.conf"
-//static const char * kernelUpdatePath[2] = { "/sidekick64/kernel8.wlan.img", "/sidekick264/kernel8.wlan.img"};
-//#else
-//static const char * kernelUpdatePath[2] = { "/sidekick64/kernel8.img", "/sidekick264/kernel8.img"};
 #endif
 
 //temporary hack
-
 extern u32 prgSizeLaunch;
 extern unsigned char prgDataLaunch[ 1025*1024 ] AAA;
 #ifdef WITH_RENDER
@@ -375,8 +372,10 @@ boolean CSidekickNet::isRebootRequested(){
 	msg.Append("  ");
 	const char * tmp = msg;
 	setErrorMsgC64( (char*) tmp );
-	if ( secondsLeft <= 0)
+	if ( secondsLeft <= 0){
+		unmountSDDrive();
 		return true;
+	}
 	else
 		return false;
 }
@@ -722,16 +721,7 @@ void CSidekickNet::handleQueuedNetworkAction()
 	{
 		if ( netEnableWebserver )
 			m_pScheduler->Yield (); // this is needed for webserver
-/*
-		if ( m_isKernelUpdateQueued )
-		{
-			//CheckForSidekickKernelUpdate();
-			m_isKernelUpdateQueued = false;
-			#ifndef WITH_RENDER
-			clearErrorMsg(); //on c64screen, kernel menu
-			#endif
-		}
-*/		
+
 		if (m_isFrameQueued)
 		{
 			#ifdef WITH_RENDER
@@ -784,7 +774,6 @@ boolean CSidekickNet::isAnyNetworkActionQueued()
 {
 	return
 			m_isNetworkInitQueued || 
-			//m_isKernelUpdateQueued || 
 			m_isFrameQueued || 
 			m_isSktxKeypressQueued || 
 			m_isCSDBDownloadQueued || 
@@ -1164,6 +1153,12 @@ void CSidekickNet::updateSktxScreenContent(){
 //				logger->Write( "updateSktxScreenContent", LogNotice, "filename: >%s<", CSDBFilename);
 				memcpy( extension, &pResponseBuffer[ m_sktxResponseLength -3 ], 3);
 				extension[3] = '\0';
+				
+				//enforce lowercase for extension because we compare it a lot
+				for(int i = 0; extension[i]; i++){
+				  extension[i] = tolower(extension[i]);
+				}
+
 //				logger->Write( "updateSktxScreenContent", LogNotice, "extension: >%s<", extension);
 
 				CString savePath;
