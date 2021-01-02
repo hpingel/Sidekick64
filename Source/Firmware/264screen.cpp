@@ -96,7 +96,7 @@ char errorMessages[5][41] = {
 #define MENU_CONFIG  0x03
 #ifdef WITH_NET
 #define MENU_NETWORK 0x04
-#define MENU_SKTX 0x05
+#define MENU_SKTP 0x05
 #define MENU_SYSTEMINFO 0x06
 #endif
 
@@ -356,9 +356,9 @@ int getMainMenuSelection( int key, char **FILE, char **FILE2, int *addIdx )
 	if ( key == KEY_HELP ) { resetMenuState(3); return 2;/* Browser */ } else
 	if ( key == KEY_F1 ) { resetMenuState(1); return 3;/* GEORAM */ } else
 	if ( key == KEY_F2 ) { resetMenuState(2); return 4;/* SID */ } else
-	//#ifdef WITH_NET
-	//if ( key == KEY_F6 ) { resetMenuState(4); return 5;/* Network */ } else //hp: don't have a clue about these numbers here
-	//#endif
+	#ifdef WITH_NET
+	if ( key == KEY_F6 ) { resetMenuState(4); return 5;/* Network */ } else //hp: don't have a clue about these numbers here
+	#endif
 	{
 		if ( key >= 'A' && key < 'A' + menuItems[ 1 ] ) // PRG
 		{
@@ -798,10 +798,10 @@ void handleC64( int k, u32 *launchKernel, char *FILENAME, char *filenameKernal )
 		}
 		if ( k == 'x' || k == 'X')
 		{
-			if (pSidekickNet->IsRunning())
+			//if (pSidekickNet->IsRunning())
 			{
-				pSidekickNet->redrawSktxScreen();
-				menuScreen = MENU_SKTX;
+				pSidekickNet->redrawSktpScreen();
+				menuScreen = MENU_SKTP;
 				handleC64( 0xffffffff, launchKernel, FILENAME, filenameKernal );
 				return;
 			}
@@ -832,16 +832,16 @@ void handleC64( int k, u32 *launchKernel, char *FILENAME, char *filenameKernal )
 		else if ( k == 'd' || k == 'D')
 		{
 				if ( errorMsg != NULL ) errorMsg = NULL;
-				if (pSidekickNet->IsRunning() && menuScreen == MENU_SKTX)
+				if (pSidekickNet->IsRunning() && menuScreen == MENU_SKTP)
 				{
-					pSidekickNet->redrawSktxScreen();
+					pSidekickNet->redrawSktpScreen();
 					handleC64( 0xffffffff, launchKernel, FILENAME, filenameKernal );
 					return;
 				}
 			
 		}
 	} else
-	if ( menuScreen == MENU_SKTX )
+	if ( menuScreen == MENU_SKTP )
 	{
 	
 		if ( k == KEY_F7 || k == KEY_F6 )
@@ -854,11 +854,11 @@ void handleC64( int k, u32 *launchKernel, char *FILENAME, char *filenameKernal )
 		else if ( k == 'n' || k == 'N')
 		{
 			//only needed temporarily for testing purposes
-			pSidekickNet->resetSktxSession();
+			pSidekickNet->resetSktpSession();
 		}*/
 		else if ( k == 'd' || k == 'D')
 		{
-				//http errors might be displayed on top of sktx screen
+				//http errors might be displayed on top of sktp screen
 				//this assignment is a cheap trick to get rid of error popups
 				if ( errorMsg != NULL ) errorMsg = NULL;
 		}
@@ -866,7 +866,7 @@ void handleC64( int k, u32 *launchKernel, char *FILENAME, char *filenameKernal )
 		{
 			//92 is pound key, this key is constantly sent by the rpimenu_net.prg
 			//automatically if the user doesn't press a key on the Commodore keyboard
-			pSidekickNet->queueSktxRefresh(); 
+			pSidekickNet->queueSktpRefresh(); 
 			
 		}
 		else
@@ -874,7 +874,7 @@ void handleC64( int k, u32 *launchKernel, char *FILENAME, char *filenameKernal )
 			//the user has actually manually pressed a key on the Commodore keyboard
 			//and it is not the pound key which is reserved to enable
 			//constant screen refresh
-			pSidekickNet->queueSktxKeypress(k);
+			pSidekickNet->queueSktpKeypress(k);
 		}
 	} else
 	if ( menuScreen == MENU_SYSTEMINFO )
@@ -1246,15 +1246,15 @@ void printSystemInfoScreen()
 }
 
 
-void printSKTXScreen()
+void printSKTPScreen()
 {
 	const unsigned yOffset = 0;
 	
 	if ( pSidekickNet->IsRunning() )
 	{
-		if ( pSidekickNet->IsSktxScreenToBeCleared() ) clearC64();
+		if ( pSidekickNet->IsSktpScreenToBeCleared() ) clearC64();
 
-		if ( !pSidekickNet->IsSktxScreenUnchanged() )
+		if ( !pSidekickNet->IsSktpScreenUnchanged() )
 		{
 			u16 pos = 0;
 			u8 color = 0;
@@ -1262,14 +1262,14 @@ void printSKTXScreen()
 			unsigned x = 0;
 			boolean inverse = false;
 			char * content;
-			while (!pSidekickNet->IsSktxScreenContentEndReached())
+			while (!pSidekickNet->IsSktpScreenContentEndReached())
 			{
-				content = (char *) pSidekickNet->GetSktxScreenContentChunk( pos, color, inverse);
+				content = (char *) pSidekickNet->GetSktpScreenContentChunk( pos, color, inverse);
 				y = pos / 40;
 				x = pos % 40;
 				printC64( x, y+yOffset, content, color + 96, inverse ? 0x80 : 0, 4);//4 is undefined
 			}
-			pSidekickNet->ResetSktxScreenContentChunks();
+			pSidekickNet->ResetSktpScreenContentChunks();
 		}
 	}
 	//printC64( 1, 24, pSidekickNet->getSysMonInfo(0), skinValues.SKIN_MENU_TEXT_ITEM, 0 );
@@ -1436,9 +1436,9 @@ void renderC64()
 	{
 		printNetworkScreen();
 	}
-	if ( menuScreen == MENU_SKTX )
+	if ( menuScreen == MENU_SKTP )
 	{
-		printSKTXScreen();
+		printSKTPScreen();
 	}
 	if ( menuScreen == MENU_SYSTEMINFO )
 	{

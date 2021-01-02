@@ -132,7 +132,7 @@ int extraMsg = 0;
 #define MENU_CONFIG  0x03
 #ifdef WITH_NET
 #define MENU_NETWORK 0x04
-#define MENU_SKTX 0x05
+#define MENU_SKTP 0x05
 #define MENU_SYSTEMINFO 0x06
 #endif
 
@@ -1697,8 +1697,8 @@ void handleC64( int k, u32 *launchKernel, char *FILENAME, char *filenameKernal, 
 		{
 			if (pSidekickNet->IsRunning())
 			{
-				pSidekickNet->redrawSktxScreen();
-				menuScreen = MENU_SKTX;
+				pSidekickNet->redrawSktpScreen();
+				menuScreen = MENU_SKTP;
 				handleC64( 0xffffffff, launchKernel, FILENAME, filenameKernal, menuItemStr );
 				return;
 			}
@@ -1730,16 +1730,16 @@ void handleC64( int k, u32 *launchKernel, char *FILENAME, char *filenameKernal, 
 		else if ( k == 'd' || k == 'D')
 		{
 				if ( errorMsg != NULL ) errorMsg = NULL;
-				if (pSidekickNet->IsRunning() && menuScreen == MENU_SKTX)
+				if (pSidekickNet->IsRunning() && menuScreen == MENU_SKTP)
 				{
-					pSidekickNet->redrawSktxScreen();
+					pSidekickNet->redrawSktpScreen();
 					handleC64( 0xffffffff, launchKernel, FILENAME, filenameKernal, menuItemStr );
 					return;
 				}
 				
 		}
 	} else
-	if ( menuScreen == MENU_SKTX )
+	if ( menuScreen == MENU_SKTP )
 	{
 	
 		if ( k == VK_F7 || k == VK_F6 )
@@ -1752,11 +1752,11 @@ void handleC64( int k, u32 *launchKernel, char *FILENAME, char *filenameKernal, 
 		else if ( k == 'n' || k == 'N')
 		{
 			//only needed temporarily for testing purposes
-			pSidekickNet->resetSktxSession();
+			pSidekickNet->resetSktpSession();
 		}*/
 		else if ( k == 'd' || k == 'D')
 		{
-				//http errors might be displayed on top of sktx screen
+				//http errors might be displayed on top of sktp screen
 				//this assignment is a cheap trick to get rid of error popups
 				if ( errorMsg != NULL ) errorMsg = NULL;
 		}
@@ -1764,7 +1764,7 @@ void handleC64( int k, u32 *launchKernel, char *FILENAME, char *filenameKernal, 
 		{
 			//92 is pound key, this key is constantly sent by the rpimenu_net.prg
 			//automatically if the user doesn't press a key on the Commodore keyboard
-			pSidekickNet->queueSktxRefresh(); 
+			pSidekickNet->queueSktpRefresh(); 
 			
 		}
 		else
@@ -1772,7 +1772,7 @@ void handleC64( int k, u32 *launchKernel, char *FILENAME, char *filenameKernal, 
 			//the user has actually manually pressed a key on the Commodore keyboard
 			//and it is not the pound key which is reserved to enable
 			//constant screen refresh
-			pSidekickNet->queueSktxKeypress(k);
+			pSidekickNet->queueSktpKeypress(k);
 		}
 	} else
 	if ( menuScreen == MENU_SYSTEMINFO )
@@ -2153,12 +2153,21 @@ void printNetworkScreen()
 	const u32 x = 1;
 	
 	CString strHostName   = "Hostname:        "; 
+	CString strSKTPHost   = "SKTP Host:       "; 
 	CString strIpAddress  = "IP address:      "; 
 	CString strNetMask    = "Netmask:         "; 
 	CString strDefGateway = "Default Gateway: "; 
 	CString strDNSServer  = "DNS Server:      ";
 	CString strDhcpUsed   = "DHCP active:     ";
 	CString strHelper;
+	
+	if (strcmp(strHostName,"") != 0)
+		strHostName.Append( netSidekickHostname );
+	if (strcmp(netSktpHostName,"") != 0){
+		strHelper = pSidekickNet->getLoggerStringForHost(netSktpHostName, netSktpHostPort);
+		strSKTPHost.Append( strHelper );
+	}
+	
 	if ( pSidekickNet->IsRunning() )
 	{
 		pSidekickNet->GetNetConfig()->GetIPAddress ()->Format (&strHelper);
@@ -2183,7 +2192,11 @@ void printNetworkScreen()
 	u32 y1 = 2;
 
 	printC64( x+1, y1+2, "Network settings", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
-	printC64( x+1, y1+8, "Press >S< to display system infos", skinValues.SKIN_MENU_TEXT_HEADER, 0 );	
+	printC64( x+1, y1+8, strHostName,   skinValues.SKIN_MENU_TEXT_SYSINFO, 0 );
+	printC64( x+1, y1+9, strSKTPHost,   skinValues.SKIN_MENU_TEXT_SYSINFO, 0 );
+
+	printC64( x+1, y1+18, "Press >S< to display system infos", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
+
 	if ( pSidekickNet->IsRunning() )
 	{
 		printC64( x+1, y1+3, strIpAddress,   skinValues.SKIN_MENU_TEXT_ITEM, 0 );
@@ -2264,15 +2277,15 @@ void printSystemInfoScreen()
 	
 }
 
-void printSKTXScreen()
+void printSKTPScreen()
 {
 	const unsigned yOffset = 0;
 	
 	if ( pSidekickNet->IsRunning() )
 	{
-		if ( pSidekickNet->IsSktxScreenToBeCleared() ) clearC64();
+		if ( pSidekickNet->IsSktpScreenToBeCleared() ) clearC64();
 
-		if ( !pSidekickNet->IsSktxScreenUnchanged() )
+		if ( !pSidekickNet->IsSktpScreenUnchanged() )
 		{
 			u16 pos = 0;
 			u8 color = 0;
@@ -2280,14 +2293,14 @@ void printSKTXScreen()
 			unsigned x = 0;
 			boolean inverse = false;
 			char * content;
-			while (!pSidekickNet->IsSktxScreenContentEndReached())
+			while (!pSidekickNet->IsSktpScreenContentEndReached())
 			{
-				content = (char *) pSidekickNet->GetSktxScreenContentChunk( pos, color, inverse);
+				content = (char *) pSidekickNet->GetSktpScreenContentChunk( pos, color, inverse);
 				y = pos / 40;
 				x = pos % 40;
 				printC64( x, y+yOffset, content, color, inverse ? 0x80 : 0, 4);//4 is undefined
 			}
-			pSidekickNet->ResetSktxScreenContentChunks();
+			pSidekickNet->ResetSktpScreenContentChunks();
 		}
 	}
 	//printC64( 1, 24, pSidekickNet->getSysMonInfo(0), skinValues.SKIN_MENU_TEXT_ITEM, 0 );
@@ -2515,9 +2528,9 @@ void renderC64()
 	{
 		printNetworkScreen();
 	}
-	if ( menuScreen == MENU_SKTX )
+	if ( menuScreen == MENU_SKTP )
 	{
-		printSKTXScreen();
+		printSKTPScreen();
 	}
 	if ( menuScreen == MENU_SYSTEMINFO )
 	{

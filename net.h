@@ -91,11 +91,11 @@ public:
 	void updateFrame();
 	#endif
 	void checkForSupportedPiModel();
-	void updateSktxScreenContent();
+	void updateSktpScreenContent();
 	void queueNetworkInit();
 	void queueFrameRequest();
-	void queueSktxKeypress( int );
-	void queueSktxRefresh();
+	void queueSktpKeypress( int );
+	void queueSktpRefresh();
 	void handleQueuedNetworkAction();
 	void getCSDBBinaryContent();
 	u8 getCSDBDownloadLaunchType();
@@ -107,24 +107,24 @@ public:
 	boolean isDownloadReadyForLaunch();
 	boolean isWireless(){ return m_useWLAN;};
 	boolean RaspiHasOnlyWLAN();
-	boolean IsSktxScreenContentEndReached();
-	boolean IsSktxScreenToBeCleared();
-	boolean IsSktxScreenUnchanged();
+	boolean IsSktpScreenContentEndReached();
+	boolean IsSktpScreenToBeCleared();
+	boolean IsSktpScreenUnchanged();
 	char * getNetworkActionStatusMessage();
-  unsigned char * getSktxScreenContent(){ return m_sktxScreenContent; };
-	unsigned char * GetSktxScreenContentChunk( u16 & startPos, u8 &color, boolean & inverse );
+  unsigned char * getSktpScreenContent(){ return m_sktpScreenContent; };
+	unsigned char * GetSktpScreenContentChunk( u16 & startPos, u8 &color, boolean & inverse );
 	CString getTimeString();
 	CString getUptime();
 	CNetConfig * GetNetConfig();
 	CString getRaspiModelName();
 	CString getSysMonInfo( unsigned );
-	void ResetSktxScreenContentChunks();
+	void ResetSktpScreenContentChunks();
 	void setErrorMsgC64( char * msg );
-	void resetSktxSession();
-	boolean launchSktxSession();
-	void redrawSktxScreen();
-	boolean isSktxSessionActive();
-	CString getSktxPath( unsigned key );
+	void resetSktpSession();
+	boolean launchSktpSession();
+	void redrawSktpScreen();
+	boolean isSktpSessionActive();
+	CString getSktpPath( unsigned key );
 	void updateSystemMonitor( size_t, unsigned);
 	char * getCSDBDownloadFilename();
 	boolean mountSDDrive();
@@ -138,6 +138,7 @@ public:
 	void requireCacheWellnessTreatment();
 	void getNetRAM( u8 *, u32 *);
 	void prepareLaunchOfUpload( char * );
+	CString getLoggerStringForHost( CString hostname, int port);
 
 private:
 
@@ -150,7 +151,6 @@ private:
 	
 	boolean Prepare ();
 	CIPAddress getIPForHost( const char * );
-	CString getLoggerStringForHost( CString hostname, int port);
 	boolean HTTPGet (remoteHTTPTarget & target, const char * path, char *pBuffer, unsigned & nLengthRead);
 	
 	CUSBHCIDevice     * m_USBHCI;
@@ -184,7 +184,7 @@ private:
 	boolean m_isNetworkInitQueued;
 	//boolean m_isKernelUpdateQueued;
 	boolean m_isFrameQueued;
-	boolean m_isSktxKeypressQueued;
+	boolean m_isSktpKeypressQueued;
 	boolean m_isCSDBDownloadQueued;
 	boolean m_isCSDBDownloadSavingQueued;
 	boolean m_isDownloadReady;
@@ -192,8 +192,8 @@ private:
 	boolean m_isRebootRequested;
 	boolean m_isReturnToMenuRequested;
 	char * m_networkActionStatusMsg;
-	unsigned char * m_sktxScreenContent;
-	char * m_sktxSessionID;
+	unsigned char * m_sktpScreenContent;
+	char * m_sktpSessionID;
 	char * m_CSDBDownloadPath;
 	char * m_CSDBDownloadExtension;
 	char * m_CSDBDownloadFilename;
@@ -201,18 +201,18 @@ private:
 	CString m_CSDBDownloadSavePath;
 	boolean m_bSaveCSDBDownload2SD;
 	TMachineModel m_PiModel;
-	unsigned char m_sktxScreenContentChunk[8192];
+	unsigned char m_sktpScreenContentChunk[8192];
 	//unsigned m_SidekickKernelUpdatePath;
 	unsigned m_queueDelay;
 	unsigned m_timestampOfLastWLANKeepAlive;
 	unsigned m_timeoutCounterStart;
-	unsigned m_skipSktxRefresh;
-	unsigned m_sktxScreenPosition;
-	char * m_sktxResponseBuffer[8193];
-	unsigned m_sktxResponseLength;
-	unsigned m_sktxResponseType;
-	unsigned m_sktxKey;
-	unsigned m_sktxSession;
+	unsigned m_skipSktpRefresh;
+	unsigned m_sktpScreenPosition;
+	char * m_sktpResponseBuffer[8193];
+	unsigned m_sktpResponseLength;
+	unsigned m_sktpResponseType;
+	unsigned m_sktpKey;
+	unsigned m_sktpSession;
 	unsigned m_videoFrameCounter;
 	size_t m_sysMonHeapFree;
 	unsigned m_sysMonCPUTemp;
