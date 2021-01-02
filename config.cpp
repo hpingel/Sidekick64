@@ -44,10 +44,10 @@ int screenType;
 
 #ifdef WITH_NET
 	char netSidekickHostname[ 256 ];
-	char netSktxHostName[ 256 ];
-	u32  netSktxHostPort = 0;
-	char netSktxHostUser[ 64 ];
-	char netSktxHostPassword[ 64 ];
+	char netSktpHostName[ 256 ];
+	u32  netSktpHostPort = 0;
+	char netSktpHostUser[ 64 ];
+	char netSktpHostPassword[ 64 ];
 	boolean netConnectOnBoot = false;
 	boolean netEnableWebserver = false;
 
@@ -221,39 +221,39 @@ int readConfig( CLogger *logger, char *DRIVE, char *FILENAME )
 				#endif
 				}
 
-				if ( strcmp( ptr, "NET_SKTXHOST_NAME" ) == 0 )
+				if ( strcmp( ptr, "NET_SKTPHOST_NAME" ) == 0 )
 				{
 					ptr = strtok_r( NULL, "\"", &rest );
-					strncpy( netSktxHostName, ptr, 255 );
+					strncpy( netSktpHostName, ptr, 255 );
 				#ifdef DEBUG_OUT
-					logger->Write( "RaspiMenu", LogNotice, " sktx host name >%s<", netSktxHostName );
+					logger->Write( "RaspiMenu", LogNotice, " sktp host name >%s<", netSktpHostName );
 				#endif
 				}
 				
-				if ( strcmp( ptr, "NET_SKTXHOST_PORT" ) == 0 )
+				if ( strcmp( ptr, "NET_SKTPHOST_PORT" ) == 0 )
 				{
 					ptr = strtok_r( NULL, "\"", &rest );
-					netSktxHostPort = atoi( ptr );
+					netSktpHostPort = atoi( ptr );
 				#ifdef DEBUG_OUT
-					logger->Write( "RaspiMenu", LogNotice, " sktx host port  >%i<", netSktxHostPort );
+					logger->Write( "RaspiMenu", LogNotice, " sktp host port  >%i<", netSktpHostPort );
 				#endif
 				}
 
-				if ( strcmp( ptr, "NET_SKTXHOST_USERNAME" ) == 0 )
+				if ( strcmp( ptr, "NET_SKTPHOST_USERNAME" ) == 0 )
 				{
 					ptr = strtok_r( NULL, "\"", &rest );
-					strncpy( netSktxHostUser, ptr, 63 );
+					strncpy( netSktpHostUser, ptr, 63 );
 				#ifdef DEBUG_OUT
-					logger->Write( "RaspiMenu", LogNotice, " sktx username  >%s<", netSktxHostUser );
+					logger->Write( "RaspiMenu", LogNotice, " sktp username  >%s<", netSktpHostUser );
 				#endif
 				}
 
-				if ( strcmp( ptr, "NET_SKTXHOST_PASSWORD" ) == 0 )
+				if ( strcmp( ptr, "NET_SKTPHOST_PASSWORD" ) == 0 )
 				{
 					ptr = strtok_r( NULL, "\"", &rest );
-					strncpy( netSktxHostPassword, ptr, 63 );
+					strncpy( netSktpHostPassword, ptr, 63 );
 				#ifdef DEBUG_OUT
-					logger->Write( "RaspiMenu", LogNotice, " sktx pw >%s<", netSktxHostPassword );
+					logger->Write( "RaspiMenu", LogNotice, " sktp pw >%s<", netSktpHostPassword );
 				#endif
 				}
 

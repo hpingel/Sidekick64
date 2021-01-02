@@ -124,7 +124,7 @@ CSidekickNet::CSidekickNet( CInterruptSystem * pInterruptSystem, CTimer * pTimer
 		m_isNetworkInitQueued( false ),
 		//m_isKernelUpdateQueued( false ),
 		m_isFrameQueued( false ),
-		m_isSktxKeypressQueued( false ),
+		m_isSktpKeypressQueued( false ),
 		m_isCSDBDownloadQueued( false ),
 		m_isCSDBDownloadSavingQueued( false ),
 		m_isDownloadReady( false ),
@@ -132,8 +132,8 @@ CSidekickNet::CSidekickNet( CInterruptSystem * pInterruptSystem, CTimer * pTimer
 		m_isRebootRequested( false ),
 		m_isReturnToMenuRequested( false ),
 		m_networkActionStatusMsg( (char * ) ""),
-		m_sktxScreenContent( (unsigned char * ) ""),
-		m_sktxSessionID( (char * ) ""),
+		m_sktpScreenContent( (unsigned char * ) ""),
+		m_sktpSessionID( (char * ) ""),
 		m_CSDBDownloadPath( (char * ) ""),
 		m_CSDBDownloadExtension( (char * ) ""),
 		m_CSDBDownloadFilename( (char * ) ""),
@@ -144,17 +144,17 @@ CSidekickNet::CSidekickNet( CInterruptSystem * pInterruptSystem, CTimer * pTimer
 		m_queueDelay(0),
 		m_timestampOfLastWLANKeepAlive(0),
 		m_timeoutCounterStart(0),
-		m_skipSktxRefresh(0),
-		m_sktxScreenPosition(0),
-		m_sktxResponseLength(0),
-		m_sktxResponseType(0),
-		m_sktxKey(0),
-		m_sktxSession(0),
+		m_skipSktpRefresh(0),
+		m_sktpScreenPosition(0),
+		m_sktpResponseLength(0),
+		m_sktpResponseType(0),
+		m_sktpKey(0),
+		m_sktpSession(0),
 		m_videoFrameCounter(1),
 		//m_sysMonInfo(""),
 		m_sysMonHeapFree(0),
 		m_sysMonCPUTemp(0),
-		m_loglevel(1)
+		m_loglevel(2)
 		
 {
 	assert (m_pTimer != 0);
@@ -252,13 +252,13 @@ boolean CSidekickNet::Initialize()
 
 	m_NTPServerIP  = getIPForHost( NTPServer );
 
-	if (strcmp(netSktxHostName,"") != 0)
+	if (strcmp(netSktpHostName,"") != 0)
 	{
-		int port = netSktxHostPort != 0 ? netSktxHostPort: HTTP_PORT;
-		m_Playground.hostName = netSktxHostName;
+		int port = netSktpHostPort != 0 ? netSktpHostPort: HTTP_PORT;
+		m_Playground.hostName = netSktpHostName;
 		m_Playground.port = port;
-		m_Playground.ipAddress = getIPForHost( netSktxHostName );
-		m_Playground.logPrefix = getLoggerStringForHost( netSktxHostName, port);
+		m_Playground.ipAddress = getIPForHost( netSktpHostName );
+		m_Playground.logPrefix = getLoggerStringForHost( netSktpHostName, port);
 	}
 	else
 	{
@@ -267,7 +267,7 @@ boolean CSidekickNet::Initialize()
 	}
 	
 	if ( netEnableWebserver ){
-		if (m_loglevel > 2)
+		if (m_loglevel > 1)
 			logger->Write ("CSidekickNet::Initialize", LogNotice, "Starting webserver.");
 		m_WebServer = new CWebServer (m_Net, 80, KERNEL_MAX_SIZE + 2000, 0, this);
 	}
@@ -565,25 +565,25 @@ void CSidekickNet::queueFrameRequest()
 	m_queueDelay = 0;
 }
 
-void CSidekickNet::queueSktxKeypress( int key )
+void CSidekickNet::queueSktpKeypress( int key )
 {
 	if ( !isAnyNetworkActionQueued())
 		m_queueDelay = 0; //this could lead to disturbing an already running queuedelay
-	m_isSktxKeypressQueued = true;
-	m_sktxKey = key;
-	//logger->Write ("CSidekickNet::queueSktxKeypress", LogNotice, "Queuing keypress");
+	m_isSktpKeypressQueued = true;
+	m_sktpKey = key;
+	//logger->Write ("CSidekickNet::queueSktpKeypress", LogNotice, "Queuing keypress");
 }
 
-void CSidekickNet::queueSktxRefresh()
+void CSidekickNet::queueSktpRefresh()
 {
 	//refesh when user didn't press a key
 	//this has to be quick for multiplayer games (value 4)
 	//and can be slow for csdb browsing (value 16)
-	m_skipSktxRefresh++;
-	if ( m_skipSktxRefresh >8 && !isAnyNetworkActionQueued())
+	m_skipSktpRefresh++;
+	if ( m_skipSktpRefresh >8 && !isAnyNetworkActionQueued())
 	{
-		m_skipSktxRefresh = 0;
-		queueSktxKeypress( 92 );
+		m_skipSktpRefresh = 0;
+		queueSktpKeypress( 92 );
 	}
 }
 
@@ -678,13 +678,13 @@ void CSidekickNet::handleQueuedNetworkAction()
 				//This can be very annoying.
 				//As a WLAN keep-alive, we auto queue a network event
 				//to avoid WLAN going into "zombie" disconnected mode
-				if (m_loglevel > 3)
+				if (m_loglevel > 1)
 					logger->Write ("CSidekickNet", LogNotice, "Triggering WLAN keep-alive request...");
 				if (m_Playground.port != 0)
 				{
 					char pResponseBuffer[4097]; //TODO: can we reuse something else existing here?
-					CString path = isSktxSessionActive() ? getSktxPath( 92 ) : "/givemea404response.html";
-					HTTPGet ( m_Playground, path, pResponseBuffer, m_sktxResponseLength);
+					CString path = isSktpSessionActive() ? getSktpPath( 92 ) : "/givemea404response.html";
+					HTTPGet ( m_Playground, path, pResponseBuffer, m_sktpResponseLength);
 				}
 				else
 					UpdateTime();
@@ -735,7 +735,7 @@ void CSidekickNet::handleQueuedNetworkAction()
 				logger->Write( "handleQueuedNetworkAction", LogNotice, "m_CSDBDownloadPath: %s", m_CSDBDownloadPath);		
 			m_isCSDBDownloadQueued = false;
 			getCSDBBinaryContent();
-			//m_isSktxKeypressQueued = false;
+			//m_isSktpKeypressQueued = false;
 		}
 		/*
 	
@@ -745,14 +745,14 @@ void CSidekickNet::handleQueuedNetworkAction()
 				logger->Write( "handleQueuedNetworkAction", LogNotice, "sCSDBDownloadSavingQueued");		
 			m_isCSDBDownloadSavingQueued = false;
 			saveDownload2SD();
-			m_isSktxKeypressQueued = false;
+			m_isSktpKeypressQueued = false;
 		}
 */		
 		//handle keypress anyway even if we have downloaded or saved something
-		else if (m_isSktxKeypressQueued)
+		else if (m_isSktpKeypressQueued)
 		{
-			updateSktxScreenContent();
-			m_isSktxKeypressQueued = false;
+			updateSktpScreenContent();
+			m_isSktpKeypressQueued = false;
 		}
 	}
 }
@@ -764,7 +764,7 @@ boolean CSidekickNet::checkForSaveableDownload(){
 			logger->Write( "checkForSaveableDownload", LogNotice, "sCSDBDownloadSavingQueued");		
 		m_isCSDBDownloadSavingQueued = false;
 		saveDownload2SD();
-		m_isSktxKeypressQueued = false;
+		m_isSktpKeypressQueued = false;
 		return true;
 	}
 	return false;
@@ -775,7 +775,7 @@ boolean CSidekickNet::isAnyNetworkActionQueued()
 	return
 			m_isNetworkInitQueued || 
 			m_isFrameQueued || 
-			m_isSktxKeypressQueued || 
+			m_isSktpKeypressQueued || 
 			m_isCSDBDownloadQueued || 
 			m_isCSDBDownloadSavingQueued;
 }
@@ -814,7 +814,7 @@ void CSidekickNet::cleanupDownloadData()
 {
 	#ifndef WITH_RENDER
 	  clearErrorMsg(); //on c64screen, kernel menu
-	  redrawSktxScreen();
+	  redrawSktpScreen();
   #endif
 	m_CSDBDownloadSavePath = "";
 	m_CSDBDownloadPath = (char*)"";
@@ -1020,86 +1020,86 @@ void CSidekickNet::updateFrame(){
 }
 #endif
 
-void CSidekickNet::resetSktxSession(){
-	m_sktxSession	= 0;
+void CSidekickNet::resetSktpSession(){
+	m_sktpSession	= 0;
 }
 
-void CSidekickNet::redrawSktxScreen(){
-	if (m_sktxSession == 1)
-		m_sktxSession	= 2;
+void CSidekickNet::redrawSktpScreen(){
+	if (m_sktpSession == 1)
+		m_sktpSession	= 2;
 }
 
-boolean CSidekickNet::isSktxSessionActive(){
-	return m_sktxSession > 0;
+boolean CSidekickNet::isSktpSessionActive(){
+	return m_sktpSession > 0;
 }
 
-boolean CSidekickNet::launchSktxSession(){
+boolean CSidekickNet::launchSktpSession(){
 	char * pResponseBuffer = new char[33];	// +1 for 0-termination
 //  use hostname as username for testing purposes
-//	CString urlSuffix = "/sktx.php?session=new&username=";
+//	CString urlSuffix = "/sktp.php?session=new&username=";
 //	urlSuffix.Append(netSidekickHostname);
-//	if (HTTPGet ( m_Playground, urlSuffix, pResponseBuffer, m_sktxResponseLength))
-	if (HTTPGet ( m_Playground, "/sktx.php?session=new", pResponseBuffer, m_sktxResponseLength))	
+//	if (HTTPGet ( m_Playground, urlSuffix, pResponseBuffer, m_sktpResponseLength))
+	if (HTTPGet ( m_Playground, "/sktp.php?session=new", pResponseBuffer, m_sktpResponseLength))	
 	{
-		if ( m_sktxResponseLength > 25 && m_sktxResponseLength < 34){
-			m_sktxSessionID = pResponseBuffer;
-			m_sktxSessionID[m_sktxResponseLength] = '\0';
+		if ( m_sktpResponseLength > 25 && m_sktpResponseLength < 34){
+			m_sktpSessionID = pResponseBuffer;
+			m_sktpSessionID[m_sktpResponseLength] = '\0';
 			if (m_loglevel > 2)
-				logger->Write( "launchSktxSession", LogNotice, "Got session id: %s", m_sktxSessionID);
+				logger->Write( "launchSktpSession", LogNotice, "Got session id: %s", m_sktpSessionID);
 		}
 	}
 	else{
 		if (m_loglevel > 1)
-			logger->Write( "launchSktxSession", LogError, "Could not get session id.");
-		m_sktxSessionID = (char*) "";
+			logger->Write( "launchSktpSession", LogError, "Could not get session id.");
+		m_sktpSessionID = (char*) "";
 		return false;
 	}
 	return true;
 }
 
-CString CSidekickNet::getSktxPath( unsigned key )
+CString CSidekickNet::getSktpPath( unsigned key )
 {
-	CString path = "/sktx.php?";
+	CString path = "/sktp.php?";
 	CString Number; 
 	Number.Format ("%02X", key);
 	path.Append( "&key=" );
 	path.Append( Number );
 
 	path.Append( "&sessionid=" );
-	path.Append( m_sktxSessionID );
+	path.Append( m_sktpSessionID );
 	
-	if ( m_sktxSession == 2) //redraw
+	if ( m_sktpSession == 2) //redraw
 	{
-		m_sktxSession = 1;
+		m_sktpSession = 1;
 		path.Append( "&redraw=1" );
 	}
 	return path;
 }
 
-//void CSidekickNet::parseSktxDownloadURL(){}
+//void CSidekickNet::parseSktpDownloadURL(){}
 
 
-void CSidekickNet::updateSktxScreenContent(){
+void CSidekickNet::updateSktpScreenContent(){
 	if (!m_isActive || m_Playground.port == 0)
 	{
-		m_sktxScreenContent = (unsigned char *) msgNoConnection; //FIXME: there's a memory leak in here
+		m_sktpScreenContent = (unsigned char *) msgNoConnection; //FIXME: there's a memory leak in here
 		return;
 	}
 	
-	if ( m_sktxSession < 1){
-		if (!launchSktxSession())
+	if ( m_sktpSession < 1){
+		if (!launchSktpSession())
 			return;
-		m_sktxSession = 1;
+		m_sktpSession = 1;
 	}
 
-	char pResponseBuffer[4097]; //maybe turn this into member var when creating new sktx class?
-	if (HTTPGet ( m_Playground, getSktxPath( m_sktxKey ), pResponseBuffer, m_sktxResponseLength))
+	char pResponseBuffer[4097]; //maybe turn this into member var when creating new sktp class?
+	if (HTTPGet ( m_Playground, getSktpPath( m_sktpKey ), pResponseBuffer, m_sktpResponseLength))
 	{
-		if ( m_sktxResponseLength > 0 )
+		if ( m_sktpResponseLength > 0 )
 		{
-			//logger->Write( "updateSktxScreenContent", LogNotice, "HTTP Document m_sktxResponseLength: %i", m_sktxResponseLength);
-			m_sktxResponseType = pResponseBuffer[0];
-			if ( m_sktxResponseType == 2) // url for binary download, e. g. csdb
+			//logger->Write( "updateSktpScreenContent", LogNotice, "HTTP Document m_sktpResponseLength: %i", m_sktpResponseLength);
+			m_sktpResponseType = pResponseBuffer[0];
+			if ( m_sktpResponseType == 2) // url for binary download, e. g. csdb
 			{
 				u8 tmpUrlLength = pResponseBuffer[1];
 				u8 tmpFilenameLength = pResponseBuffer[2];
@@ -1116,7 +1116,7 @@ void CSidekickNet::updateSktxScreenContent(){
 				else if ( pResponseBuffer[ 4 + 4 ] == 's') // ....https
 					pathStartSuffix = 8+4;                   // ....https://
 				else
-					logger->Write( "updateSktxScreenContent", LogNotice, "Error: wrong char");
+					logger->Write( "updateSktpScreenContent", LogNotice, "Error: wrong char");
 
 				for ( pathStart = pathStartSuffix; pathStart < tmpUrlLength; pathStart++ ){
 					if ( pResponseBuffer[ pathStart ] == '/' || pResponseBuffer[ pathStart ] == ':')
@@ -1134,24 +1134,24 @@ void CSidekickNet::updateSktxScreenContent(){
 				
 				if (strcmp(hostName, m_CSDB.hostName) == 0){
 					m_CSDBDownloadHost = m_CSDB;
-					//logger->Write( "updateSktxScreenContent", LogNotice, "host is csdb");
+					//logger->Write( "updateSktpScreenContent", LogNotice, "host is csdb");
 				}
 				else if ( strcmp(hostName, m_Playground.hostName) == 0){
 					m_CSDBDownloadHost = m_Playground;
-					//logger->Write( "updateSktxScreenContent", LogNotice, "host is sktxserver");
+					//logger->Write( "updateSktpScreenContent", LogNotice, "host is sktpserver");
 				}
 				else{
-					logger->Write( "updateSktxScreenContent", LogNotice, "Error: Unknown host: >%s<", hostName);
+					logger->Write( "updateSktpScreenContent", LogNotice, "Error: Unknown host: >%s<", hostName);
 					m_CSDBDownloadHost = m_CSDB;
 				}
 
 				memcpy( CSDBDownloadPath, &pResponseBuffer[ pathStart ], tmpUrlLength - pathStart + 4);
 				CSDBDownloadPath[tmpUrlLength - pathStart + 4] = '\0';
-//				logger->Write( "updateSktxScreenContent", LogNotice, "download path: >%s<", CSDBDownloadPath);
+//				logger->Write( "updateSktpScreenContent", LogNotice, "download path: >%s<", CSDBDownloadPath);
 				memcpy( CSDBFilename, &pResponseBuffer[ 4 + tmpUrlLength  ], tmpFilenameLength );
 				CSDBFilename[tmpFilenameLength] = '\0';
-//				logger->Write( "updateSktxScreenContent", LogNotice, "filename: >%s<", CSDBFilename);
-				memcpy( extension, &pResponseBuffer[ m_sktxResponseLength -3 ], 3);
+//				logger->Write( "updateSktpScreenContent", LogNotice, "filename: >%s<", CSDBFilename);
+				memcpy( extension, &pResponseBuffer[ m_sktpResponseLength -3 ], 3);
 				extension[3] = '\0';
 				
 				//enforce lowercase for extension because we compare it a lot
@@ -1159,7 +1159,7 @@ void CSidekickNet::updateSktxScreenContent(){
 				  extension[i] = tolower(extension[i]);
 				}
 
-//				logger->Write( "updateSktxScreenContent", LogNotice, "extension: >%s<", extension);
+//				logger->Write( "updateSktpScreenContent", LogNotice, "extension: >%s<", extension);
 
 				CString savePath;
 				if (m_bSaveCSDBDownload2SD)
@@ -1175,9 +1175,9 @@ void CSidekickNet::updateSktxScreenContent(){
 						savePath.Append( (const char *) "SID/" );
 					savePath.Append(CSDBFilename);
 				}
-				m_sktxResponseLength = 1;
-				m_sktxScreenContent = (unsigned char * ) pResponseBuffer;
-				m_sktxScreenPosition = 1;
+				m_sktpResponseLength = 1;
+				m_sktpScreenContent = (unsigned char * ) pResponseBuffer;
+				m_sktpScreenPosition = 1;
 				m_isCSDBDownloadQueued = true;
 				m_queueDelay = 0;
 				m_CSDBDownloadPath = CSDBDownloadPath;
@@ -1186,64 +1186,64 @@ void CSidekickNet::updateSktxScreenContent(){
 				m_CSDBDownloadSavePath = savePath;
 			}
 			/*
-			if ( m_sktxResponseType == 3) // background and border color change
+			if ( m_sktpResponseType == 3) // background and border color change
 			{
 			}
-			if ( m_sktxResponseType == 4) // background and border color change
+			if ( m_sktpResponseType == 4) // background and border color change
 			{
 			}
 			*/
 			else
 			{
-				m_sktxScreenContent = (unsigned char * ) pResponseBuffer;
-				m_sktxScreenPosition = 1;
+				m_sktpScreenContent = (unsigned char * ) pResponseBuffer;
+				m_sktpScreenPosition = 1;
 			}
 		}
-		//logger->Write( "updateSktxScreenContent", LogNotice, "HTTP Document content: '%s'", m_sktxScreenContent);
+		//logger->Write( "updateSktpScreenContent", LogNotice, "HTTP Document content: '%s'", m_sktpScreenContent);
 		
 	}
 	else
 	{
-		m_sktxScreenContent = (unsigned char *) msgNotFound;
+		m_sktpScreenContent = (unsigned char *) msgNotFound;
 	}
-	m_sktxKey = 0;
+	m_sktpKey = 0;
 }
 
-boolean CSidekickNet::IsSktxScreenContentEndReached()
+boolean CSidekickNet::IsSktpScreenContentEndReached()
 {
-	return m_sktxScreenPosition >= m_sktxResponseLength;
+	return m_sktpScreenPosition >= m_sktpResponseLength;
 }
 
-boolean CSidekickNet::IsSktxScreenToBeCleared()
+boolean CSidekickNet::IsSktpScreenToBeCleared()
 {
-	return m_sktxResponseType == 0;
+	return m_sktpResponseType == 0;
 }
 
-boolean CSidekickNet::IsSktxScreenUnchanged()
+boolean CSidekickNet::IsSktpScreenUnchanged()
 {
-	return m_sktxResponseType == 2;
+	return m_sktpResponseType == 2;
 }
 
-void CSidekickNet::ResetSktxScreenContentChunks(){
-	m_sktxScreenPosition = 1;
+void CSidekickNet::ResetSktpScreenContentChunks(){
+	m_sktpScreenPosition = 1;
 }
 
-unsigned char * CSidekickNet::GetSktxScreenContentChunk( u16 & startPos, u8 &color, boolean &inverse )
+unsigned char * CSidekickNet::GetSktpScreenContentChunk( u16 & startPos, u8 &color, boolean &inverse )
 {
-	if ( m_sktxScreenPosition >= m_sktxResponseLength ){
-		//logger->Write( "GetSktxScreenContentChunk", LogNotice, "End reached.");
+	if ( m_sktpScreenPosition >= m_sktpResponseLength ){
+		//logger->Write( "GetSktpScreenContentChunk", LogNotice, "End reached.");
 		startPos = 0;
 		color = 0;
-		m_sktxScreenPosition = 1;
+		m_sktpScreenPosition = 1;
 		return (unsigned char *) '\0';
 	}
-	u8 type      = m_sktxScreenContent[ m_sktxScreenPosition ];
-	u8 scrLength = m_sktxScreenContent[ m_sktxScreenPosition + 1]; // max255
+	u8 type      = m_sktpScreenContent[ m_sktpScreenPosition ];
+	u8 scrLength = m_sktpScreenContent[ m_sktpScreenPosition + 1]; // max255
 	u8 byteLength= 0;
-	u8 startPosL = m_sktxScreenContent[ m_sktxScreenPosition + 2 ];//screen pos x/y
-	u8 startPosM = m_sktxScreenContent[ m_sktxScreenPosition + 3 ];//screen pos x/y
-	color        = m_sktxScreenContent[ m_sktxScreenPosition + 4 ]&15;//0-15, here we have some bits
-	inverse    = m_sktxScreenContent[ m_sktxScreenPosition + 4 ]>>7;//test bit 8
+	u8 startPosL = m_sktpScreenContent[ m_sktpScreenPosition + 2 ];//screen pos x/y
+	u8 startPosM = m_sktpScreenContent[ m_sktpScreenPosition + 3 ];//screen pos x/y
+	color        = m_sktpScreenContent[ m_sktpScreenPosition + 4 ]&15;//0-15, here we have some bits
+	inverse    = m_sktpScreenContent[ m_sktpScreenPosition + 4 ]>>7;//test bit 8
 	
 	if ( type == 0)
 	 	byteLength = scrLength;
@@ -1251,19 +1251,19 @@ unsigned char * CSidekickNet::GetSktxScreenContentChunk( u16 & startPos, u8 &col
 	 	byteLength = 1;
 	
 	startPos = startPosM * 255 + startPosL;//screen pos x/y
-	//logger->Write( "GetSktxScreenContentChunk", LogNotice, "Chunk parsed: length=%u, startPos=%u, color=%u ",length, startPos, color);
+	//logger->Write( "GetSktpScreenContentChunk", LogNotice, "Chunk parsed: length=%u, startPos=%u, color=%u ",length, startPos, color);
 	if ( type == 0)
-		memcpy( m_sktxScreenContentChunk, &m_sktxScreenContent[ m_sktxScreenPosition + 5], byteLength);
+		memcpy( m_sktpScreenContentChunk, &m_sktpScreenContent[ m_sktpScreenPosition + 5], byteLength);
 	if ( type == 1) //repeat single char
 	{
-		char fillChar = m_sktxScreenContent[ m_sktxScreenPosition + 5 ];
+		char fillChar = m_sktpScreenContent[ m_sktpScreenPosition + 5 ];
 		for (unsigned i = 0; i < scrLength; i++)
-			m_sktxScreenContentChunk[i] = fillChar;
+			m_sktpScreenContentChunk[i] = fillChar;
 	}
-	m_sktxScreenContentChunk[scrLength] = '\0';
-	m_sktxScreenPosition += 5+byteLength;//begin of next chunk
+	m_sktpScreenContentChunk[scrLength] = '\0';
+	m_sktpScreenPosition += 5+byteLength;//begin of next chunk
 	
-  return m_sktxScreenContentChunk;
+  return m_sktpScreenContentChunk;
 }
 
 boolean CSidekickNet::HTTPGet (remoteHTTPTarget & target, const char * path, char *pBuffer, unsigned & nLengthRead )

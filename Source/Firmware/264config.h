@@ -130,10 +130,10 @@ extern int screenType;
 
 #ifdef WITH_NET
 	extern char netSidekickHostname[ 256 ];
-	extern char netSktxHostName[ 256 ];
-	extern u32 netSktxHostPort;
-	extern char netSktxHostUser[ 64 ];
-	extern char netSktxHostPassword[ 64 ];
+	extern char netSktpHostName[ 256 ];
+	extern u32 netSktpHostPort;
+	extern char netSktpHostUser[ 64 ];
+	extern char netSktpHostPassword[ 64 ];
 	extern boolean netConnectOnBoot;
 	extern boolean netEnableWebserver;
 	
