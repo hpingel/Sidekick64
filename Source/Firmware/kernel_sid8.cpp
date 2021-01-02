@@ -1002,7 +1002,7 @@ void CKernel::FIQHandler (void *pParam)
 			u16 s2 = s >> 16;
 			s32 d1 = (s32)( ( *(s16*)&s1 + 32768 ) * PWMRange ) >> 17;
 			s32 d2 = (s32)( ( *(s16*)&s2 + 32768 ) * PWMRange ) >> 17;
-			#if RASPI >= 4
+			#if RASPPI >= 4
 			write32( ARM_PWM1_DAT1, d1 );
 			write32( ARM_PWM1_DAT2, d2 );
 			#else

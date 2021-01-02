@@ -107,13 +107,13 @@ CHTTPDaemon *CWebServer::CreateWorker (CNetSubSystem *pNetSubSystem, CSocket *pS
 				m_SidekickNet->requireCacheWellnessTreatment();
 
 #ifndef IS264				
-				#if RASPI >= 4
+				#if RASPPI >= 4
   				const char * filename = m_SidekickNet->usesWLAN() ? "SD:rpi4_kernel_sk64_wlan.img" : "SD:rpi4_kernel_sk64_net.img";
 				#else
   				const char * filename = m_SidekickNet->usesWLAN() ? "SD:kernel_sk64_wlan.img" : "SD:kernel_sk64_net.img";
 				#endif
 #else
-				#if RASPI >= 4
+				#if RASPPI >= 4
 					const char * filename = m_SidekickNet->usesWLAN() ? "SD:rpi4_kernel_sk264_wlan.img" : "SD:rpi4_kernel_sk264_net.img";
 				#else
 					const char * filename = m_SidekickNet->usesWLAN() ? "SD:kernel_sk264_wlan.img" : "SD:kernel_sk264_net.img";
