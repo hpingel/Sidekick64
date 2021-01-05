@@ -828,6 +828,7 @@ void handleC64( int k, u32 *launchKernel, char *FILENAME, char *filenameKernal )
 		{
 			pSidekickNet->requestReboot();
 		}
+		*/
 		//get rid of this after implementing a proper error msg dialog
 		else if ( k == 'd' || k == 'D')
 		{
@@ -1141,12 +1142,21 @@ void printNetworkScreen()
 	const u32 x = 1;
 	
 	CString strHostName   = "Hostname:        "; 
+	CString strSKTPHost   = "SKTP Host:       "; 
 	CString strIpAddress  = "IP address:      "; 
 	CString strNetMask    = "Netmask:         "; 
 	CString strDefGateway = "Default Gateway: "; 
 	CString strDNSServer  = "DNS Server:      ";
 	CString strDhcpUsed   = "DHCP active:     ";
 	CString strHelper;
+	
+	if (strcmp(strHostName,"") != 0)
+		strHostName.Append( netSidekickHostname );
+	if (strcmp(netSktpHostName,"") != 0){
+		strHelper = pSidekickNet->getLoggerStringForHost(netSktpHostName, netSktpHostPort);
+		strSKTPHost.Append( strHelper );
+	}
+	
 	if ( pSidekickNet->IsRunning() )
 	{
 		pSidekickNet->GetNetConfig()->GetIPAddress ()->Format (&strHelper);
@@ -1171,7 +1181,11 @@ void printNetworkScreen()
 	u32 y1 = 2;
 
 	printC64( x+1, y1+2, "Network settings", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
-	printC64( x+1, y1+8, "Press >S< to display system infos", skinValues.SKIN_MENU_TEXT_HEADER, 0 );	
+	printC64( x+1, y1+8, strHostName,   skinValues.SKIN_MENU_TEXT_SYSINFO, 0 );
+	printC64( x+1, y1+9, strSKTPHost,   skinValues.SKIN_MENU_TEXT_SYSINFO, 0 );
+
+	printC64( x+1, y1+18, "Press >S< to display system infos", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
+
 	if ( pSidekickNet->IsRunning() )
 	{
 		printC64( x+1, y1+3, strIpAddress,   skinValues.SKIN_MENU_TEXT_ITEM, 0 );
