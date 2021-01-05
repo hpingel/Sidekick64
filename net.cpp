@@ -612,7 +612,7 @@ u8 CSidekickNet::getCSDBDownloadLaunchType(){
 		prgSizeLaunch = crtSize;
 		m_CSDBDownloadFilename = "SD:C64/temp.crt"; //this is only an irrelevant dummy name ending wih crt
 #else
-		type = 0; //unused, we only save the file
+		type = 0; //unused, we only save the file (on Sidekick 264)
 #endif
 		if (m_loglevel > 2)
 			logger->Write ("CSidekickNet::getCSDBDownloadLaunchType", LogNotice, "D64 detected: >%s<",m_CSDBDownloadExtension);
@@ -646,9 +646,11 @@ u8 CSidekickNet::getCSDBDownloadLaunchType(){
 
 		delete psid64;
 		//FIXME: End of copy
-#endif
-		
 		type = 41;
+#else
+		type = 0; //unused, we only save the file (on Sidekick 264)
+#endif
+
 		if (m_loglevel > 2)
 			logger->Write ("CSidekickNet::getCSDBDownloadLaunchType", LogNotice, "SID detected: >%s<",m_CSDBDownloadExtension);
 	}
@@ -1166,11 +1168,23 @@ void CSidekickNet::updateSktpScreenContent(){
 				{
 					savePath = "SD:";
 					if ( strcmp(extension,"prg") == 0)
+#ifndef IS264
 						savePath.Append( (const char *) "PRG/" );
+#else
+						savePath.Append( (const char *) "PRG264/" );
+#endif
 					else if ( strcmp(extension,"crt") == 0)
+#ifndef IS264
+						savePath.Append( (const char *) "CART264/" );
+#else
 						savePath.Append( (const char *) "CRT/" );
+#endif
 					else if ( strcmp(extension,"d64") == 0)
+#ifndef IS264
 						savePath.Append( (const char *) "D64/" );
+#else
+						savePath.Append( (const char *) "D264/" );
+#endif
 					else if ( strcmp(extension,"sid") == 0)
 						savePath.Append( (const char *) "SID/" );
 					savePath.Append(CSDBFilename);
