@@ -493,8 +493,10 @@ boolean CSidekickNet::Prepare()
 		setErrorMsgC64((char*)"Can't mount SD card. Sorry.");
 		return false;
 	}	
+	#ifndef WITHOUT_STDLIB
 	CGlueStdioInit (m_FileSystem);
-
+	#endif
+	
 	if (m_useWLAN)
 	{
 	#ifdef WITH_WLAN
@@ -1155,11 +1157,13 @@ void CSidekickNet::updateSktpScreenContent(){
 //				logger->Write( "updateSktpScreenContent", LogNotice, "filename: >%s<", CSDBFilename);
 				memcpy( extension, &pResponseBuffer[ m_sktpResponseLength -3 ], 3);
 				extension[3] = '\0';
-				
+				#ifndef WITHOUT_STDLIB
+				//workaround: tolower is only available with stdlib!
 				//enforce lowercase for extension because we compare it a lot
 				for(int i = 0; extension[i]; i++){
 				  extension[i] = tolower(extension[i]);
 				}
+				#endif
 
 //				logger->Write( "updateSktpScreenContent", LogNotice, "extension: >%s<", extension);
 

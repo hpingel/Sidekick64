@@ -32,8 +32,7 @@
 */
 
 //to use SidekickNet without circle-stdlib and without HTTPS,
-//this define WITH_TLS may be removed
-#define WITH_TLS
+//compile without define WITH_TLS
 
 #include <circle/interrupt.h>
 #include <circle/timer.h>
@@ -46,10 +45,12 @@
 
 #include "webserver.h"
 
+#ifndef WITHOUT_STDLIB
 #include <circle_glue.h>
 #ifdef WITH_TLS
 #include <circle-mbedtls/tlssimplesupport.h>
 #include <circle-mbedtls/httpclient.h>
+#endif
 #endif
 
 #ifdef WITH_WLAN
