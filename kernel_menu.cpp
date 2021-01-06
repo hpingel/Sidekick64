@@ -37,7 +37,9 @@ Copyright (c) 2019-2021 Carsten Dachsbacher <frenetic@dachsbacher.de>
 
 // we will read these files
 static const char DRIVE[] = "SD:";
-#ifdef WITH_NET
+#ifdef WITHOUT_STDLIB
+static const char FILENAME_PRG[] = "SD:C64/rpimenu.prg";		// .PRG to start
+#elif WITH_NET
 static const char FILENAME_PRG[] = "SD:C64/rpimenu_net.prg";		// .PRG to start
 #else
 static const char FILENAME_PRG[] = "SD:C64/rpimenu.prg";		// .PRG to start
