@@ -41,6 +41,8 @@ extern void detectVIC();
 
 void bootstrapCustomNMIHandler()
 {
+  //FIXME: Do we have to backup accu value here first to restore it later?
+  
   //cmd 1 - lda - first byte (opcode)
   __asm__ ("lda #$a9");
   __asm__ ("sta $c000");
@@ -88,7 +90,13 @@ void bootstrapCustomNMIHandler()
   __asm__ ("lda #$40");
   __asm__ ("sta $c005");
   
-  //NMI handler will now be expected at $c0000
+  //end of handler
+  
+  //initialize flag with zero value
+  __asm__ ("lda #0");
+  __asm__ ("sta $c00f");
+  
+  //NMI handler will now be expected at $c000
   __asm__ ("lda #$00");
   __asm__ ("sta $0318");
   __asm__ ("lda #$c0");
@@ -375,10 +383,9 @@ int main (void)
 				
         {
           *((char *)(0xc00f)) = 0; //reset update flag set by nmi handler
+          __asm__ ("lda #$0a"); //FIXME: do we need this here to have the right value in accu?
           wireDetection();
           updateScreen();
-          //DEBUG: change border color
-          //*((char *)(0xd020)) = 1;
         }
 
         wireDetection();
