@@ -38,71 +38,7 @@ const char VERSION_STR[7] = {0x53, 0x49, 0x44, 0x4b, 0x09, 0x03, 0x0b };
 
 extern void detectC128();
 extern void detectVIC();
-
-void bootstrapCustomNMIHandler()
-{
-  //FIXME: Do we have to backup accu value here first to restore it later?
-  
-  //cmd 1 - lda - first byte (opcode)
-  __asm__ ("lda #$a9");
-  __asm__ ("sta $c000");
-
-  //cmd 1 - lda - second byte (payload)
-  __asm__ ("lda #$01");
-  __asm__ ("sta $c001");
-
-  //cmd 2 - sta - first byte (opcode)
-  __asm__ ("lda #$8d");
-  __asm__ ("sta $c002");
-
-  //cmd 2 - sta - second byte (lsb 0f)
-  __asm__ ("lda #$0f");
-  __asm__ ("sta $c003");
-
-  //cmd 2 - sta - third byte (msb c0)
-  __asm__ ("lda #$c0");
-  __asm__ ("sta $c004");
-
-//DEBUG: change border color
-/*
-  //cmd 3 - lda - first byte (opcode)
-  __asm__ ("lda #$a9");
-  __asm__ ("sta $c005");
-
-  //cmd 3 - lda - second byte (payload)
-  __asm__ ("lda #$02");
-  __asm__ ("sta $c006");
-
-  //cmd 3 - sta - first byte (opcode)
-  __asm__ ("lda #$8d");
-  __asm__ ("sta $c007");
-
-  //cmd 3 - sta - second byte (lsb 20)
-  __asm__ ("lda #$20");
-  __asm__ ("sta $c008");
-
-  //cmd 3 - sta - third byte (msb d0)
-  __asm__ ("lda #$d0");
-  __asm__ ("sta $c009");
-*/
-
-  //cmd 4 - RTI dec 64 / hex 40
-  __asm__ ("lda #$40");
-  __asm__ ("sta $c005");
-  
-  //end of handler
-  
-  //initialize flag with zero value
-  __asm__ ("lda #0");
-  __asm__ ("sta $c00f");
-  
-  //NMI handler will now be expected at $c000
-  __asm__ ("lda #$00");
-  __asm__ ("sta $0318");
-  __asm__ ("lda #$c0");
-  __asm__ ("sta $0319");
-
-}
+extern void instNMIHandler();
 
 void updateScreen()
 {
@@ -311,7 +247,7 @@ int main (void)
     *((char *)(0xdf01)) = 0; // dummy keypress
     updateScreen();
 
-   bootstrapCustomNMIHandler();
+		instNMIHandler();
 
 	joy2prev = 255;
     while ( 1 )

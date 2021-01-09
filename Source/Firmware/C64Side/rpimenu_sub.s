@@ -154,3 +154,28 @@ vicregs:
                  .BYTE $79 ; $d019 Interrupt Request Register (IRR)
                  .BYTE $F0 ; $d01a Interrupt Mask Register (IMR)
                  .BYTE 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+
+; ---------------------------------------------------------------------------
+; Sidekick64 NMI handler
+; ---------------------------------------------------------------------------
+.proc   _instNMIHandler
+.export _instNMIHandler
+_instNMIHandler:
+						sei
+						lda #0
+						sta $c00f ; initialize flag with zero value
+						lda #<sidekick_nmi_handler
+						sta $0318
+						lda #>sidekick_nmi_handler
+						sta $0319
+						cli
+						rts
+
+sidekick_nmi_handler:
+						sta $c00e ; backup accu value
+						lda #$01
+						sta $c00f ; set flag
+						;sta $d020 ; debug only : change border color to white
+						lda $c00e
+						rti
+.endproc
