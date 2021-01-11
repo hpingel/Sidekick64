@@ -129,7 +129,7 @@ public:
 
 private:
 	static void FIQHandler( void *pParam );
-	void RelaxInterrupts( void );
+	void DisableFIQInterrupt( void );
 
 public:
 	// do not change this order
