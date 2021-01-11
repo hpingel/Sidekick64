@@ -30,6 +30,11 @@
 
 #include "kernel_rkl.h"
 
+#ifdef WITH_NETRAM
+extern CSidekickNet * pSidekickNet;
+#endif
+
+
 // let them blink
 //#define LED
 
@@ -261,7 +266,16 @@ void CKernelRKL::Run( void )
 	if ( FILENAME_RAM )
 	{
 		u32 size;
-		readFile( logger, DRIVE, FILENAME_RAM, geo.RAM, &size );
+		#ifdef WITH_NETRAM
+		if (strcmp(FILENAME_RAM, "SD:GEORAM/slot09.ram") == 0)
+		{
+			pSidekickNet->getNetRAM( geo.RAM, &size );
+			//geoRAM_Init(); //this has already been called
+			size = 4096*1024;
+		}
+		else
+		#endif
+			readFile( logger, DRIVE, FILENAME_RAM, geo.RAM, &size );
 		geoSizeKB = size / 1024;
 	}
 
@@ -688,4 +702,3 @@ void CKernelRKL::FIQHandler( void *pParam )
 
 	OUTPUT_LATCH_AND_FINISH_BUS_HANDLING
 }
-
