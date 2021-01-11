@@ -441,7 +441,7 @@ __attribute__( ( always_inline ) ) inline void warmCache( void *fiqh, bool scree
 	FORCE_READ_LINEARa( (void*)fiqh, 2048*2, 65536 );
 }
 
-void CKernelMenu::RelaxInterrupts( void )
+void CKernelMenu::DisableFIQInterrupt( void )
 {
 	m_InputPin.DisableInterrupt();
 	m_InputPin.DisconnectInterrupt();
@@ -575,21 +575,39 @@ void CKernelMenu::Run( void )
 				}
 			} else
 			{
-				//to test this, please modify the ifdef and the code inside
-				#ifdef WITH_NET
-					if (m_SidekickNet.isAnyNetworkActionQueued())
+
+		#ifdef WITH_NET
+				m_InputPin.DisableInterrupt();
+				m_InputPin.DisconnectInterrupt();
+				EnableIRQs();
+				updateSystemMonitor();
+				m_SidekickNet.handleQueuedNetworkAction();
+				
+				if ( m_SidekickNet.isDownloadReadyForLaunch()){
+					logger->Write( "RaspiMenu", LogNotice, "Download is ready for launch" );
+					u32 launchKernelTmp = m_SidekickNet.getCSDBDownloadLaunchType();
+					if (launchKernelTmp > 0)
 					{
-						m_InputPin.DisableInterrupt();
-						m_InputPin.DisconnectInterrupt();
-						EnableIRQs();
-						updateSystemMonitor();
-						m_SidekickNet.handleQueuedNetworkAction();
-					
-						DisableIRQs();
-						m_InputPin.ConnectInterrupt( this->FIQHandler, this );
-						m_InputPin.EnableInterrupt( GPIOInterruptOnRisingEdge );
+						launchKernel = launchKernelTmp;
+						strcpy(FILENAME, m_SidekickNet.getCSDBDownloadFilename());
+						//strcpy(menuItemStr, m_SidekickNet.getCSDBDownloadFilename());
+						lastChar = 0xfffffff;
 					}
-				#endif
+					m_SidekickNet.cleanupDownloadData(); //this also removes the status message
+				}
+				
+				//if there is an unsaved download we save it to sd card
+				//after the status message was rendered by checkForFinishedDownload
+				m_SidekickNet.checkForSaveableDownload();
+				
+				//when HTTP download is finished but we haven't saved it yet
+				//a status message is being put onto the screen for the user
+				m_SidekickNet.checkForFinishedDownload();
+				
+				DisableIRQs();
+				m_InputPin.ConnectInterrupt( m_InputPin.FIQHandler, this );
+				m_InputPin.EnableInterrupt( GPIOInterruptOnRisingEdge );
+		#endif
 				
 				CACHE_PRELOAD_DATA_CACHE( c64screen, 1024, CACHE_PRELOADL2STRM );
 				CACHE_PRELOAD_DATA_CACHE( c64color, 1024, CACHE_PRELOADL2STRM );
@@ -602,7 +620,7 @@ void CKernelMenu::Run( void )
 	#endif
 	}
 	
-	RelaxInterrupts();
+	DisableFIQInterrupt();
 	pScheduler->Sleep (1);
 
 	// and we'll never reach this...
