@@ -37,13 +37,14 @@ Copyright (c) 2019-2021 Carsten Dachsbacher <frenetic@dachsbacher.de>
 
 // we will read these files
 static const char DRIVE[] = "SD:";
-#ifdef WITHOUT_STDLIB
+
+//#ifdef WITHOUT_STDLIB
 static const char FILENAME_PRG[] = "SD:C64/rpimenu.prg";		// .PRG to start
-#elif WITH_NET
-static const char FILENAME_PRG[] = "SD:C64/rpimenu_net.prg";		// .PRG to start
-#else
-static const char FILENAME_PRG[] = "SD:C64/rpimenu.prg";		// .PRG to start
-#endif
+//#elif WITH_NET
+//static const char FILENAME_PRG[] = "SD:C64/rpimenu_net.prg";		// .PRG to start
+//#else
+//static const char FILENAME_PRG[] = "SD:C64/rpimenu.prg";		// .PRG to start
+//#endif
 static const char FILENAME_CBM80[] = "SD:C64/launch.cbm80";		// launch code (CBM80 8k cart)
 static const char FILENAME_CONFIG[] = "SD:C64/sidekick64.cfg";		
 static const char FILENAME_SIDKICK_CONFIG[] = "SD:C64/SIDKick_CFG.prg";		
@@ -250,6 +251,19 @@ __attribute__( ( always_inline ) ) inline void warmCache( void *fiqh )
 	}
 }
 
+void doCacheWellnessTreatmentX( void * pFIQ2 ){
+	logger->Write( "RaspiMenu", LogNotice, "doCacheWellnessTreatmentX" );
+	
+	CleanDataCache();
+	InvalidateDataCache();
+	InvalidateInstructionCache();
+	pFIQ = pFIQ2;
+	warmCache( pFIQ );
+	DELAY(1<<18);
+	warmCache( pFIQ );
+	DELAY(1<<18);
+}
+
 
 void activateCart()
 {
@@ -274,6 +288,7 @@ void activateCart()
 		tftCopyBackground2Framebuffer();
 		tftSendFramebuffer16BitImm( tftFrameBuffer );
 	}
+	//TODO
 	CleanDataCache();
 	InvalidateDataCache();
 	InvalidateInstructionCache();
@@ -281,7 +296,8 @@ void activateCart()
 	DELAY(1<<18);
 	warmCache( pFIQ );
 	DELAY(1<<18);
-
+	
+//	doCacheWellnessTreatmentX( pFIQ );
 	latchSetClearImm( LATCH_RESET | LED_ACTIVATE_CART2_HIGH, LED_ACTIVATE_CART2_LOW | LATCH_ENABLE_KERNAL );
 }
 
@@ -355,7 +371,7 @@ boolean CKernelMenu::Initialize( void )
 	#ifdef WITH_NET
 		logger->Write ("SidekickKernel", LogNotice, "Compiled on: " COMPILE_TIME ", Git branch: " GIT_BRANCH ", Git hash: " GIT_HASH);
 		//TODO: this should be done in constructor of SideKickNet
-		m_SidekickNet.checkForSupportedPiModel();	
+		m_SidekickNet.checkForSupportedPiModel();
 		m_SidekickNet.mountSDDrive();
 	#endif
 
@@ -451,12 +467,56 @@ u32 updateLogo = 0;
 unsigned char tftC128Logo[ 240 * 240 * 2 ];
 extern unsigned char tftBackground[ 240 * 240 * 2 ];
 
-void CKernelMenu::RelaxInterrupts( void )
+void CKernelMenu::enableFIQInterrupt( void )
+{
+	DisableIRQs();
+	m_InputPin.ConnectInterrupt( this->FIQHandler, this );
+	m_InputPin.EnableInterrupt( GPIOInterruptOnRisingEdge );
+}
+
+void CKernelMenu::DisableFIQInterrupt( void )
 {
 	m_InputPin.DisableInterrupt();
 	m_InputPin.DisconnectInterrupt();
 	EnableIRQs();
 }
+
+#ifdef WITH_NET
+void CKernelMenu::handleNetwork()
+{
+	DisableFIQInterrupt();
+	//logger->Write( "RaspiMenu", LogNotice, "handleNetwork" );
+	
+	updateSystemMonitor();
+	//the order of the following function calls is done like this on purpose
+	m_SidekickNet.handleQueuedNetworkAction();
+	
+	if (m_SidekickNet.IsRunning()){
+		if ( m_SidekickNet.isDownloadReadyForLaunch()){
+			logger->Write( "RaspiMenu", LogNotice, "Download is ready for launch" );
+			u32 launchKernelTmp = m_SidekickNet.getCSDBDownloadLaunchType();
+			if (launchKernelTmp > 0)
+			{
+				launchKernel = launchKernelTmp;
+				strcpy(FILENAME, m_SidekickNet.getCSDBDownloadFilename());
+				strcpy(menuItemStr, m_SidekickNet.getCSDBDownloadFilename());
+				lastChar = 0xfffffff;
+			}
+			m_SidekickNet.cleanupDownloadData(); //this also removes the status message
+		}
+		
+		//if there is an unsaved download we save it to sd card
+		//after the status message was rendered by checkForFinishedDownload
+		m_SidekickNet.checkForSaveableDownload();
+		
+		//when HTTP download is finished but we haven't saved it yet
+		//a status message is being put onto the screen for the user
+		m_SidekickNet.checkForFinishedDownload();
+		m_timeStampOfLastNetworkEvent = 0;
+	}
+	enableFIQInterrupt();
+}
+#endif
 
 void CKernelMenu::Run( void )
 {
@@ -511,15 +571,19 @@ void CKernelMenu::Run( void )
 		tftSendFramebuffer16BitImm( tftFrameBuffer );
 	}
 
+	#ifdef WITH_NET
+	m_timeStampOfLastNetworkEvent = 0;
+	#endif
+	
 	if ( !disableCart )
 	{
 		// setup FIQ
-		DisableIRQs();
-		m_InputPin.ConnectInterrupt( this->FIQHandler, this );
-		m_InputPin.EnableInterrupt( GPIOInterruptOnRisingEdge );
+		enableFIQInterrupt();
 
 		launchKernel = 0;
 
+//		doCacheWellnessTreatment();
+		
 		CleanDataCache();
 		InvalidateDataCache();
 		InvalidateInstructionCache();
@@ -534,10 +598,12 @@ void CKernelMenu::Run( void )
 		SET_GPIO( bNMI | bDMA );
 		latchSetClearImm( LATCH_RESET, 0 );
 	}
+	unsigned keepNMILow = 0;
 
 	// wait forever
 	while ( !isRebootRequested() )
 	{
+
 		if ( first && nBytesRead < 32 && c64CycleCount > 1000000 )
 		{
 			first = 0;
@@ -550,13 +616,11 @@ void CKernelMenu::Run( void )
 
 		if ( launchKernel )
 		{
-			m_InputPin.DisableInterrupt();
-			m_InputPin.DisconnectInterrupt();
-			EnableIRQs();
+			DisableFIQInterrupt();
 			return;
 		}
 
-		static u32 refresh = 0;
+		//static u32 refresh = 0;
 		if ( screenType == 0 )
 		{
 			u32 v = 1 << ( ( c64CycleCount >> 18 ) % 6 );
@@ -574,6 +638,7 @@ void CKernelMenu::Run( void )
 
 		if ( updateMenu == 1 )
 		{
+			if ( keepNMILow > 0 )	SET_GPIO( bNMI );
 			wireSIDAvailable = 0;
 			if ( wireSIDGotLow && wireSIDGotHigh )
 				wireSIDAvailable = 1;
@@ -589,51 +654,55 @@ void CKernelMenu::Run( void )
 			}
 
 			startForC128 = 0;
+			//handleC64 - processes the key the user has pressed to determine how 
+			//the screen has to change (e.g. jump from page a to page b)
 			handleC64( lastChar, &launchKernel, FILENAME, filenameKernal, menuItemStr, &startForC128 );
 			lastChar = 0xfffffff;
 			refresh++;
-			renderC64();
+			renderC64(); //puts the active menu page into the raspi memory
+			#ifdef WITH_NET
+			handleNetwork();
+			#endif
 			warmCache( pFIQ );
 			doneWithHandling = 1;
 			updateMenu = 0;
-			#ifdef WITH_NET
-			m_InputPin.DisableInterrupt();
-			m_InputPin.DisconnectInterrupt();
-			EnableIRQs();
-			updateSystemMonitor();
-			//the order of the following function calls is done like this on purpose
-			m_SidekickNet.handleQueuedNetworkAction();
-			
-			if ( m_SidekickNet.isDownloadReadyForLaunch()){
-				logger->Write( "RaspiMenu", LogNotice, "Download is ready for launch" );
-				u32 launchKernelTmp = m_SidekickNet.getCSDBDownloadLaunchType();
-				if (launchKernelTmp > 0)
-				{
-					launchKernel = launchKernelTmp;
-					strcpy(FILENAME, m_SidekickNet.getCSDBDownloadFilename());
-					strcpy(menuItemStr, m_SidekickNet.getCSDBDownloadFilename());
-					lastChar = 0xfffffff;
-				}
-				m_SidekickNet.cleanupDownloadData(); //this also removes the status message
+		}
+		#ifdef WITH_NET
+		else
+		{
+			if ( m_SidekickNet.isSKTPScreenActive() )
+				m_SidekickNet.queueSktpRefresh( 8 );
+			if ( m_SidekickNet.isMenuScreenUpdateNeeded() )
+			{
+				//SET_GPIO( bNMI );
+				doneWithHandling = 0;
+				updateMenu = 1;
+//				logger->Write( "RaspiMenu", LogNotice, "MenuScreenUpdateNeeded => NMI" );
+				//doCacheWellnessTreatment();
+				renderC64(); //puts the active menu page into the raspi memory
+				doCacheWellnessTreatment();
+				CLR_GPIO( bNMI );
+				keepNMILow = 0;
+				doneWithHandling = 1;
+				updateMenu = 0;
+			}
+			if ( m_SidekickNet.IsRunning() &&  ++m_timeStampOfLastNetworkEvent > 3000000)
+			{
+					if ( keepNMILow > 0 )	SET_GPIO( bNMI );
+					handleNetwork(); //this makes the webserver respond quickly even when there is no keypress user action
+					//to improve performance here we could just call scheduler yield directly
 			}
 			
-			//if there is an unsaved download we save it to sd card
-			//after the status message was rendered by checkForFinishedDownload
-			m_SidekickNet.checkForSaveableDownload();
-			
-			//when HTTP download is finished but we haven't saved it yet
-			//a status message is being put onto the screen for the user
-			m_SidekickNet.checkForFinishedDownload();
-
-			DisableIRQs();
-			m_InputPin.ConnectInterrupt( this->FIQHandler, this );
-			m_InputPin.EnableInterrupt( GPIOInterruptOnRisingEdge );
-			#endif
-			
 		}
-	}
+		
+		if ( ++keepNMILow > 1)	SET_GPIO( bNMI );
+		
+		#endif
+		
 
-	RelaxInterrupts();
+	}
+	
+	DisableFIQInterrupt();
 	pScheduler->Sleep (1);
 
 	// and we'll never reach this...
@@ -641,16 +710,7 @@ void CKernelMenu::Run( void )
 }
 
 void CKernelMenu::doCacheWellnessTreatment(){
-	logger->Write( "RaspiMenu", LogNotice, "doCacheWellnessTreatment" );
-	
-	CleanDataCache();
-	InvalidateDataCache();
-	InvalidateInstructionCache();
-	pFIQ = (void*)this->FIQHandler;
-	warmCache( pFIQ );
-	DELAY(1<<18);
-	warmCache( pFIQ );
-	DELAY(1<<18);
+	doCacheWellnessTreatmentX( (void*) this->FIQHandler );
 }
 
 void CKernelMenu::FIQHandler (void *pParam)

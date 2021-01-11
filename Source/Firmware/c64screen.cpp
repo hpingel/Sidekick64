@@ -1708,6 +1708,7 @@ void handleC64( int k, u32 *launchKernel, char *FILENAME, char *filenameKernal, 
 		{
 			//if (pSidekickNet->IsRunning())
 			{
+				pSidekickNet->enteringSktpScreen();
 				menuScreen = MENU_SYSTEMINFO;
 				handleC64( 0xffffffff, launchKernel, FILENAME, filenameKernal, menuItemStr );
 				return;
@@ -1781,6 +1782,7 @@ void handleC64( int k, u32 *launchKernel, char *FILENAME, char *filenameKernal, 
 	{
 		if ( k == VK_F7)
 		{
+			pSidekickNet->leavingSktpScreen();
 			menuScreen = MENU_MAIN;
 			handleC64( 0xffffffff, launchKernel, FILENAME, filenameKernal, menuItemStr );
 			return;
