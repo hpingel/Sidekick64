@@ -272,6 +272,7 @@ boolean CSidekickNet::Initialize()
 	}
 				
 	#ifndef WITH_RENDER
+	 m_isMenuScreenUpdateNeeded = true;
 	 clearErrorMsg(); //on c64screen, kernel menu
   #endif
 	return true;
@@ -756,6 +757,7 @@ void CSidekickNet::handleQueuedNetworkAction()
 		else if (m_isSktpKeypressQueued)
 		{
 			updateSktpScreenContent();
+			m_isMenuScreenUpdateNeeded = true;
 			m_isSktpKeypressQueued = false;
 		}
 	}
@@ -1230,6 +1232,7 @@ void CSidekickNet::updateSktpScreenContent(){
 			{
 				m_sktpScreenContent = (unsigned char * ) pResponseBuffer;
 				m_sktpScreenPosition = 1;
+				m_isMenuScreenUpdateNeeded = true;
 			}
 		}
 		//logger->Write( "updateSktpScreenContent", LogNotice, "HTTP Document content: '%s'", m_sktpScreenContent);
