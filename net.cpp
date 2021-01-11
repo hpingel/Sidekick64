@@ -76,12 +76,8 @@ static const int nTimeZone       = 1*60;		// minutes diff to UTC
 static const char DRIVE[] = "SD:";
 //nDocMaxSize reserved 2 MB as the maximum size of the kernel file
 static const unsigned nDocMaxSize = 2000*1024;
-//static const char KERNEL_IMG_NAME[] = "kernel8.img";
-//static const char KERNEL_SAVE_LOCATION[] = "SD:kernel8.img";
-//static const char RPIMENU64_SAVE_LOCATION[] = "SD:C64/rpimenu_net.prg";
 static const char msgNoConnection[] = "Sorry, no network connection!";
 static const char msgNotFound[]     = "Message not found. :(";
-//static const char * prgUpdatePath[2] = { "/sidekick64/rpimenu_net.prg", "/sidekick264/rpimenu_net.prg"};
 
 static const char CSDB_HOST[] = "csdb.dk";
 
@@ -134,6 +130,8 @@ CSidekickNet::CSidekickNet( CInterruptSystem * pInterruptSystem, CTimer * pTimer
 		m_networkActionStatusMsg( (char * ) ""),
 		m_sktpScreenContent( (unsigned char * ) ""),
 		m_sktpSessionID( (char * ) ""),
+		m_isSktpScreenActive( false ),
+		m_isMenuScreenUpdateNeeded( false ),
 		m_CSDBDownloadPath( (char * ) ""),
 		m_CSDBDownloadExtension( (char * ) ""),
 		m_CSDBDownloadFilename( (char * ) ""),
@@ -166,7 +164,8 @@ CSidekickNet::CSidekickNet( CInterruptSystem * pInterruptSystem, CTimer * pTimer
 
 void CSidekickNet::setErrorMsgC64( char * msg ){ 
 	#ifndef WITH_RENDER
-	setErrorMsg( msg ); 
+	setErrorMsg( msg );
+	m_isMenuScreenUpdateNeeded = true;
 	#endif
 };
 
@@ -255,15 +254,15 @@ boolean CSidekickNet::Initialize()
 	if (strcmp(netSktpHostName,"") != 0)
 	{
 		int port = netSktpHostPort != 0 ? netSktpHostPort: HTTP_PORT;
-		m_Playground.hostName = netSktpHostName;
-		m_Playground.port = port;
-		m_Playground.ipAddress = getIPForHost( netSktpHostName );
-		m_Playground.logPrefix = getLoggerStringForHost( netSktpHostName, port);
+		m_SKTPServer.hostName = netSktpHostName;
+		m_SKTPServer.port = port;
+		m_SKTPServer.ipAddress = getIPForHost( netSktpHostName );
+		m_SKTPServer.logPrefix = getLoggerStringForHost( netSktpHostName, port);
 	}
 	else
 	{
-		m_Playground.hostName = "";
-		m_Playground.port = 0;
+		m_SKTPServer.hostName = "";
+		m_SKTPServer.port = 0;
 	}
 	
 	if ( netEnableWebserver ){
@@ -576,13 +575,13 @@ void CSidekickNet::queueSktpKeypress( int key )
 	//logger->Write ("CSidekickNet::queueSktpKeypress", LogNotice, "Queuing keypress");
 }
 
-void CSidekickNet::queueSktpRefresh()
+void CSidekickNet::queueSktpRefresh( unsigned timeout )
 {
 	//refesh when user didn't press a key
 	//this has to be quick for multiplayer games (value 4)
 	//and can be slow for csdb browsing (value 16)
 	m_skipSktpRefresh++;
-	if ( m_skipSktpRefresh >8 && !isAnyNetworkActionQueued())
+	if ( timeout == 0 || (m_skipSktpRefresh > timeout && !isAnyNetworkActionQueued()))
 	{
 		m_skipSktpRefresh = 0;
 		queueSktpKeypress( 92 );
@@ -672,7 +671,7 @@ void CSidekickNet::handleQueuedNetworkAction()
 		//every 10 seconds + seconds needed for request
 		//log cpu temp + uptime + free memory
 		//in wlan case do keep-alive request
-		if ( m_pTimer->GetUptime() - m_timestampOfLastWLANKeepAlive > 10)
+		if ( m_pTimer->GetUptime() - m_timestampOfLastWLANKeepAlive > netEnableWebserver ? 1:10)
 		{
 			#ifdef WITH_WLAN
 			//if (!netEnableWebserver)
@@ -684,11 +683,11 @@ void CSidekickNet::handleQueuedNetworkAction()
 				//to avoid WLAN going into "zombie" disconnected mode
 				if (m_loglevel > 1)
 					logger->Write ("CSidekickNet", LogNotice, "Triggering WLAN keep-alive request...");
-				if (m_Playground.port != 0)
+				if (m_SKTPServer.port != 0)
 				{
 					char pResponseBuffer[4097]; //TODO: can we reuse something else existing here?
 					CString path = isSktpSessionActive() ? getSktpPath( 92 ) : "/givemea404response.html";
-					HTTPGet ( m_Playground, path, pResponseBuffer, m_sktpResponseLength);
+					HTTPGet ( m_SKTPServer, path, pResponseBuffer, m_sktpResponseLength);
 				}
 				else
 					UpdateTime();
@@ -723,6 +722,7 @@ void CSidekickNet::handleQueuedNetworkAction()
 	}
 	else if (m_isActive)
 	{
+		//logger->Write( "handleQueuedNetworkAction", LogNotice, "Yield");
 		if ( netEnableWebserver )
 			m_pScheduler->Yield (); // this is needed for webserver
 
@@ -1005,7 +1005,7 @@ void CSidekickNet::getCSDBBinaryContent( ){
 #ifdef WITH_RENDER
 
 void CSidekickNet::updateFrame(){
-	if (!m_isActive || m_Playground.port == 0)
+	if (!m_isActive || m_SKTPServer.port == 0)
 	{
 		return;
 	}
@@ -1018,7 +1018,7 @@ void CSidekickNet::updateFrame(){
 	Number.Format ("%05d", m_videoFrameCounter);
 	path.Append( Number );
 	path.Append( ".bin" );
-	HTTPGet ( m_Playground, path, (char*) logo_bg_raw, iFileLength);
+	HTTPGet ( m_SKTPServer, path, (char*) logo_bg_raw, iFileLength);
 	m_videoFrameCounter++;
 	if (m_videoFrameCounter > 1500) m_videoFrameCounter = 1;
 }
@@ -1042,8 +1042,8 @@ boolean CSidekickNet::launchSktpSession(){
 //  use hostname as username for testing purposes
 //	CString urlSuffix = "/sktp.php?session=new&username=";
 //	urlSuffix.Append(netSidekickHostname);
-//	if (HTTPGet ( m_Playground, urlSuffix, pResponseBuffer, m_sktpResponseLength))
-	if (HTTPGet ( m_Playground, "/sktp.php?session=new", pResponseBuffer, m_sktpResponseLength))	
+//	if (HTTPGet ( m_SKTPServer, urlSuffix, pResponseBuffer, m_sktpResponseLength))
+	if (HTTPGet ( m_SKTPServer, "/sktp.php?session=new", pResponseBuffer, m_sktpResponseLength))	
 	{
 		if ( m_sktpResponseLength > 25 && m_sktpResponseLength < 34){
 			m_sktpSessionID = pResponseBuffer;
@@ -1080,11 +1080,26 @@ CString CSidekickNet::getSktpPath( unsigned key )
 	return path;
 }
 
-//void CSidekickNet::parseSktpDownloadURL(){}
+void CSidekickNet::enteringSktpScreen(){
+	m_isSktpScreenActive = true;
+}
 
+void CSidekickNet::leavingSktpScreen(){
+	m_isSktpScreenActive = false;
+}
+
+boolean CSidekickNet::isSKTPScreenActive(){
+	return m_isSktpScreenActive;
+}
+
+boolean CSidekickNet::isMenuScreenUpdateNeeded(){
+	boolean tmp = m_isMenuScreenUpdateNeeded;
+	m_isMenuScreenUpdateNeeded = false;
+	return tmp;
+}
 
 void CSidekickNet::updateSktpScreenContent(){
-	if (!m_isActive || m_Playground.port == 0)
+	if (!m_isActive || !m_isSktpScreenActive || m_SKTPServer.port == 0)
 	{
 		m_sktpScreenContent = (unsigned char *) msgNoConnection; //FIXME: there's a memory leak in here
 		return;
@@ -1097,7 +1112,7 @@ void CSidekickNet::updateSktpScreenContent(){
 	}
 
 	char pResponseBuffer[4097]; //maybe turn this into member var when creating new sktp class?
-	if (HTTPGet ( m_Playground, getSktpPath( m_sktpKey ), pResponseBuffer, m_sktpResponseLength))
+	if (HTTPGet ( m_SKTPServer, getSktpPath( m_sktpKey ), pResponseBuffer, m_sktpResponseLength))
 	{
 		if ( m_sktpResponseLength > 0 )
 		{
@@ -1140,8 +1155,8 @@ void CSidekickNet::updateSktpScreenContent(){
 					m_CSDBDownloadHost = m_CSDB;
 					//logger->Write( "updateSktpScreenContent", LogNotice, "host is csdb");
 				}
-				else if ( strcmp(hostName, m_Playground.hostName) == 0){
-					m_CSDBDownloadHost = m_Playground;
+				else if ( strcmp(hostName, m_SKTPServer.hostName) == 0){
+					m_CSDBDownloadHost = m_SKTPServer;
 					//logger->Write( "updateSktpScreenContent", LogNotice, "host is sktpserver");
 				}
 				else{
@@ -1345,7 +1360,7 @@ void CSidekickNet::requireCacheWellnessTreatment(){
 
 void CSidekickNet::getNetRAM( u8 * content, u32 * size){
 	CString path = "/getNetRam.php";
-	if (!HTTPGet ( m_Playground, path, (char*) content, *size)){
+	if (!HTTPGet ( m_SKTPServer, path, (char*) content, *size)){
 		logger->Write( "getNetRAM", LogError, "Failed with path >%s<", path);
 	}
 }
