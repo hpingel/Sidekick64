@@ -92,11 +92,13 @@ public:
 	void updateFrame();
 	#endif
 	void checkForSupportedPiModel();
+	void enteringSktpScreen();
+	void leavingSktpScreen();
 	void updateSktpScreenContent();
 	void queueNetworkInit();
 	void queueFrameRequest();
 	void queueSktpKeypress( int );
-	void queueSktpRefresh();
+	void queueSktpRefresh( unsigned timeout);
 	void handleQueuedNetworkAction();
 	void getCSDBBinaryContent();
 	u8 getCSDBDownloadLaunchType();
@@ -140,6 +142,8 @@ public:
 	void getNetRAM( u8 *, u32 *);
 	void prepareLaunchOfUpload( char * );
 	CString getLoggerStringForHost( CString hostname, int port);
+	boolean isSKTPScreenActive();
+	boolean isMenuScreenUpdateNeeded();
 
 private:
 
@@ -214,12 +218,14 @@ private:
 	unsigned m_sktpResponseType;
 	unsigned m_sktpKey;
 	unsigned m_sktpSession;
+	boolean  m_isSktpScreenActive;
+	boolean  m_isMenuScreenUpdateNeeded;
 	unsigned m_videoFrameCounter;
 	size_t m_sysMonHeapFree;
 	unsigned m_sysMonCPUTemp;
 	unsigned m_loglevel;
 	
-	remoteHTTPTarget m_Playground;
+	remoteHTTPTarget m_SKTPServer;
 	remoteHTTPTarget m_CSDB;
 	
 };
