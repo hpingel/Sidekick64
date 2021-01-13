@@ -120,21 +120,29 @@ CHTTPDaemon *CWebServer::CreateWorker (CNetSubSystem *pNetSubSystem, CSocket *pS
 				#endif
 #endif			
 				logger->Write( FromWebServer, LogNotice, "Saving kernel image to SD card, length: %u", nPartLength);
-				//logger->Write( FromWebServer, LogNotice, "Unlink.");
 				//f_unlink("SD:kernel_sk64_net.img.old");
-				//logger->Write( FromWebServer, LogNotice, "Rename.");
 				//f_rename("SD:kernel_sk64_net.img","SD:kernel_sk64_net.img.old");
-				//logger->Write( FromWebServer, LogNotice, "Write.");
-				//writeFile( logger, "SD:", (const char *) "SD:kernel_sk64_net.img", (u8*) pPartData, nPartLength );
 				writeFile( logger, "SD:", filename, (u8*) pPartData, nPartLength );
-				//logger->Write( FromWebServer, LogNotice, "Written, now reboot requested.");
 				m_SidekickNet->requireCacheWellnessTreatment();
 				m_SidekickNet->requestReboot();
-				//logger->Write( FromWebServer, LogNotice, "Reboot was requested.");
 				
 				pMsg = "Now rebooting into new kernel...";
 			}
-			else
+			else if ( strstr (pPartHeader, "filename=\"rpimenu.prg") != 0  && nPartLength > 0 )
+			{
+				#ifndef IS264
+  				const char * filename = "SD:C64/rpimenu.prg";
+				#else
+					const char * filename = "SD:C16/rpimenu.prg";
+				#endif
+				logger->Write( FromWebServer, LogNotice, "Saving rpimenu.prg to SD card, length: %u", nPartLength);
+				writeFile( logger, "SD:", filename, (u8*) pPartData, nPartLength );
+				m_SidekickNet->requireCacheWellnessTreatment();
+				m_SidekickNet->requestReboot();
+				
+				pMsg = "Press reset button on Sidekick to reload new rpimenu.prg";
+			}
+			else if (nPartLength > 0)
 			{
 				char * type = "";
 				if ( strstr (pPartHeader, ".PRG\"") || strstr (pPartHeader, ".prg\""))
