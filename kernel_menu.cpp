@@ -512,8 +512,8 @@ void CKernelMenu::handleNetwork()
 		//when HTTP download is finished but we haven't saved it yet
 		//a status message is being put onto the screen for the user
 		m_SidekickNet.checkForFinishedDownload();
-		m_timeStampOfLastNetworkEvent = 0;
 	}
+	m_timeStampOfLastNetworkEvent = 0;
 	enableFIQInterrupt();
 }
 #endif
@@ -636,9 +636,14 @@ void CKernelMenu::Run( void )
 			latchSetClear( l_on, l_off );
 		}
 
+		if ( keepNMILow > 0 ){
+				keepNMILow --;
+				if ( keepNMILow == 0 )
+					SET_GPIO( bNMI );
+		};
+
 		if ( updateMenu == 1 )
 		{
-			if ( keepNMILow > 0 )	SET_GPIO( bNMI );
 			wireSIDAvailable = 0;
 			if ( wireSIDGotLow && wireSIDGotHigh )
 				wireSIDAvailable = 1;
@@ -672,33 +677,38 @@ void CKernelMenu::Run( void )
 		{
 			if ( m_SidekickNet.isSKTPScreenActive() )
 				m_SidekickNet.queueSktpRefresh( 8 );
+			/*
+			if ( m_SidekickNet.IsRunning() && m_SidekickNet.isAnyNetworkActionQueued()){
+				DisableFIQInterrupt();
+				m_SidekickNet.handleQueuedNetworkAction();
+				enableFIQInterrupt();
+			}
+			else*/
 			if ( m_SidekickNet.isMenuScreenUpdateNeeded() )
 			{
 				//SET_GPIO( bNMI );
 				doneWithHandling = 0;
 				updateMenu = 1;
-//				logger->Write( "RaspiMenu", LogNotice, "MenuScreenUpdateNeeded => NMI" );
-				//doCacheWellnessTreatment();
+				DisableFIQInterrupt();
+				logger->Write( "RaspiMenu", LogNotice, "MenuScreenUpdateNeeded => NMI" );
+				//render should be after disable fiq because then the stuff like 
+				//system clock, uptime and CPU temp are being updated
+				doCacheWellnessTreatment();
 				renderC64(); //puts the active menu page into the raspi memory
 				doCacheWellnessTreatment();
-				CLR_GPIO( bNMI );
-				keepNMILow = 0;
+				enableFIQInterrupt();
 				doneWithHandling = 1;
 				updateMenu = 0;
+				CLR_GPIO( bNMI );
+				keepNMILow = 1; //this means the duration of NMI going down is a little longer
 			}
-			if ( m_SidekickNet.IsRunning() &&  ++m_timeStampOfLastNetworkEvent > 3000000)
+			else if ( ( m_SidekickNet.IsConnecting() || m_SidekickNet.IsRunning()) &&  ++m_timeStampOfLastNetworkEvent > 3000000)
 			{
-					if ( keepNMILow > 0 )	SET_GPIO( bNMI );
 					handleNetwork(); //this makes the webserver respond quickly even when there is no keypress user action
 					//to improve performance here we could just call scheduler yield directly
 			}
-			
 		}
-		
-		if ( ++keepNMILow > 1)	SET_GPIO( bNMI );
-		
 		#endif
-		
 
 	}
 	
