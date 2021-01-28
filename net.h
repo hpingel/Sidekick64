@@ -86,6 +86,8 @@ public:
 	boolean usesWLAN (void);
 	boolean Initialize ( void );
 	boolean IsRunning ( void );
+	boolean IsConnecting ( void );
+
 	//boolean CheckForSidekickKernelUpdate ();
 	boolean UpdateTime (void);
 	#ifdef WITH_RENDER
