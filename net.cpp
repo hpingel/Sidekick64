@@ -543,6 +543,11 @@ boolean CSidekickNet::IsRunning ()
 	 return m_isActive; 
 }
 
+boolean CSidekickNet::IsConnecting ()
+{
+	 return m_isNetworkInitQueued; 
+}
+
 void CSidekickNet::queueNetworkInit()
 { 
 	m_isNetworkInitQueued = true;
