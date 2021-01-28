@@ -213,7 +213,9 @@ void readSIDKick_Version()
 int main (void)
 {
     char key, x, firstHit;
-  unsigned char /*joy1, joy1prev, */joy2, joy2prev;
+    unsigned char /*joy1, joy1prev, */joy2, joy2prev;
+
+	  instNMIHandler();
 
     *(unsigned char*)(0x01) = 15;
 
@@ -246,8 +248,6 @@ int main (void)
     wireDetection();
     *((char *)(0xdf01)) = 0; // dummy keypress
     updateScreen();
-
-    instNMIHandler();
 
     joy2prev = 255;
     while ( 1 )
