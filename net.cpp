@@ -372,8 +372,9 @@ boolean CSidekickNet::isRebootRequested(){
 	msg.Append("  ");
 	const char * tmp = msg;
 	setErrorMsgC64( (char*) tmp );
+	m_isMenuScreenUpdateNeeded = true;// to update the waiting message instantly
 	if ( secondsLeft <= 0){
-		unmountSDDrive();
+		unmountSDDrive(); //TODO: check if this needs FIQ to be off!
 		return true;
 	}
 	else
@@ -591,6 +592,7 @@ void CSidekickNet::queueSktpRefresh( unsigned timeout )
 	{
 		m_skipSktpRefresh = 0;
 		queueSktpKeypress( 92 );
+		m_isMenuScreenUpdateNeeded = true;
 	}
 }
 
