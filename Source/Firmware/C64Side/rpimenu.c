@@ -282,7 +282,19 @@ int main (void)
 			{
 				 __asm__ ("jsr $e5b4");		// get it!
 				 __asm__ ("sta %v", key ); 
-			} else
+			}
+			else if  ( *((char *)(0xc00f)) == 1)
+			{
+				// do nmi handler stuff here
+				*((char *)(0xc00f)) = 0; //reset update flag set by nmi handler
+				waitvsync();
+				wireDetection();
+				updateScreen();
+				//DEBUG: change border color
+				//*((char *)(0xd020)) = 1;
+				continue;
+			}
+			else
                 continue;
 		}
 
@@ -299,15 +311,7 @@ int main (void)
 						__asm__ ("dex");
 						__asm__ ("bne loop");
 				}
-				else ( *((char *)(0xc00f)) == 1)
-				{
-					// do nmi handler stuff here
-					*((char *)(0xc00f)) = 0; //reset update flag set by nmi handler
-					wireDetection();
-          updateScreen();
-          //DEBUG: change border color
-          //*((char *)(0xd020)) = 1;
-				}
+
 				        wireDetection();
 				        *((char *)(0xdf01)) = key;
 						waitvsync();
@@ -317,25 +321,6 @@ int main (void)
 							for ( x = 0; x < 15; x++ )
 								waitvsync();
 				
-        {
-          *((char *)(0xc00f)) = 0; //reset update flag set by nmi handler
-          __asm__ ("lda #$0a"); //FIXME: do we need this here to have the right value in accu?
-          wireDetection();
-          updateScreen();
-        }
-
-        wireDetection();
-        *((char *)(0xdf01)) = key;
-		waitvsync();
-        updateScreen();
-
-		if ( firstHit )
-			for ( x = 0; x < 15; x++ )
-				waitvsync();
-    }
-    if ( firstHit )
-      for ( x = 0; x < 15; x++ )
-        waitvsync();
   }
 
   return 0;
