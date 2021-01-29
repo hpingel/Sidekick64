@@ -29,7 +29,7 @@
 #include "config.h"
 #include "lowlevel_arm64.h"
 
-#define MAX_CONTENT_SIZE	4000
+#define MAX_CONTENT_SIZE	40000
 
 extern u32 prgSizeLaunch;
 extern unsigned char prgDataLaunch[ 1025*1024 ] AAA;
@@ -51,6 +51,12 @@ static const u8 s_Favicon[] =
 {
 #include "webcontent/favicon.h"
 };
+
+static const u8 s_SK64Logo[] =
+{
+#include "webcontent/sidekick64_logo.h"
+};
+
 
 static const char FromWebServer[] = "webserver";
 
@@ -181,6 +187,7 @@ CHTTPDaemon *CWebServer::CreateWorker (CNetSubSystem *pNetSubSystem, CSocket *pS
 		nLength = String.GetLength ();
 		*ppContentType = "text/html; charset=UTF-8";
 	}
+	/*
 	else if (strcmp (pPath, "/tuning.html") == 0)
 	{
 		const char *pMsg = 0;
@@ -324,6 +331,7 @@ CHTTPDaemon *CWebServer::CreateWorker (CNetSubSystem *pNetSubSystem, CSocket *pS
 		nLength = String.GetLength ();
 		*ppContentType = "text/html; charset=UTF-8";
 	}
+	*/
 	else if (strcmp (pPath, "/style.css") == 0)
 	{
 		pContent = s_Style;
@@ -335,6 +343,12 @@ CHTTPDaemon *CWebServer::CreateWorker (CNetSubSystem *pNetSubSystem, CSocket *pS
 		pContent = s_Favicon;
 		nLength = sizeof s_Favicon;
 		*ppContentType = "image/x-icon";
+	}
+	else if (strcmp (pPath, "/sidekick64_logo.png") == 0)
+	{
+		pContent = s_SK64Logo;
+		nLength = sizeof s_SK64Logo;
+		*ppContentType = "image/png";
 	}
 	else
 	{
