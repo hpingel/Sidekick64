@@ -226,8 +226,9 @@ void CKernelLaunch::Run( void )
 
 	nBytesRead = 0; stage = 1;
 	u32 cycleCountC64_Stage1 = 0;
-	#ifdef WITH_NET2
-	unsigned netDelay = 90000000; //TODO: improve this
+	#ifdef WITH_NET
+	pSidekickNet->setCurrentKernel( (char*)"l" );
+	unsigned netDelay = _playingPSID ? 900000000: 300; //TODO: improve this
 	#endif
 
 	// wait forever

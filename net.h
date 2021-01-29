@@ -146,6 +146,7 @@ public:
 	CString getLoggerStringForHost( CString hostname, int port);
 	boolean isSKTPScreenActive();
 	boolean isMenuScreenUpdateNeeded();
+	void setCurrentKernel( char *);
 
 private:
 
@@ -226,6 +227,7 @@ private:
 	size_t m_sysMonHeapFree;
 	unsigned m_sysMonCPUTemp;
 	unsigned m_loglevel;
+	char * m_currentKernelRunning;
 	
 	remoteHTTPTarget m_SKTPServer;
 	remoteHTTPTarget m_CSDB;
