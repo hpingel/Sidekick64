@@ -617,6 +617,7 @@ void CKernelMenu::Run( void )
 	}
 
 	#ifdef WITH_NET
+	m_SidekickNet.setCurrentKernel( (char*)'m' );
 	unsigned keepNMILow = 0;
 	#endif
 

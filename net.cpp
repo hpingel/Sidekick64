@@ -152,7 +152,8 @@ CSidekickNet::CSidekickNet( CInterruptSystem * pInterruptSystem, CTimer * pTimer
 		//m_sysMonInfo(""),
 		m_sysMonHeapFree(0),
 		m_sysMonCPUTemp(0),
-		m_loglevel(2)
+		m_loglevel(2),
+		m_currentKernelRunning((char *) "-")
 		
 {
 	assert (m_pTimer != 0);
@@ -619,7 +620,7 @@ u8 CSidekickNet::getCSDBDownloadLaunchType(){
 		u32 crtSize = createD2EF( prgDataLaunch, prgSizeLaunch, cart, 2, 0, true );
 		memcpy( &prgDataLaunch[0], cart, crtSize );
 		prgSizeLaunch = crtSize;
-		m_CSDBDownloadFilename = "SD:C64/temp.crt"; //this is only an irrelevant dummy name ending wih crt
+		m_CSDBDownloadFilename = (char *)"SD:C64/temp.crt"; //this is only an irrelevant dummy name ending wih crt
 #else
 		type = 0; //unused, we only save the file (on Sidekick 264)
 #endif
@@ -817,10 +818,15 @@ void CSidekickNet::saveDownload2SD()
 void CSidekickNet::prepareLaunchOfUpload( char * ext ){
 	m_isDownloadReadyForLaunch = true;
 	m_CSDBDownloadExtension = ext;
-	m_CSDBDownloadFilename = "http_upload";
+	m_CSDBDownloadFilename = (char *)"http_upload";
   //TODO:
 	//m_CSDBDownloadSavePath
-	//m_isReturnToMenuRequested = true;
+	//if already in launcher kernel (l), leave it
+	if ( strcmp( m_currentKernelRunning, "l" ) == 0){
+		m_isReturnToMenuRequested = true;
+		//logger->Write( "prepareLaunchOfUpload", LogNotice, "ReturnToMenuRequested.");
+		
+	}
 }
 
 void CSidekickNet::cleanupDownloadData()
@@ -1373,4 +1379,8 @@ void CSidekickNet::getNetRAM( u8 * content, u32 * size){
 	if (!HTTPGet ( m_SKTPServer, path, (char*) content, *size)){
 		logger->Write( "getNetRAM", LogError, "Failed with path >%s<", path);
 	}
+}
+
+void CSidekickNet::setCurrentKernel( char * r){
+	m_currentKernelRunning = r;
 }
