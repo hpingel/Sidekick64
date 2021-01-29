@@ -146,7 +146,7 @@ CHTTPDaemon *CWebServer::CreateWorker (CNetSubSystem *pNetSubSystem, CSocket *pS
 				m_SidekickNet->requireCacheWellnessTreatment();
 				m_SidekickNet->requestReboot();
 				
-				pMsg = "Press reset button on Sidekick to reload new rpimenu.prg";
+				pMsg = "Now uploading new rpimenu.prg to folder C64 and rebooting.";
 			}
 			else if (nPartLength > 0)
 			{
@@ -175,8 +175,7 @@ CHTTPDaemon *CWebServer::CreateWorker (CNetSubSystem *pNetSubSystem, CSocket *pS
 		}
 		else
 		{
-			pMsg = "Select the kernel image file to be loaded "
-			       "and press the boot button!";
+			pMsg = "Send a PRG, SID, CRT or D64 file to Sidekick64 for instant launch. Or upload a Sidekick kernel image update (includes reboot).";
 		}
 
 		assert (pMsg != 0);
