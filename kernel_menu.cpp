@@ -39,6 +39,17 @@ Copyright (c) 2019-2021 Carsten Dachsbacher <frenetic@dachsbacher.de>
 static const char DRIVE[] = "SD:";
 
 //#ifdef WITHOUT_STDLIB
+
+#if WITH_NET
+
+//static 
+const u8 RPIMENUPRG[] =
+{
+#include "C64Side/rpimenu_prg.h"
+};
+
+#endif
+
 static const char FILENAME_PRG[] = "SD:C64/rpimenu.prg";		// .PRG to start
 //#elif WITH_NET
 //static const char FILENAME_PRG[] = "SD:C64/rpimenu_net.prg";		// .PRG to start
@@ -397,8 +408,14 @@ boolean CKernelMenu::Initialize( void )
 	latchSetClearImm( LED_INIT2_HIGH, LED_INIT2_LOW );
 
 	// read .PRG
+	#ifndef WITH_NET
 	readFile( logger, (char*)DRIVE, (char*)FILENAME_PRG, prgData, &prgSize );
-
+	#else
+	prgSize = sizeof RPIMENUPRG;
+  memcpy( &prgData[0], RPIMENUPRG, prgSize );
+	logger->Write( "SidekickMenu", LogNotice, "rpimenu.prg was read from memory." );
+	#endif
+	
 	latchSetClearImm( LED_INIT3_HIGH, LED_INIT3_LOW );
 
 	extern void scanDirectories( char *DRIVE );
@@ -409,7 +426,7 @@ boolean CKernelMenu::Initialize( void )
 	if ( !readConfig( logger, (char*)DRIVE, (char*)FILENAME_CONFIG ) )
 	{
 		latchSetClearImm( LED_INITERR_HIGH, LED_INITERR_LOW );
-		logger->Write( "RaspiMenu", LogPanic, "error reading .cfg" );
+		logger->Write( "SidekickMenu", LogPanic, "error reading .cfg" );
 	}
 
 	u32 t;
@@ -598,7 +615,10 @@ void CKernelMenu::Run( void )
 		SET_GPIO( bNMI | bDMA );
 		latchSetClearImm( LATCH_RESET, 0 );
 	}
+
+	#ifdef WITH_NET
 	unsigned keepNMILow = 0;
+	#endif
 
 	// wait forever
 	while ( !isRebootRequested() )
@@ -636,11 +656,13 @@ void CKernelMenu::Run( void )
 			latchSetClear( l_on, l_off );
 		}
 
+		#ifdef WITH_NET
 		if ( keepNMILow > 0 ){
 				keepNMILow --;
 				if ( keepNMILow == 0 )
 					SET_GPIO( bNMI );
 		};
+		#endif
 
 		if ( updateMenu == 1 )
 		{
