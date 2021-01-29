@@ -4,24 +4,48 @@
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootswatch/4.5.2/darkly/bootstrap.min.css" integrity="sha512-8lE+UgnY2CgbE+WDsGwSwAiMOswuRYm11jXYV5KWH6XfSDAzrdRMbPQDpCwzVjJbe9quHrNNPV6N/llRKnw5Hg==" crossorigin="anonymous" />
-	<title>Sidekick64 Webserver</title>
+	
+	<link rel="icon" href="/favicon.ico" type="image/x-icon">
+	
+	<!-- link rel="apple-touch-icon" sizes="57x57" href="/apple-icon-57x57.png">
+	<link rel="apple-touch-icon" sizes="60x60" href="/apple-icon-60x60.png">
+	<link rel="apple-touch-icon" sizes="72x72" href="/apple-icon-72x72.png">
+	<link rel="apple-touch-icon" sizes="76x76" href="/apple-icon-76x76.png">
+	<link rel="apple-touch-icon" sizes="114x114" href="/apple-icon-114x114.png">
+	<link rel="apple-touch-icon" sizes="120x120" href="/apple-icon-120x120.png">
+	<link rel="apple-touch-icon" sizes="144x144" href="/apple-icon-144x144.png">
+	<link rel="apple-touch-icon" sizes="152x152" href="/apple-icon-152x152.png">
+	<link rel="apple-touch-icon" sizes="180x180" href="/apple-icon-180x180.png">
+	<link rel="icon" type="image/png" sizes="192x192"  href="/android-icon-192x192.png">
+	<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+	<link rel="icon" type="image/png" sizes="96x96" href="/favicon-96x96.png">
+	<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+	<link rel="manifest" href="/manifest.json">
+	<meta name="msapplication-TileColor" content="#ffffff">
+	<meta name="msapplication-TileImage" content="/ms-icon-144x144.png">
+	<meta name="theme-color" content="#ffffff" -->
+	
+	<title>Sidekick64 Web-Interface</title>
 </head>
 <body>
-	&nbsp;<br/><div class="container">	
-	<h3>Sidekick64 Webserver</h3>
+	&nbsp;<br/><div class="container">
+		<img src="/sidekick64_logo.png" style="height: 128px; width: 128px;"/>
+	<!-- h3> Sidekick64 Web-Interface</h3 -->
+	<br/><br/>
 	<div class="container bg-dark">
-
+		<br/>
 		<p>%s</p>
 
 		<form action="index.html" method="post" enctype="multipart/form-data">
 			<div class="form-group">
 				
 				<div class="custom-file">
-				  <input type="file" class="custom-file-input" id="customFile" name="kernelimg" >
-				  <label class="custom-file-label" for="customFile">Kernel image file (kernel*.img)</label>
+				  <input type="file" class="custom-file-input" id="skUploadFile" name="kernelimg" >
+				  <label class="custom-file-label" for="skUploadFile">Kernel image file (kernel*.img)</label>
 				</div>
-				
+				<br/>
 				<input type="submit" class="btn btn-success" value="Upload and reboot" />
+				<br/><br/>
 			</div>
 		</form>
 
@@ -31,6 +55,17 @@
 	<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js" integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj" crossorigin="anonymous"></script>
 	<script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js" integrity="sha384-9/reFTGAW83EW2RDu2S0VKaIzap3H66lZH81PoYlFhbGU+6BZp6G7niu735Sk7lN" crossorigin="anonymous"></script>
 	<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js" integrity="sha384-B4gt1jrGC7Jh4AgTPSdUtOBvfO8shuf57BaghqFfPlYxofvL8/KUEfYiJOMMV+rV" crossorigin="anonymous"></script>	
+	
+	<script>
+	$(document).ready(function() {		
+		document.querySelector('.custom-file-input').addEventListener('change',function(e){
+			var fileName = document.getElementById("skUploadFile").files[0].name;
+			var nextSibling = e.target.nextElementSibling;
+			nextSibling.innerText = fileName;
+		});
+	});
+	</script>
+		
 	</div>
 </body>
 </html>
