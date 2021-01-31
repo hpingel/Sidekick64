@@ -169,9 +169,11 @@ CHTTPDaemon *CWebServer::CreateWorker (CNetSubSystem *pNetSubSystem, CSocket *pS
 				}
 				else
 				{
-					pMsg = "Invalid request";
+					pMsg = "Invalid request (1)";
 				}
 			}
+			else
+				pMsg = "Invalid request (2)";
 		}
 		else
 		{
