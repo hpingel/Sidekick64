@@ -71,6 +71,7 @@
 #define USE_DHCP
 #endif
 // Time configuration
+static const unsigned bestBefore = 1614556800;
 static const char NTPServer[]    = "pool.ntp.org";
 static const int nTimeZone       = 1*60;		// minutes diff to UTC
 static const char DRIVE[] = "SD:";
@@ -112,7 +113,8 @@ CSidekickNet::CSidekickNet( CInterruptSystem * pInterruptSystem, CTimer * pTimer
 		m_DNSClient(0),
 #ifdef WITH_TLS
 		m_TLSSupport(0),
-#endif		
+#endif
+		m_WebServer(0),
 		m_isFSMounted( false ),
 		m_isActive( false ),
 		m_isPrepared( false ),
@@ -227,8 +229,8 @@ boolean CSidekickNet::Initialize()
 				logger->Write( "CSidekickNet::Initialize", LogNotice, 
 					"Network connection is not running - is ethernet cable not attached?"
 				);
-			//                 "012345678901234567890123456789012345XXXX"
-			setErrorMsgC64((char*)"    Is the network cable plugged in?    ");
+			//                    "012345678901234567890123456789012345XXXX"
+			setErrorMsgC64((char*)"  Cable plugged in? Check and press >C< ");
 		}
 		return false;
 	}
@@ -267,9 +269,7 @@ boolean CSidekickNet::Initialize()
 	}
 	
 	if ( netEnableWebserver ){
-		if (m_loglevel > 1)
-			logger->Write ("CSidekickNet::Initialize", LogNotice, "Starting webserver.");
-		m_WebServer = new CWebServer (m_Net, 80, KERNEL_MAX_SIZE + 2000, 0, this);
+		EnableWebserver();
 	}
 				
 	#ifndef WITH_RENDER
@@ -278,6 +278,13 @@ boolean CSidekickNet::Initialize()
   #endif
 	return true;
 }
+
+void CSidekickNet::EnableWebserver(){
+	if (m_loglevel > 1)
+		logger->Write ("CSidekickNet::Initialize", LogNotice, "Starting webserver.");
+	m_WebServer = new CWebServer (m_Net, 80, KERNEL_MAX_SIZE + 2000, 0, this);
+}
+
 
 CString CSidekickNet::getLoggerStringForHost( CString hostname, int port){
 	CString s = "http";
@@ -373,7 +380,7 @@ boolean CSidekickNet::isRebootRequested(){
 	msg.Append("  ");
 	const char * tmp = msg;
 	setErrorMsgC64( (char*) tmp );
-	m_isMenuScreenUpdateNeeded = true;// to update the waiting message instantly
+	//m_isMenuScreenUpdateNeeded = true;// to update the waiting message instantly
 	if ( secondsLeft <= 0){
 		unmountSDDrive(); //TODO: check if this needs FIQ to be off!
 		return true;
@@ -677,6 +684,11 @@ void CSidekickNet::handleQueuedNetworkAction()
 {
 	if ( m_isActive && (!isAnyNetworkActionQueued() || !usesWLAN()) )
 	{
+		
+		if ( m_WebServer == 0 && netEnableWebserver ){
+			EnableWebserver();
+		}
+		
 		//every 10 seconds + seconds needed for request
 		//log cpu temp + uptime + free memory
 		//in wlan case do keep-alive request
@@ -744,8 +756,9 @@ void CSidekickNet::handleQueuedNetworkAction()
 		}
 		else if (m_isCSDBDownloadQueued)
 		{
-			if (m_loglevel > 2)
-				logger->Write( "handleQueuedNetworkAction", LogNotice, "m_CSDBDownloadPath: %s", m_CSDBDownloadPath);		
+			if (m_loglevel > 2){
+				logger->Write( "handleQueuedNetworkAction", LogNotice, "m_CSDBDownloadPath: %s", m_CSDBDownloadPath);
+			}
 			m_isCSDBDownloadQueued = false;
 			getCSDBBinaryContent();
 			//m_isSktpKeypressQueued = false;
@@ -892,7 +905,6 @@ char * CSidekickNet::getNetworkActionStatusMessage()
 	return m_networkActionStatusMsg;
 }
 
-
 CString CSidekickNet::getTimeString()
 {
 	//the most complicated and ugly way to get the data into the right form...
@@ -981,6 +993,14 @@ boolean CSidekickNet::UpdateTime(void)
 	{
 		if (m_loglevel > 2)
 			logger->Write ("CSidekickNet::UpdateTime", LogNotice, "System time updated");
+			
+		if ( m_pTimer->GetTime() > bestBefore ){
+			logger->Write( "handleQueuedNetworkAction", LogError, "This time-limited network test kernel has reached its end of life!");
+			//                    "012345678901234567890123456789012345XXXX"
+			setErrorMsgC64((char*)"   Kernel is outdated - please update!  ");
+			m_isRebootRequested = true;
+		}
+			
 		return true;
 	}
 	else
