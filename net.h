@@ -158,6 +158,7 @@ private:
 	} remoteHTTPTarget;
 	
 	boolean Prepare ();
+	void EnableWebserver();
 	CIPAddress getIPForHost( const char * );
 	boolean HTTPGet (remoteHTTPTarget & target, const char * path, char *pBuffer, unsigned & nLengthRead);
 	
@@ -181,7 +182,7 @@ private:
 #ifdef WITH_TLS	
 	CTLSSimpleSupport * m_TLSSupport;
 #endif	
-	CActLED							m_ActLED;
+	//CActLED							m_ActLED;
 	CWebServer        * m_WebServer;
 	
 	boolean m_useWLAN;
