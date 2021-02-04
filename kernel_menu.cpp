@@ -263,7 +263,7 @@ __attribute__( ( always_inline ) ) inline void warmCache( void *fiqh )
 }
 
 void doCacheWellnessTreatmentX( void * pFIQ2 ){
-	logger->Write( "RaspiMenu", LogNotice, "doCacheWellnessTreatmentX" );
+	//logger->Write( "RaspiMenu", LogNotice, "doCacheWellnessTreatmentX" );
 	
 	CleanDataCache();
 	InvalidateDataCache();
@@ -593,6 +593,7 @@ void CKernelMenu::Run( void )
 	m_SidekickNet.setCurrentKernel( (char*)'m' );
 	unsigned keepNMILow = 0;
 	unsigned lastAutoRefresh = 0;
+	unsigned autoRefreshTimeLookup = 0;
 	#endif
 	
 	if ( !disableCart )
@@ -702,6 +703,11 @@ void CKernelMenu::Run( void )
 			boolean timedRefresh = false;
 			if ( isAutomaticScreenRefreshNeeded() )
 			{
+				boolean toggle = !m_SidekickNet.IsRunning() && ++autoRefreshTimeLookup > 1500000;
+				if ( toggle ){
+					autoRefreshTimeLookup = 0;
+					DisableFIQInterrupt();
+				}
 				unsigned uptime = m_Timer.GetUptime();
 				if ( lastAutoRefresh == 0){
 					lastAutoRefresh = uptime;
@@ -710,10 +716,11 @@ void CKernelMenu::Run( void )
 				{
 					timedRefresh = true;
 					lastAutoRefresh = uptime;
-					DisableFIQInterrupt();
+					if( !toggle )
+						DisableFIQInterrupt();
 					doneWithHandling = 0;
 					updateMenu = 1;
-					logger->Write( "SidekickMenu", LogNotice, "timed refresh happening" );
+					//logger->Write( "SidekickMenu", LogNotice, "timed refresh happening" );
 					renderC64(); //puts the active menu page into the raspi memory
 					doCacheWellnessTreatment();
 					enableFIQInterrupt();
@@ -722,12 +729,16 @@ void CKernelMenu::Run( void )
 					updateMenu = 0;
 					keepNMILow = 1; //this means the duration of NMI going down is a little longer
 				}
+				else if ( toggle ){
+					doCacheWellnessTreatment();
+					enableFIQInterrupt();
+				}
 			}
 			else
 			{
 				lastAutoRefresh = 0;
 				if ( m_SidekickNet.isSKTPScreenActive() )
-					m_SidekickNet.queueSktpRefresh( 8 );
+					m_SidekickNet.queueSktpRefresh( 16 );
 			}
 			/*
 			if ( m_SidekickNet.IsRunning() && m_SidekickNet.isAnyNetworkActionQueued()){
@@ -744,7 +755,7 @@ void CKernelMenu::Run( void )
 					DisableFIQInterrupt();
 					doneWithHandling = 0;
 					updateMenu = 1;
-					logger->Write( "SidekickMenu", LogNotice, "MenuScreenUpdateNeeded => NMI" );
+					//logger->Write( "SidekickMenu", LogNotice, "MenuScreenUpdateNeeded => NMI" );
 					//render should be after disable fiq because then the stuff like 
 					//system clock, uptime and CPU temp are being updated
 					renderC64(); //puts the active menu page into the raspi memory
@@ -755,7 +766,7 @@ void CKernelMenu::Run( void )
 					updateMenu = 0;
 					keepNMILow = 1; //this means the duration of NMI going down is a little longer
 				}
-				else if ( ( m_SidekickNet.IsConnecting() || m_SidekickNet.IsRunning()) &&  ++m_timeStampOfLastNetworkEvent > 3000000)
+				else if ( ( m_SidekickNet.IsConnecting() || m_SidekickNet.IsRunning()) &&  ++m_timeStampOfLastNetworkEvent > 1500000)
 				{
 						handleNetwork(); //this makes the webserver respond quickly even when there is no keypress user action
 						//to improve performance here we could just call scheduler yield directly
