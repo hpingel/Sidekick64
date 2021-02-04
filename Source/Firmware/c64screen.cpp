@@ -1695,7 +1695,7 @@ void handleC64( int k, u32 *launchKernel, char *FILENAME, char *filenameKernal, 
 		}
 		if ( k == 'x' || k == 'X')
 		{
-			if (pSidekickNet->IsRunning())
+			if (pSidekickNet->IsRunning() && strcmp(netSktpHostName,"") != 0)
 			{
 				pSidekickNet->enteringSktpScreen();
 				pSidekickNet->redrawSktpScreen();
@@ -2178,12 +2178,17 @@ void printNetworkScreen()
 	
 	if (strcmp(strHostName,"") != 0)
 		strHostName.Append( netSidekickHostname );
+	else
+		strHostName.Append( "sidekick64" );
 	if (strcmp(netSktpHostName,"") != 0){
 		strHelper = pSidekickNet->getLoggerStringForHost(netSktpHostName, netSktpHostPort);
 		strSKTPHost.Append( strHelper );
 	}
 	if (netEnableWebserver)
-		strWebserver.Append( "Running" );
+		if ( pSidekickNet->IsRunning() )
+			strWebserver.Append( "Running" );
+		else
+			strWebserver.Append( "Waiting" );
 	else
 		strWebserver.Append( "Stopped" );
 
@@ -2195,19 +2200,22 @@ void printNetworkScreen()
 	u32 y1 = 2;
 
 	printC64( x+1, y1+2, "Network settings", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
-	printC64( x+1, y1+8, strHostName,   skinValues.SKIN_MENU_TEXT_SYSINFO, 0 );
-	printC64( x+1, y1+9, strSKTPHost,   skinValues.SKIN_MENU_TEXT_SYSINFO, 0 );
-	printC64( x+1, y1+10, strConnection,   skinValues.SKIN_MENU_TEXT_SYSINFO, 0 );
-	printC64( x+1, y1+11, strWebserver,   skinValues.SKIN_MENU_TEXT_SYSINFO, 0 );
+	printC64( x+1, y1+ 9, strConnection,   skinValues.SKIN_MENU_TEXT_SYSINFO, 0 );
+	printC64( x+1, y1+10, strWebserver,   skinValues.SKIN_MENU_TEXT_SYSINFO, 0 );
+	printC64( x+1, y1+11, strHostName,   skinValues.SKIN_MENU_TEXT_SYSINFO, 0 );
+	printC64( x+1, y1+12, strSKTPHost,   skinValues.SKIN_MENU_TEXT_SYSINFO, 0 );
 
-	printC64( x+1, y1+15, "S - Display system information", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
+	u32 y2=15;
+
+	printC64( x+1, y1+y2, "S - Display system information", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
 
 	if ( pSidekickNet->IsRunning() )
 	{
-		printC64( x+1, y1+5, "You are connected.",   skinValues.SKIN_MENU_TEXT_ITEM, 0 );
-		printC64( x+1, y1+16, "X - Launch SKTP browser", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
+		printC64( x+1, y1+4, "You are connected.",   skinValues.SKIN_MENU_TEXT_ITEM, 0 );
+		if (strcmp(netSktpHostName,"") != 0)
+			printC64( x+1, y1+(++y2), "X - Launch SKTP browser", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
 		if (!netEnableWebserver)
-			printC64( x+1, y1+17, "W - Start web server", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
+			printC64( x+1, y1+(++y2), "W - Start web server", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
 
 	}
 	else{
@@ -2236,7 +2244,6 @@ void printNetworkScreen()
 			printC64( x+1, y1+7, "(Plug in a network cable first.)",   skinValues.SKIN_MENU_TEXT_ITEM, 0 );
 		}
 	}
-
 	
 	printSidekickLogo();
 
