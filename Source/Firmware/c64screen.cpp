@@ -2171,19 +2171,15 @@ void printNetworkScreen()
 	const u32 x = 1;
 	
 	CString strHostName   = "Hostname:         ";
-	CString strSKTPHost   = "SKTP Host:        ";
 	CString strConnection = "Connection state: ";
 	CString strWebserver  = "Webserver state:  ";
 	CString strHelper;
 	
-	if (strcmp(strHostName,"") != 0)
+	if (strcmp(netSidekickHostname,"") != 0)
 		strHostName.Append( netSidekickHostname );
 	else
 		strHostName.Append( "sidekick64" );
-	if (strcmp(netSktpHostName,"") != 0){
-		strHelper = pSidekickNet->getLoggerStringForHost(netSktpHostName, netSktpHostPort);
-		strSKTPHost.Append( strHelper );
-	}
+
 	if (netEnableWebserver)
 		if ( pSidekickNet->IsRunning() )
 			strWebserver.Append( "Running" );
@@ -2203,7 +2199,11 @@ void printNetworkScreen()
 	printC64( x+1, y1+ 9, strConnection,   skinValues.SKIN_MENU_TEXT_SYSINFO, 0 );
 	printC64( x+1, y1+10, strWebserver,   skinValues.SKIN_MENU_TEXT_SYSINFO, 0 );
 	printC64( x+1, y1+11, strHostName,   skinValues.SKIN_MENU_TEXT_SYSINFO, 0 );
-	printC64( x+1, y1+12, strSKTPHost,   skinValues.SKIN_MENU_TEXT_SYSINFO, 0 );
+	if (strcmp(netSktpHostName,"") != 0){
+		strHelper = pSidekickNet->getLoggerStringForHost(netSktpHostName, netSktpHostPort);
+		printC64( x+1, y1+12, "SKTP Host:",   skinValues.SKIN_MENU_TEXT_SYSINFO, 0 );
+		printC64( x+1, y1+13, strHelper,   skinValues.SKIN_MENU_TEXT_SYSINFO, 0 );
+	}
 
 	u32 y2=15;
 
