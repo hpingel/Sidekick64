@@ -167,7 +167,7 @@ CSidekickNet::CSidekickNet( CInterruptSystem * pInterruptSystem, CTimer * pTimer
 
 void CSidekickNet::setErrorMsgC64( char * msg ){ 
 	#ifndef WITH_RENDER
-	setErrorMsg( msg );
+	setErrorMsg2( msg, true );
 	m_isMenuScreenUpdateNeeded = true;
 	#endif
 };
