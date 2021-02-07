@@ -499,7 +499,7 @@ void CKernelMenu::DisableFIQInterrupt( void )
 }
 
 #ifdef WITH_NET
-void CKernelMenu::handleNetwork()
+boolean CKernelMenu::handleNetwork( boolean doRender)
 {
 	DisableFIQInterrupt();
 	//logger->Write( "RaspiMenu", LogNotice, "handleNetwork" );
@@ -529,10 +529,18 @@ void CKernelMenu::handleNetwork()
 		//when HTTP download is finished but we haven't saved it yet
 		//a status message is being put onto the screen for the user
 		m_SidekickNet.checkForFinishedDownload();
+		
+		if (m_SidekickNet.isMenuScreenUpdateNeeded())
+			doRender = true;
 	}
-	renderC64(); //puts the active menu page into the raspi memory
+	else
+  	doRender = true;
+	
+	if ( doRender )
+		renderC64(); //puts the active menu page into the raspi memory
 	m_timeStampOfLastNetworkEvent = 0;
 	enableFIQInterrupt();
+	return doRender;
 }
 #endif
 
@@ -664,7 +672,7 @@ void CKernelMenu::Run( void )
 					SET_GPIO( bNMI );
 		};
 		#endif
-
+		
 		if ( updateMenu == 1 )
 		{
 			wireSIDAvailable = 0;
@@ -687,10 +695,8 @@ void CKernelMenu::Run( void )
 			handleC64( lastChar, &launchKernel, FILENAME, filenameKernal, menuItemStr, &startForC128 );
 			lastChar = 0xfffffff;
 			#ifdef WITH_NET
-			handleNetwork();
+			handleNetwork( true );
 			lastAutoRefresh = 0;
-//			if ( m_SidekickNet.isMenuScreenUpdateNeeded() )
-//				renderC64(); //puts the active menu page into the raspi memory
 			#else
 			refresh++;
 			renderC64(); //puts the active menu page into the raspi memory
@@ -761,10 +767,13 @@ void CKernelMenu::Run( void )
 					updateMenu = 0;
 					keepNMILow = 1; //this means the duration of NMI going down is a little longer
 				}
-				else if ( ( m_SidekickNet.IsConnecting() || m_SidekickNet.IsRunning()) &&  ++m_timeStampOfLastNetworkEvent > 1500000)
+				if ( ( m_SidekickNet.IsConnecting() || m_SidekickNet.IsRunning()) &&  ++m_timeStampOfLastNetworkEvent > 1500000)
 				{
-						handleNetwork(); //this makes the webserver respond quickly even when there is no keypress user action
-						//to improve performance here we could just call scheduler yield directly
+					if ( handleNetwork( false)) //this makes the webserver respond quickly even when there is no keypress user action
+					{
+						CLR_GPIO( bNMI );
+						keepNMILow = 1; //this means the duration of NMI going down is a little longer
+					}
 				}
 			}
 		}
