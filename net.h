@@ -124,7 +124,7 @@ public:
 	CString getRaspiModelName();
 	CString getSysMonInfo( unsigned );
 	void ResetSktpScreenContentChunks();
-	void setErrorMsgC64( char * msg );
+	void setErrorMsgC64( char *, boolean );
 	void resetSktpSession();
 	boolean launchSktpSession();
 	void redrawSktpScreen();
@@ -229,6 +229,7 @@ private:
 	unsigned m_sysMonCPUTemp;
 	unsigned m_loglevel;
 	char * m_currentKernelRunning;
+	signed m_oldSecondsLeft;
 	
 	remoteHTTPTarget m_SKTPServer;
 	remoteHTTPTarget m_CSDB;

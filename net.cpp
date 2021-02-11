@@ -155,7 +155,8 @@ CSidekickNet::CSidekickNet( CInterruptSystem * pInterruptSystem, CTimer * pTimer
 		m_sysMonHeapFree(0),
 		m_sysMonCPUTemp(0),
 		m_loglevel(2),
-		m_currentKernelRunning((char *) "-")
+		m_currentKernelRunning((char *) "-"),
+		m_oldSecondsLeft(0)
 		
 {
 	assert (m_pTimer != 0);
@@ -165,9 +166,9 @@ CSidekickNet::CSidekickNet( CInterruptSystem * pInterruptSystem, CTimer * pTimer
 	m_pTimer->SetTimeZone (nTimeZone);
 }
 
-void CSidekickNet::setErrorMsgC64( char * msg ){ 
+void CSidekickNet::setErrorMsgC64( char * msg, boolean sticky = true ){ 
 	#ifndef WITH_RENDER
-	setErrorMsg2( msg, true );
+	setErrorMsg2( msg, sticky );
 	m_isMenuScreenUpdateNeeded = true;
 	#endif
 };
@@ -373,20 +374,25 @@ boolean CSidekickNet::isRebootRequested(){
 	unsigned waitDuration = 5;
 	signed secondsLeft = waitDuration - (m_pTimer->GetUptime() - m_timeoutCounterStart);
 	if ( secondsLeft < 0 ) secondsLeft = 0;
-	CString msg = "  Please wait, rebooting Sidekick in ";
-	CString Number;
-	Number.Format ("%01d", secondsLeft-2 > 0 ? secondsLeft-2 : 0 );
-	msg.Append( Number );
-	msg.Append("  ");
-	const char * tmp = msg;
-	setErrorMsgC64( (char*) tmp );
-	//m_isMenuScreenUpdateNeeded = true;// to update the waiting message instantly
 	if ( secondsLeft <= 0){
-		unmountSDDrive(); //TODO: check if this needs FIQ to be off!
+		//unmountSDDrive(); //TODO: check if this needs FIQ to be off!
 		return true;
 	}
 	else
+	{
+		if ( m_oldSecondsLeft != secondsLeft ){
+			CString msg = "  Please wait, rebooting Sidekick in ";
+			CString Number;
+			Number.Format ("%01d", secondsLeft-2 > 0 ? secondsLeft-2 : 0 );
+			msg.Append( Number );
+			msg.Append("  ");
+			const char * tmp = msg;
+			setErrorMsgC64( (char*) tmp );
+			m_isMenuScreenUpdateNeeded = true;// to update the waiting message instantly
+			m_oldSecondsLeft = secondsLeft;
+		}
 		return false;
+	}
 }
 
 void CSidekickNet::requestReboot(){
@@ -692,13 +698,13 @@ void CSidekickNet::handleQueuedNetworkAction()
 		//every 10 seconds + seconds needed for request
 		//log cpu temp + uptime + free memory
 		//in wlan case do keep-alive request
-		if ( m_pTimer->GetUptime() - m_timestampOfLastWLANKeepAlive > netEnableWebserver ? 1:10)
+		if ( (m_pTimer->GetUptime() - m_timestampOfLastWLANKeepAlive) > (netEnableWebserver ? 1:10))
 		{
 			#ifdef WITH_WLAN
-			//if (!netEnableWebserver)
+			if (!netEnableWebserver)
 			{
 				//Circle42 offers experimental WLAN, but it seems to
-				//disconnect very quickly if there is not traffic.
+				//disconnect very quickly if there is no traffic.
 				//This can be very annoying.
 				//As a WLAN keep-alive, we auto queue a network event
 				//to avoid WLAN going into "zombie" disconnected mode
@@ -1026,11 +1032,11 @@ void CSidekickNet::getCSDBBinaryContent( ){
 		requireCacheWellnessTreatment();
 	}
 	else if (m_CSDBDownloadHost.port == 443)
-		setErrorMsgC64((char*)"    HTTPS request failed (press D).     ");
+		setErrorMsgC64((char*)"          HTTPS request failed          ", false);
 		//                    "012345678901234567890123456789012345XXXX"
 		
 	else
-		setErrorMsgC64((char*)"     HTTP request failed (press D).     ");
+		setErrorMsgC64((char*)"           HTTP request failed          ", false);
 		//                    "012345678901234567890123456789012345XXXX"
 	if (m_loglevel > 2)
 		logger->Write( "getCSDBBinaryContent", LogNotice, "HTTPS Document length: %i", iFileLength);
