@@ -2203,9 +2203,13 @@ void printNetworkScreen()
 	printC64( x+1, y1+10, strWebserver,   skinValues.SKIN_MENU_TEXT_SYSINFO, 0 );
 	printC64( x+1, y1+11, strHostName,   skinValues.SKIN_MENU_TEXT_SYSINFO, 0 );
 	if (strcmp(netSktpHostName,"") != 0){
-		strHelper = pSidekickNet->getLoggerStringForHost(netSktpHostName, netSktpHostPort);
+		unsigned port = netSktpHostPort;
+		if (port == 0 ) port = 80;
+		strHelper = pSidekickNet->getLoggerStringForHost(netSktpHostName, port);
+		char * tmpHost;
+		sprintf( tmpHost, strHelper, "" );
 		printC64( x+1, y1+12, "SKTP Host:",   skinValues.SKIN_MENU_TEXT_SYSINFO, 0 );
-		printC64( x+1, y1+13, strHelper,   skinValues.SKIN_MENU_TEXT_SYSINFO, 0 );
+		printC64( x+1, y1+13, tmpHost,   skinValues.SKIN_MENU_TEXT_SYSINFO, 0 );
 	}
 
 	u32 y2=15;
