@@ -78,6 +78,7 @@ static const char SETTINGS_FILE[] = "SD:C16/special.cfg";
 u8 c64screen[ 40 * 25 + 1024 * 4 ]; 
 u8 c64color[ 40 * 25 + 1024 * 4 ]; 
 
+boolean errorSticky = false;
 char *errorMsg = NULL;
 
 char errorMessages[5][41] = {
@@ -798,13 +799,20 @@ void handleC64( int k, u32 *launchKernel, char *FILENAME, char *filenameKernal )
 		}
 		if ( k == 'x' || k == 'X')
 		{
-			//if (pSidekickNet->IsRunning())
+			if (pSidekickNet->IsRunning() && strcmp(netSktpHostName,"") != 0)
 			{
 				pSidekickNet->enteringSktpScreen();
 				pSidekickNet->redrawSktpScreen();
 				menuScreen = MENU_SKTP;
 				handleC64( 0xffffffff, launchKernel, FILENAME, filenameKernal );
 				return;
+			}
+		}
+		if ( k == 'w' || k == 'W')
+		{
+			if (pSidekickNet->IsRunning() && !netEnableWebserver)
+			{
+				netEnableWebserver = true;
 			}
 		}
 		else if ( k == 's' || k == 'S')
@@ -821,6 +829,7 @@ void handleC64( int k, u32 *launchKernel, char *FILENAME, char *filenameKernal )
 			if (!pSidekickNet->IsRunning())
 			{
 				pSidekickNet->queueNetworkInit();
+				clearErrorMsg();
 				setErrorMsg( pSidekickNet->getNetworkActionStatusMessage() );
 			}
 		}
@@ -1143,22 +1152,108 @@ void printNetworkScreen()
 
 	const u32 x = 1;
 	
-	CString strHostName   = "Hostname:        "; 
-	CString strSKTPHost   = "SKTP Host:       "; 
-	CString strIpAddress  = "IP address:      "; 
-	CString strNetMask    = "Netmask:         "; 
-	CString strDefGateway = "Default Gateway: "; 
+	CString strHostName   = "Hostname:         ";
+	CString strConnection = "Connection state: ";
+	CString strWebserver  = "Webserver state:  ";
+	CString strHelper;
+	
+	if (strcmp(netSidekickHostname,"") != 0)
+		strHostName.Append( netSidekickHostname );
+	else
+		strHostName.Append( "sidekick64" );
+
+	if (netEnableWebserver)
+		if ( pSidekickNet->IsRunning() )
+			strWebserver.Append( "Running" );
+		else
+			strWebserver.Append( "Waiting" );
+	else
+		strWebserver.Append( "Stopped" );
+
+	if ( pSidekickNet->IsRunning() )
+		strConnection.Append( "Active" );
+	else
+		strConnection.Append( "Inactive" );
+
+	u32 y1 = 2;
+
+	printC64( x+1, y1+2, "Network settings", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
+	printC64( x+1, y1+ 9, strConnection,   skinValues.SKIN_MENU_TEXT_SYSINFO, 0 );
+	printC64( x+1, y1+10, strWebserver,   skinValues.SKIN_MENU_TEXT_SYSINFO, 0 );
+	printC64( x+1, y1+11, strHostName,   skinValues.SKIN_MENU_TEXT_SYSINFO, 0 );
+	if (strcmp(netSktpHostName,"") != 0){
+		strHelper = pSidekickNet->getLoggerStringForHost(netSktpHostName, netSktpHostPort);
+		printC64( x+1, y1+12, "SKTP Host:",   skinValues.SKIN_MENU_TEXT_SYSINFO, 0 );
+		printC64( x+1, y1+13, strHelper,   skinValues.SKIN_MENU_TEXT_SYSINFO, 0 );
+	}
+
+	u32 y2=15;
+
+	printC64( x+1, y1+y2, "S - Display system information", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
+
+	if ( pSidekickNet->IsRunning() )
+	{
+		printC64( x+1, y1+4, "You are connected.",   skinValues.SKIN_MENU_TEXT_ITEM, 0 );
+		if (strcmp(netSktpHostName,"") != 0)
+			printC64( x+1, y1+(++y2), "X - Launch SKTP browser", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
+		if (!netEnableWebserver)
+			printC64( x+1, y1+(++y2), "W - Start web server", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
+
+	}
+	else{
+		printC64( x+1, y1+4, "Network connection is inactive", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
+		if (pSidekickNet->isWireless())
+		{
+			//                   "012345678901234567890123456789012345XXXX"
+			printC64( x+1, y1+5, "Press >C< to enable WIFI. (Config",   skinValues.SKIN_MENU_TEXT_ITEM, 0 );
+			printC64( x+1, y1+6, "file with SSID and passphrase is",   skinValues.SKIN_MENU_TEXT_ITEM, 0 );
+			printC64( x+1, y1+7, "needed on the SD card.)"          ,   skinValues.SKIN_MENU_TEXT_ITEM, 0 );
+		}
+		else if (pSidekickNet->RaspiHasOnlyWLAN())
+		{
+			//                   "012345678901234567890123456789012345XXXX"
+			printC64( x+1, y1+5, "This Sidekick kernel does not",   skinValues.SKIN_MENU_TEXT_ITEM, 0 );
+			printC64( x+1, y1+6, "support WLAN. Use a Raspberry Pi",   skinValues.SKIN_MENU_TEXT_ITEM, 0 );
+			printC64( x+1, y1+7, "that has a network socket.",   skinValues.SKIN_MENU_TEXT_ITEM, 0 );
+		}
+		else
+		{
+			//                   "012345678901234567890123456789012345XXXX"
+			printC64( x+1, y1+16, "C - Connect to network",   skinValues.SKIN_MENU_TEXT_HEADER, 0 );
+			
+			printC64( x+1, y1+5, "Press >C< to establish a",   skinValues.SKIN_MENU_TEXT_ITEM, 0 );
+			printC64( x+1, y1+6, "network connection!",   skinValues.SKIN_MENU_TEXT_ITEM, 0 );
+			printC64( x+1, y1+7, "(Plug in a network cable first.)",   skinValues.SKIN_MENU_TEXT_ITEM, 0 );
+		}
+	}
+
+	
+	printSidekickLogo();
+
+	c64screen[ 1000 ] = ((0x6800 >> 8) & 0xFC);
+	c64screen[ 1001 ] = skinValues.SKIN_MENU_BACKGROUND_COLOR;
+	c64screen[ 1002 ] = skinValues.SKIN_MENU_BORDER_COLOR;
+}
+
+void printSystemInfoScreen()
+{
+	clearC64();
+	//               "012345678901234567890123456789012345XXXX"
+	printC64( 0,  1, "   .- Sidekick264 - Frenetic -.         ", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
+	printC64( 0, 23, "           F6/F7 Back to Menu           ", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
+
+	const u32 x = 1;
+	u32 y1 = 3;
+
+	printC64( x+1, y1+1, "System information", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
+
+	CString strIpAddress  = "IP address:      ";
+	CString strNetMask    = "Netmask:         ";
+	CString strDefGateway = "Default Gateway: ";
 	CString strDNSServer  = "DNS Server:      ";
 	CString strDhcpUsed   = "DHCP active:     ";
 	CString strHelper;
-	
-	if (strcmp(strHostName,"") != 0)
-		strHostName.Append( netSidekickHostname );
-	if (strcmp(netSktpHostName,"") != 0){
-		strHelper = pSidekickNet->getLoggerStringForHost(netSktpHostName, netSktpHostPort);
-		strSKTPHost.Append( strHelper );
-	}
-	
+
 	if ( pSidekickNet->IsRunning() )
 	{
 		pSidekickNet->GetNetConfig()->GetIPAddress ()->Format (&strHelper);
@@ -1180,79 +1275,26 @@ void printNetworkScreen()
 		strDhcpUsed.Append( "-" );
 	}
 
-	u32 y1 = 2;
-
-	printC64( x+1, y1+2, "Network settings", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
-	printC64( x+1, y1+8, strHostName,   skinValues.SKIN_MENU_TEXT_SYSINFO, 0 );
-	printC64( x+1, y1+9, strSKTPHost,   skinValues.SKIN_MENU_TEXT_SYSINFO, 0 );
-
-	printC64( x+1, y1+18, "Press >S< to display system infos", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
-
-	if ( pSidekickNet->IsRunning() )
-	{
-		printC64( x+1, y1+3, strIpAddress,   skinValues.SKIN_MENU_TEXT_ITEM, 0 );
-		printC64( x+1, y1+4, strDhcpUsed,   skinValues.SKIN_MENU_TEXT_SYSINFO, 0 );
-		printC64( x+1, y1+5, strDefGateway, skinValues.SKIN_MENU_TEXT_SYSINFO, 0 );
-		printC64( x+1, y1+6, strDNSServer,  skinValues.SKIN_MENU_TEXT_SYSINFO, 0 );
-		printC64( x+1, y1+7, "Press >X< to launch SKTP browser", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
-	}
-	else{
-		printC64( x+1, y1+4, "Network connection is inactive", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
-		if (pSidekickNet->isWireless())
-		{
-			//                   "012345678901234567890123456789012345XXXX"
-			printC64( x+1, y1+5, "Press >C< to enable WIFI. (Config",   skinValues.SKIN_MENU_TEXT_ITEM, 0 );
-			printC64( x+1, y1+6, "file with SSID and passphrase is",   skinValues.SKIN_MENU_TEXT_ITEM, 0 );
-			printC64( x+1, y1+7, "needed on the SD card.)"          ,   skinValues.SKIN_MENU_TEXT_ITEM, 0 );
-		}
-		else if (pSidekickNet->RaspiHasOnlyWLAN())
-		{
-			//                   "012345678901234567890123456789012345XXXX"
-			printC64( x+1, y1+5, "This Sidekick kernel does not",   skinValues.SKIN_MENU_TEXT_ITEM, 0 );
-			printC64( x+1, y1+6, "support WLAN. Use a Raspberry Pi",   skinValues.SKIN_MENU_TEXT_ITEM, 0 );
-			printC64( x+1, y1+7, "that has a network socket.",   skinValues.SKIN_MENU_TEXT_ITEM, 0 );
-		}
-		else
-		{
-			//                   "012345678901234567890123456789012345XXXX"
-			printC64( x+1, y1+5, "Press >C< to establish a",   skinValues.SKIN_MENU_TEXT_ITEM, 0 );
-			printC64( x+1, y1+6, "network connection!",   skinValues.SKIN_MENU_TEXT_ITEM, 0 );
-			printC64( x+1, y1+7, "(Plug in a network cable first.)",   skinValues.SKIN_MENU_TEXT_ITEM, 0 );
-		}
-	}
-
-	
-	printSidekickLogo();
-
-	c64screen[ 1000 ] = ((0x6800 >> 8) & 0xFC);
-	c64screen[ 1001 ] = skinValues.SKIN_MENU_BACKGROUND_COLOR;
-	c64screen[ 1002 ] = skinValues.SKIN_MENU_BORDER_COLOR;
-}
-
-void printSystemInfoScreen()
-{
-	clearC64();
-	//               "012345678901234567890123456789012345XXXX"
-	printC64( 0,  1, "   .- Sidekick64 -- Frenetic -.         ", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
-	printC64( 0, 23, "           F6/F7 Back to Menu           ", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
-
-	const u32 x = 1;
-	u32 y1 = 2;
-	//printC64( x+1, y1+8, "Press >Q< for reboot ", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
-	printC64( x+1, y1+9, "Sidekick Kernel Info", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
-	printC64( x+1, y1+10, "Compiled on: " COMPILE_TIME, skinValues.SKIN_MENU_TEXT_ITEM, 0 );
-	printC64( x+1, y1+11, "Git branch : " GIT_BRANCH, skinValues.SKIN_MENU_TEXT_ITEM, 0 );
-	printC64( x+1, y1+12, "Git hash   : " GIT_HASH, skinValues.SKIN_MENU_TEXT_ITEM, 0 );
-
-	printC64( x+1, y1+15, "You are running Sidekick on a", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
-	printC64( x+1, y1+16, pSidekickNet->getRaspiModelName(), skinValues.SKIN_MENU_TEXT_ITEM, 0 );
-	printC64( x+1, y1+18, "System time", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
+	printC64( x+1, y1+3, "You are running Sidekick on a", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
+	printC64( x+1, y1+4, pSidekickNet->getRaspiModelName(), skinValues.SKIN_MENU_TEXT_ITEM, 0 );
 	//printC64( x+1, y1+18, "System time           Uptime", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
-	printC64( x+1, y1+17, pSidekickNet->getSysMonInfo(0), skinValues.SKIN_MENU_TEXT_ITEM, 0 );
-	printC64( x+1, y1+19, pSidekickNet->getTimeString(), skinValues.SKIN_MENU_TEXT_ITEM, 0 );
-	//printC64(x+22, y1+19, pSidekickNet->getUptime(), skinValues.SKIN_MENU_TEXT_ITEM, 0 );
-	
-	printC64( x+28, 24, "Circle " CIRCLE_VERSION_STRING, skinValues.SKIN_MENU_TEXT_SYSINFO, 0 );
+	printC64( x+1, y1+5, pSidekickNet->getSysMonInfo(0), skinValues.SKIN_MENU_TEXT_ITEM, 0 );
+
+	printC64( x+1, y1+7, "Network settings", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
+	printC64( x+1, y1+8, strIpAddress,   skinValues.SKIN_MENU_TEXT_ITEM, 0 );
+	printC64( x+1, y1+9, strDhcpUsed,   skinValues.SKIN_MENU_TEXT_SYSINFO, 0 );
+	printC64( x+1, y1+10, strDefGateway, skinValues.SKIN_MENU_TEXT_SYSINFO, 0 );
+	printC64( x+1, y1+11, strDNSServer,  skinValues.SKIN_MENU_TEXT_SYSINFO, 0 );
+	printC64( x+1, y1+12, "System time", skinValues.SKIN_MENU_TEXT_SYSINFO, 0 );
+	printC64( x+18, y1+12, pSidekickNet->getTimeString(), skinValues.SKIN_MENU_TEXT_SYSINFO, 0 );
+
+	//printC64( x+1, y1+8, "Press >Q< for reboot ", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
+	printC64( x+1, y1+14, "Sidekick Kernel Info", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
+	printC64( x+1, y1+15, "Compiled on: " COMPILE_TIME, skinValues.SKIN_MENU_TEXT_ITEM, 0 );
+	printC64( x+1, y1+16, "Git branch : " GIT_BRANCH, skinValues.SKIN_MENU_TEXT_ITEM, 0 );
+	printC64( x+1, y1+17, "Git hash   : " GIT_HASH, skinValues.SKIN_MENU_TEXT_ITEM, 0 );
+	printC64( x+1, y1+18, "Circle     : " CIRCLE_VERSION_STRING, skinValues.SKIN_MENU_TEXT_ITEM, 0 );
+
 
 	printSidekickLogo();
 	
@@ -1423,14 +1465,23 @@ void printSettingsScreen()
 
 void clearErrorMsg()
 {
+	if ( errorMsg != NULL && menuScreen == MENU_ERROR)
+		menuScreen = previousMenuScreen;
 	errorMsg = NULL;
+	errorSticky = false;
 }
 
-void setErrorMsg( char * msg )
+void setErrorMsg( char * msg)
+{
+	setErrorMsg2( msg, false );
+}
+
+void setErrorMsg2( char * msg, boolean sticky = false )
 {
 	errorMsg = msg;
 	previousMenuScreen = menuScreen;
 	menuScreen = MENU_ERROR;
+	errorSticky = sticky;
 }
 
 void renderC64()
@@ -1477,4 +1528,11 @@ void renderErrorMsg()
 	printC64( 0, 12, errorMsg, skinValues.SKIN_ERROR_TEXT, 0, convert );
 	printC64( 0, 13, "                                        ", skinValues.SKIN_ERROR_TEXT, 0 );
 	printC64( 0, 14, "\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8", skinValues.SKIN_ERROR_BAR, 0, 1 );
+	
+	if (!errorSticky)
+	{
+		errorMsg = NULL;
+	}
+	
+	menuScreen = previousMenuScreen;
 }
