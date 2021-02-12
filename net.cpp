@@ -231,7 +231,8 @@ boolean CSidekickNet::Initialize()
 					"Network connection is not running - is ethernet cable not attached?"
 				);
 			//                    "012345678901234567890123456789012345XXXX"
-			setErrorMsgC64((char*)"  Cable plugged in? Check and press >C< ");
+			if ( !netConnectOnBoot)
+				setErrorMsgC64((char*)"  Cable plugged in? Check and reconnect ");
 		}
 		return false;
 	}
