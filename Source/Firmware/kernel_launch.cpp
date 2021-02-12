@@ -293,8 +293,6 @@ void CKernelLaunch::Run( void )
 				DELAY(1<<18);
 				prepareOnReset( true );
 				
-				
-				
 				DisableIRQs();
 				m_InputPin.ConnectInterrupt( FIQ_HANDLER, FIQ_PARENT );
 				m_InputPin.EnableInterrupt( GPIOInterruptOnRisingEdge );
