@@ -2135,13 +2135,14 @@ void printMainMenu()
 				printC64( menuX[ 0 ], menuY[ 0 ]+4, "F6", skinValues.SKIN_MENU_TEXT_KEY, 0 );
 				printC64( menuX[ 0 ]+3, menuY[ 0 ]+4, "SIDKick Config", skinValues.SKIN_MENU_TEXT_ITEM, 0 );
 				ADD_JOY_ITEM( menuX[ 0 ], menuY[ 0 ]+4, 2, VK_F6 );
-				printC64( menuX[ 0 ], menuY[ 0 ]+5, "AT", skinValues.SKIN_MENU_TEXT_KEY, 0 );
+
+				printC64( menuX[ 0 ], menuY[ 0 ]+5, "\x40", skinValues.SKIN_MENU_TEXT_KEY, 0, 1 );
 				printC64( menuX[ 0 ]+3, menuY[ 0 ]+5, "Network", skinValues.SKIN_MENU_TEXT_ITEM, 0 );
 				ADD_JOY_ITEM( menuX[ 0 ], menuY[ 0 ]+5, 2, VK_AT );
 			}
 			else
 			{
-				printC64( menuX[ 0 ], menuY[ 0 ]+4, "AT", skinValues.SKIN_MENU_TEXT_KEY, 0 );
+				printC64( menuX[ 0 ], menuY[ 0 ]+4, "\x40", skinValues.SKIN_MENU_TEXT_KEY, 0, 1 );
 				printC64( menuX[ 0 ]+3, menuY[ 0 ]+4, "Network", skinValues.SKIN_MENU_TEXT_ITEM, 0 );
 				ADD_JOY_ITEM( menuX[ 0 ], menuY[ 0 ]+4, 2, VK_AT );
 			}
