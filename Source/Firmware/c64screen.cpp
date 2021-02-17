@@ -57,6 +57,7 @@ const int VK_RETURN = 13;
 const int VK_SHIFT_RETURN = 141;
 const int VK_MOUNT = 205; // SHIFT-M
 const int VK_MOUNT_START = 77; // M
+const int VK_STAR = 42; //*
 
 
 const int VK_LEFT  = 157;
@@ -1694,7 +1695,7 @@ void handleC64( int k, u32 *launchKernel, char *FILENAME, char *filenameKernal, 
 			handleC64( 0xffffffff, launchKernel, FILENAME, filenameKernal, menuItemStr );
 			return;
 		}
-		if ( k == 'x' || k == 'X')
+		if ( k == VK_STAR)
 		{
 			if (pSidekickNet->IsRunning() && strcmp(netSktpHostName,"") != 0)
 			{
@@ -2234,7 +2235,7 @@ void printNetworkScreen()
 	{
 		printC64( x+1, y1+4, "You are connected.",   skinValues.SKIN_MENU_TEXT_ITEM, 0 );
 		if (strcmp(netSktpHostName,"") != 0)
-			printC64( x+1, y1+(++y2), "X - Launch SKTP browser", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
+			printC64( x+1, y1+(++y2), "* - Launch SKTP browser", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
 		if (!netEnableWebserver)
 			printC64( x+1, y1+(++y2), "W - Start web server", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
 
