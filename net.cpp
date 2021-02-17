@@ -134,6 +134,7 @@ CSidekickNet::CSidekickNet( CInterruptSystem * pInterruptSystem, CTimer * pTimer
 		m_sktpSessionID( (char * ) ""),
 		m_isSktpScreenActive( false ),
 		m_isMenuScreenUpdateNeeded( false ),
+		m_isC128( false ),
 		m_CSDBDownloadPath( (char * ) ""),
 		m_CSDBDownloadExtension( (char * ) ""),
 		m_CSDBDownloadFilename( (char * ) ""),
@@ -879,11 +880,11 @@ boolean CSidekickNet::checkForFinishedDownload()
 			if (m_loglevel > 2)
 				logger->Write( "isDownloadReady", LogNotice, "Download is ready and we want to save it.");
 			m_isCSDBDownloadSavingQueued = true;
-			m_queueDelay = 5;
+			//m_queueDelay = 5;
 			if ( strcmp( m_CSDBDownloadExtension, "d64" ) == 0)
 			{
 				//                    "012345678901234567890123456789012345XXXX"
-				setErrorMsgC64((char*)"       Saving D64 file to SD card       ");
+				setErrorMsgC64((char*)"     Saving and launching D64 file      ");
 			}
 			else if ( strcmp( m_CSDBDownloadExtension, "prg" ) == 0)
 			{
@@ -899,7 +900,7 @@ boolean CSidekickNet::checkForFinishedDownload()
 			{
 				//                    "012345678901234567890123456789012345XXXX"
 				setErrorMsgC64((char*)"     Saving and launching CRT file      ");
-				m_queueDelay = 15;
+				//m_queueDelay = 15;
 			}
 			requireCacheWellnessTreatment();
 		}
@@ -1085,7 +1086,17 @@ boolean CSidekickNet::launchSktpSession(){
 //	CString urlSuffix = "/sktp.php?session=new&username=";
 //	urlSuffix.Append(netSidekickHostname);
 //	if (HTTPGet ( m_SKTPServer, urlSuffix, pResponseBuffer, m_sktpResponseLength))
-	if (HTTPGet ( m_SKTPServer, "/sktp.php?session=new", pResponseBuffer, m_sktpResponseLength))	
+	CString urlSuffix = "/sktp.php?session=new&type=";
+	#ifndef IS264
+	if (m_isC128)
+		urlSuffix.Append("128");
+	else
+		urlSuffix.Append("64");
+	#else
+		urlSuffix.Append("264");
+	#endif
+	if (HTTPGet ( m_SKTPServer, urlSuffix, pResponseBuffer, m_sktpResponseLength))
+//	if (HTTPGet ( m_SKTPServer, "/sktp.php?session=new", pResponseBuffer, m_sktpResponseLength))	
 	{
 		if ( m_sktpResponseLength > 25 && m_sktpResponseLength < 34){
 			m_sktpSessionID = pResponseBuffer;
@@ -1259,6 +1270,7 @@ void CSidekickNet::updateSktpScreenContent(){
 				m_CSDBDownloadExtension = extension;
 				m_CSDBDownloadFilename = CSDBFilename;
 				m_CSDBDownloadSavePath = savePath;
+				//m_sktpResponseType = 1; //just to clear the screen
 			}
 			/*
 			if ( m_sktpResponseType == 3) // background and border color change
@@ -1410,4 +1422,9 @@ void CSidekickNet::getNetRAM( u8 * content, u32 * size){
 
 void CSidekickNet::setCurrentKernel( char * r){
 	m_currentKernelRunning = r;
+}
+
+void CSidekickNet::setC128Mode()
+{
+	m_isC128 = true;
 }

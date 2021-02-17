@@ -147,6 +147,7 @@ public:
 	boolean isSKTPScreenActive();
 	boolean isMenuScreenUpdateNeeded();
 	void setCurrentKernel( char *);
+	void setC128Mode();
 
 private:
 
@@ -211,7 +212,6 @@ private:
 	boolean m_bSaveCSDBDownload2SD;
 	TMachineModel m_PiModel;
 	unsigned char m_sktpScreenContentChunk[8192];
-	//unsigned m_SidekickKernelUpdatePath;
 	unsigned m_queueDelay;
 	unsigned m_timestampOfLastWLANKeepAlive;
 	unsigned m_timeoutCounterStart;
@@ -224,6 +224,7 @@ private:
 	unsigned m_sktpSession;
 	boolean  m_isSktpScreenActive;
 	boolean  m_isMenuScreenUpdateNeeded;
+	boolean  m_isC128;
 	unsigned m_videoFrameCounter;
 	size_t m_sysMonHeapFree;
 	unsigned m_sysMonCPUTemp;

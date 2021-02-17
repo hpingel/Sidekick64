@@ -505,9 +505,11 @@ boolean CKernelMenu::handleNetwork( boolean doRender)
 	//logger->Write( "RaspiMenu", LogNotice, "handleNetwork" );
 	
 	updateSystemMonitor();
+	if ( updateMenu == 1 && doRender && modeC128 )
+		m_SidekickNet.setC128Mode();
+
 	//the order of the following function calls is done like this on purpose
 	m_SidekickNet.handleQueuedNetworkAction();
-	
 	if (m_SidekickNet.IsRunning()){
 		if ( m_SidekickNet.isDownloadReadyForLaunch()){
 			logger->Write( "RaspiMenu", LogNotice, "Download is ready for launch" );
@@ -536,8 +538,10 @@ boolean CKernelMenu::handleNetwork( boolean doRender)
 	else
   	doRender = true;
 	
-	if ( doRender )
+	if ( doRender ){
 		renderC64(); //puts the active menu page into the raspi memory
+		doCacheWellnessTreatment();
+	}
 	m_timeStampOfLastNetworkEvent = 0;
 	enableFIQInterrupt();
 	return doRender;
