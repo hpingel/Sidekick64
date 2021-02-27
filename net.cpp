@@ -697,19 +697,23 @@ void CSidekickNet::handleQueuedNetworkAction()
 			EnableWebserver();
 		}
 		
-		//every 10 seconds + seconds needed for request
+		//every couple of seconds + seconds needed for request
 		//log cpu temp + uptime + free memory
 		//in wlan case do keep-alive request
-		if ( (m_pTimer->GetUptime() - m_timestampOfLastWLANKeepAlive) > (netEnableWebserver ? 1:10))
+		if ( (m_pTimer->GetUptime() - m_timestampOfLastWLANKeepAlive) > (netEnableWebserver ? 7:5))
 		{
 			#ifdef WITH_WLAN
-			if (!netEnableWebserver)
+			//if (!netEnableWebserver)
 			{
 				//Circle42 offers experimental WLAN, but it seems to
 				//disconnect very quickly if there is no traffic.
 				//This can be very annoying.
 				//As a WLAN keep-alive, we auto queue a network event
 				//to avoid WLAN going into "zombie" disconnected mode
+				
+				//further tests have to be done if the keep-alive and the webserver
+				//run together smoothly
+				
 				if (m_loglevel > 1)
 					logger->Write ("CSidekickNet", LogNotice, "Triggering WLAN keep-alive request...");
 				if (m_SKTPServer.port != 0)
