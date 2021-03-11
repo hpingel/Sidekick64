@@ -71,7 +71,7 @@
 #define USE_DHCP
 #endif
 // Time configuration
-static const unsigned bestBefore = 1614556800;
+static const unsigned bestBefore = 1617235140;
 static const char NTPServer[]    = "pool.ntp.org";
 static const int nTimeZone       = 1*60;		// minutes diff to UTC
 static const char DRIVE[] = "SD:";
@@ -702,7 +702,7 @@ void CSidekickNet::handleQueuedNetworkAction()
 		//in wlan case do keep-alive request
 		if ( (m_pTimer->GetUptime() - m_timestampOfLastWLANKeepAlive) > (netEnableWebserver ? 7:5))
 		{
-			#ifdef WITH_WLAN
+			#ifdef WITH_WLAN_NEVER //we apparently don't need wlan keep-alive at all if we just always do the yield!!!
 			//if (!netEnableWebserver)
 			{
 				//Circle42 offers experimental WLAN, but it seems to
@@ -756,8 +756,8 @@ void CSidekickNet::handleQueuedNetworkAction()
 	else if (m_isActive)
 	{
 		//logger->Write( "handleQueuedNetworkAction", LogNotice, "Yield");
-		if ( netEnableWebserver )
-			m_pScheduler->Yield (); // this is needed for webserver
+		if ( netEnableWebserver || m_useWLAN)
+			m_pScheduler->Yield (); // this is needed for webserver and wlan keep-alive
 
 		if (m_isFrameQueued)
 		{
