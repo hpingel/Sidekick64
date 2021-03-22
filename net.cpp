@@ -84,8 +84,8 @@ static const char CSDB_HOST[] = "csdb.dk";
 
 #ifdef WITH_WLAN
 #define DRIVE		"SD:"
-#define FIRMWARE_PATH	DRIVE "/firmware/"		// firmware files must be provided here
-#define CONFIG_FILE	DRIVE "/wpa_supplicant.conf"
+#define FIRMWARE_PATH	DRIVE "/wlan/"		// wlan firmware files must be provided here
+#define CONFIG_FILE	FIRMWARE_PATH "/wpa_supplicant.conf"
 #endif
 
 //temporary hack
