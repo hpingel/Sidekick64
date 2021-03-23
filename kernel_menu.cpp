@@ -510,7 +510,8 @@ boolean CKernelMenu::handleNetwork( boolean doRender)
 //	#else
 //	#ifdef WITH_WLAN
 		DisableFIQInterrupt();
-		handleC64( lastChar, &launchKernel, FILENAME, filenameKernal, menuItemStr, &startForC128 );
+		if (doRender)
+			handleC64( lastChar, &launchKernel, FILENAME, filenameKernal, menuItemStr, &startForC128 );
 //	#endif
 
 	updateSystemMonitor();
