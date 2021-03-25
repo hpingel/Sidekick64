@@ -34,12 +34,14 @@
 //to use SidekickNet without circle-stdlib and without HTTPS,
 //compile without define WITH_TLS
 
+#include <circle/devicenameservice.h>
 #include <circle/interrupt.h>
 #include <circle/timer.h>
 #include <circle/logger.h>
 #include <circle/machineinfo.h>
 #include <circle/sched/scheduler.h>
 #include <circle/usb/usbhcidevice.h>
+#include <circle/usb/usbserialft231x.h>
 #include <circle/util.h>
 #include <SDCard/emmc.h>
 
@@ -59,6 +61,7 @@
 #endif
 
 #include <circle/net/netsubsystem.h>
+#include <circle/net/socket.h>
 #include <circle/net/dnsclient.h>
 
 #include "lowlevel_arm64.h"
@@ -77,7 +80,7 @@ using namespace CircleMbedTLS;
 class CSidekickNet
 {
 public:
-	CSidekickNet( CInterruptSystem *, CTimer *, CScheduler *, CEMMCDevice *, CKernelMenu * );
+	CSidekickNet( CInterruptSystem *, CTimer *, CScheduler *, CEMMCDevice *, CDeviceNameService *, CKernelMenu * );
 	~CSidekickNet( void )
 	{
 	};
@@ -185,14 +188,16 @@ private:
 #endif	
 	//CActLED							m_ActLED;
 	CWebServer        * m_WebServer;
-	
+	CUSBSerialFT231XDevice * volatile m_pUSBSerial;
+	CDeviceNameService	* m_DeviceNameService;
+	CSocket             *m_pBBSSocket;	
+
 	boolean m_useWLAN;
 	boolean m_isFSMounted;
 	boolean m_isActive;
 	boolean m_isPrepared;
 	boolean m_isUSBPrepared;
 	boolean m_isNetworkInitQueued;
-	//boolean m_isKernelUpdateQueued;
 	boolean m_isFrameQueued;
 	boolean m_isSktpKeypressQueued;
 	boolean m_isCSDBDownloadQueued;
@@ -225,6 +230,8 @@ private:
 	boolean  m_isSktpScreenActive;
 	boolean  m_isMenuScreenUpdateNeeded;
 	boolean  m_isC128;
+	boolean  m_isBBSSocketConnected;
+	boolean  m_isBBSTermReady;
 	unsigned m_videoFrameCounter;
 	size_t m_sysMonHeapFree;
 	unsigned m_sysMonCPUTemp;
@@ -234,6 +241,7 @@ private:
 	
 	remoteHTTPTarget m_SKTPServer;
 	remoteHTTPTarget m_CSDB;
+	remoteHTTPTarget m_BBS;
 	
 };
 

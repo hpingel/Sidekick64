@@ -81,6 +81,7 @@ static const char msgNoConnection[] = "Sorry, no network connection!";
 static const char msgNotFound[]     = "Message not found. :(";
 
 static const char CSDB_HOST[] = "csdb.dk";
+static const char BBS_HOST[] = "test";
 
 #ifdef WITH_WLAN
 #define DRIVE		"SD:"
@@ -95,12 +96,19 @@ extern unsigned char prgDataLaunch[ 1025*1024 ] AAA;
   extern unsigned char logo_bg_raw[32000];
 #endif
 
-CSidekickNet::CSidekickNet( CInterruptSystem * pInterruptSystem, CTimer * pTimer, CScheduler * pScheduler, CEMMCDevice * pEmmcDevice, CKernelMenu * pKernelMenu  )
-		:m_USBHCI (0),
+CSidekickNet::CSidekickNet( 
+		CInterruptSystem * pInterruptSystem, 
+		CTimer * pTimer, 
+		CScheduler * pScheduler, 
+		CEMMCDevice * pEmmcDevice, 
+		CDeviceNameService * pDeviceNameService,
+		CKernelMenu * pKernelMenu
+):	m_USBHCI (0),
 		m_pScheduler(pScheduler),
 		m_pInterrupt(pInterruptSystem),
 		m_pTimer(pTimer),
 		m_EMMC( *pEmmcDevice),
+		m_DeviceNameService( pDeviceNameService ),
 		m_kMenu(pKernelMenu),
 		m_Net (0),
 #ifdef WITH_WLAN		
@@ -114,7 +122,9 @@ CSidekickNet::CSidekickNet( CInterruptSystem * pInterruptSystem, CTimer * pTimer
 #ifdef WITH_TLS
 		m_TLSSupport(0),
 #endif
+		m_pBBSSocket(0),
 		m_WebServer(0),
+		m_pUSBSerial(0),
 		m_isFSMounted( false ),
 		m_isActive( false ),
 		m_isPrepared( false ),
@@ -135,6 +145,8 @@ CSidekickNet::CSidekickNet( CInterruptSystem * pInterruptSystem, CTimer * pTimer
 		m_isSktpScreenActive( false ),
 		m_isMenuScreenUpdateNeeded( false ),
 		m_isC128( false ),
+		m_isBBSSocketConnected (false),
+		m_isBBSTermReady( false ),
 		m_CSDBDownloadPath( (char * ) ""),
 		m_CSDBDownloadExtension( (char * ) ""),
 		m_CSDBDownloadFilename( (char * ) ""),
@@ -210,7 +222,18 @@ boolean CSidekickNet::Initialize()
 	}
 	while (!m_Net->IsRunning () && sleepCount < sleepLimit)
 	{
-		m_USBHCI->UpdatePlugAndPlay ();
+		boolean bUpdated = m_USBHCI->UpdatePlugAndPlay ();
+		if ( bUpdated && m_pUSBSerial == 0)
+		{
+			m_pUSBSerial = (CUSBSerialFT231XDevice *) m_DeviceNameService->GetDevice ("utty1", FALSE);
+			if (m_pUSBSerial != 0)
+			{
+				logger->Write( "CSidekickNet::Initialize", LogNotice, 
+					"USB TTY device detected."
+				);
+				m_pUSBSerial->SetBaudRate(2400);
+			}
+		}
 		m_pScheduler->Yield ();
 		m_pScheduler->MsSleep(100);
 		sleepCount ++;
@@ -246,6 +269,12 @@ boolean CSidekickNet::Initialize()
 #ifdef WITH_TLS
 	m_TLSSupport = new CTLSSimpleSupport (m_Net);
 #endif
+
+
+	m_BBS.hostName = BBS_HOST;
+	m_BBS.port = 64128;
+	m_BBS.ipAddress = getIPForHost( BBS_HOST );
+	m_BBS.logPrefix = getLoggerStringForHost( BBS_HOST, m_BBS.port);
 
 	//TODO: the resolves could be postponed to the moment where the first 
 	//actual access takes place
@@ -692,17 +721,64 @@ void CSidekickNet::handleQueuedNetworkAction()
 {
 	if ( m_isActive && (!isAnyNetworkActionQueued() || !usesWLAN()) )
 	{
+
 		
 		if ( m_WebServer == 0 && netEnableWebserver ){
 			EnableWebserver();
 		}
 		
+		if ( ( strcmp( m_currentKernelRunning, "l" ) == 0) && m_pUSBSerial != 0 )
+		{
+			int bsize = 2048;
+			char buffer[bsize];
+			
+			if (!m_isBBSTermReady)
+			{
+				int a = m_pUSBSerial->Read(buffer, 10);
+				if ( a > 0 )
+				{
+					logger->Write ("CSidekickNet", LogNotice, "USB serial read %u chars from C64 - %u", a, buffer[0]);
+					if (buffer[0] == 'A')
+					{
+						m_pBBSSocket = new CSocket (m_Net, IPPROTO_TCP);
+						m_isBBSTermReady = true;
+						if ( m_pBBSSocket->Connect ( m_BBS.ipAddress, m_BBS.port) == 0)
+						{
+							m_isBBSSocketConnected = true;
+							logger->Write ("CSidekickNet", LogNotice, "Socket connect successful");
+						}
+						else
+							logger->Write ("CSidekickNet", LogNotice, "Socket connect failed");
+					}
+				}
+			}
+			if ( m_isBBSSocketConnected ){
+				
+				int x = m_pBBSSocket->Receive ( buffer, bsize -2, MSG_DONTWAIT);
+				if (x > 0)
+				{
+					int a = m_pUSBSerial->Write(buffer, x);
+					logger->Write ("CSidekickNet", LogNotice, "USB serial wrote %u chars", x);
+				}
+				else
+				{
+					int a = m_pUSBSerial->Read(buffer, 80);
+					if ( a > 0 )
+					{
+						m_pBBSSocket->Send (buffer, a, MSG_DONTWAIT);
+					}
+				}
+			}
+		}
+		
+		
 		//every couple of seconds + seconds needed for request
 		//log cpu temp + uptime + free memory
 		//in wlan case do keep-alive request
-		if ( (m_pTimer->GetUptime() - m_timestampOfLastWLANKeepAlive) > (netEnableWebserver ? 7:5))
+		if ( (m_pTimer->GetUptime() - m_timestampOfLastWLANKeepAlive) > 10) //(netEnableWebserver ? 7:5))
 		{
-			#ifdef WITH_WLAN_NEVER //we apparently don't need wlan keep-alive at all if we just always do the yield!!!
+			
+			#ifdef WITH_WLAN //we apparently don't need wlan keep-alive at all if we just always do the yield!!!
 			//if (!netEnableWebserver)
 			{
 				//Circle42 offers experimental WLAN, but it seems to
