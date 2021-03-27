@@ -238,11 +238,11 @@ private:
 	unsigned m_loglevel;
 	char * m_currentKernelRunning;
 	signed m_oldSecondsLeft;
+	char * m_modemCommand;
+	unsigned m_modemCommandLength;
 	
 	remoteHTTPTarget m_SKTPServer;
 	remoteHTTPTarget m_CSDB;
-	remoteHTTPTarget m_BBS;
-	
 };
 
 #endif

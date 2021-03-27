@@ -40,7 +40,7 @@ static const char DRIVE[] = "SD:";
 
 //#ifdef WITHOUT_STDLIB
 
-#if WITH_NET
+#ifdef WITH_NET
 
 //static 
 const u8 RPIMENUPRG[] =
@@ -48,14 +48,11 @@ const u8 RPIMENUPRG[] =
 #include "C64Side/rpimenu_prg.h"
 };
 
+CSidekickNet *pSidekickNet = 0;//used for c64screen to display net config params
+
 #endif
 
 static const char FILENAME_PRG[] = "SD:C64/rpimenu.prg";		// .PRG to start
-//#elif WITH_NET
-//static const char FILENAME_PRG[] = "SD:C64/rpimenu_net.prg";		// .PRG to start
-//#else
-//static const char FILENAME_PRG[] = "SD:C64/rpimenu.prg";		// .PRG to start
-//#endif
 static const char FILENAME_CBM80[] = "SD:C64/launch.cbm80";		// launch code (CBM80 8k cart)
 static const char FILENAME_CONFIG[] = "SD:C64/sidekick64.cfg";		
 static const char FILENAME_SIDKICK_CONFIG[] = "SD:C64/SIDKick_CFG.prg";		
@@ -235,6 +232,10 @@ void deactivateCart()
 	
 	DELAY( 1 << 17 );
 	latchSetClearImm( LATCH_RESET | LED_DEACTIVATE_CART2_HIGH, LED_DEACTIVATE_CART2_LOW | LATCH_ENABLE_KERNAL );
+	#ifdef WITH_NET
+	if (pSidekickNet != 0)
+		pSidekickNet->setCurrentKernel( (char*)'l' );	
+	#endif
 }
 
 
@@ -326,9 +327,6 @@ CVCHIQDevice		*pVCHIQ;
 #endif
 
 //u32 temperature;
-#ifdef WITH_NET
-CSidekickNet *pSidekickNet;//used for c64screen to display net config params
-#endif
 
 boolean CKernelMenu::Initialize( void )
 {
@@ -385,7 +383,7 @@ boolean CKernelMenu::Initialize( void )
 		m_SidekickNet.checkForSupportedPiModel();
 		m_SidekickNet.mountSDDrive();
 	#endif
-
+/* until debugging is done disable logo on hdmi
 	u8 tempHDMI[ 640 * 480 * 3 ];
 	readFile( logger, (char*)DRIVE, (char*)FILENAME_SPLASH_HDMI, tempHDMI, &size );
 	u32 xOfs = ( screen->GetWidth() - 640 ) / 2;
@@ -401,6 +399,7 @@ boolean CKernelMenu::Initialize( void )
 			screen->SetPixel( i+xOfs, j+yOfs,  _CONV_RGB( p[ 0 ], p[ 1 ], p[ 2 ] )  ); 
 			p += 3;
 		}
+*/		
 	// read launch code
 	cartCBM80 = (unsigned char *)( ((u64)&cart_pool+64) & ~63 );
 	readFile( logger, (char*)DRIVE, (char*)FILENAME_CBM80, cartCBM80, &size );
