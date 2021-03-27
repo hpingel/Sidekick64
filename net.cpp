@@ -81,7 +81,6 @@ static const char msgNoConnection[] = "Sorry, no network connection!";
 static const char msgNotFound[]     = "Message not found. :(";
 
 static const char CSDB_HOST[] = "csdb.dk";
-static const char BBS_HOST[] = "test";
 
 #ifdef WITH_WLAN
 #define DRIVE		"SD:"
@@ -169,14 +168,17 @@ CSidekickNet::CSidekickNet(
 		m_sysMonCPUTemp(0),
 		m_loglevel(2),
 		m_currentKernelRunning((char *) "-"),
-		m_oldSecondsLeft(0)
-		
+		m_oldSecondsLeft(0),
+		m_modemCommand( (char * ) ""),
+		m_modemCommandLength(0)
 {
 	assert (m_pTimer != 0);
 	assert (& m_pScheduler != 0);
 
 	//timezone is not really related to net stuff, it could go somewhere else
 	m_pTimer->SetTimeZone (nTimeZone);
+	
+	m_modemCommand[0] = '\0';
 }
 
 void CSidekickNet::setErrorMsgC64( char * msg, boolean sticky = true ){ 
@@ -231,7 +233,7 @@ boolean CSidekickNet::Initialize()
 				logger->Write( "CSidekickNet::Initialize", LogNotice, 
 					"USB TTY device detected."
 				);
-				m_pUSBSerial->SetBaudRate(2400);
+				m_pUSBSerial->SetBaudRate(1200);
 			}
 		}
 		m_pScheduler->Yield ();
@@ -269,12 +271,6 @@ boolean CSidekickNet::Initialize()
 #ifdef WITH_TLS
 	m_TLSSupport = new CTLSSimpleSupport (m_Net);
 #endif
-
-
-	m_BBS.hostName = BBS_HOST;
-	m_BBS.port = 64128;
-	m_BBS.ipAddress = getIPForHost( BBS_HOST );
-	m_BBS.logPrefix = getLoggerStringForHost( BBS_HOST, m_BBS.port);
 
 	//TODO: the resolves could be postponed to the moment where the first 
 	//actual access takes place
@@ -727,46 +723,191 @@ void CSidekickNet::handleQueuedNetworkAction()
 			EnableWebserver();
 		}
 		
-		if ( ( strcmp( m_currentKernelRunning, "l" ) == 0) && m_pUSBSerial != 0 )
+		if ( strcmp( m_currentKernelRunning, "m" ) == 0 && m_isBBSTermReady){
+			logger->Write ("CSidekickNet", LogNotice, "cleanup bbs connection");
+			m_isBBSTermReady = false;
+			if ( m_isBBSSocketConnected )
+			{
+				m_isBBSSocketConnected = false;
+				delete(m_pBBSSocket);
+				m_pBBSSocket = 0;
+			}
+			if (m_pUSBSerial->Configure())
+				m_pUSBSerial->SetBaudRate(1200);
+			else
+				logger->Write ("CSidekickNet", LogNotice, "can't configure m_pUSBSerial");
+		}
+			
+		if (  m_pUSBSerial != 0 )
 		{
 			int bsize = 2048;
 			char buffer[bsize];
+			char inputChar[bsize];
 			
 			if (!m_isBBSTermReady)
 			{
-				int a = m_pUSBSerial->Read(buffer, 10);
+				int a = m_pUSBSerial->Read(inputChar, 1);
 				if ( a > 0 )
 				{
-					logger->Write ("CSidekickNet", LogNotice, "USB serial read %u chars from C64 - %u", a, buffer[0]);
-					if (buffer[0] == 'A')
+					if (inputChar[0] == 0)
 					{
-						m_pBBSSocket = new CSocket (m_Net, IPPROTO_TCP);
-						m_isBBSTermReady = true;
-						if ( m_pBBSSocket->Connect ( m_BBS.ipAddress, m_BBS.port) == 0)
-						{
-							m_isBBSSocketConnected = true;
-							logger->Write ("CSidekickNet", LogNotice, "Socket connect successful");
+						//logger->Write ("CSidekickNet", LogNotice, "USB serial read char 0");
+					}
+					else if (inputChar[0] == 20)
+					{
+						a = m_pUSBSerial->Write(inputChar, 1);//echo
+						//logger->Write ("CSidekickNet", LogNotice, "USB serial read char delete");
+						if (m_modemCommandLength > 0)
+							m_modemCommand[ --m_modemCommandLength ] = '\0';
+					}
+					else if (inputChar[0] != 13)
+					{
+						a = m_pUSBSerial->Write(inputChar, 1);//echo
+						m_modemCommand[ m_modemCommandLength++ ] = tolower(inputChar[0]);
+						m_modemCommand[ m_modemCommandLength ] = '\0';
+						//logger->Write ("CSidekickNet", LogNotice, "USB serial read %u chars from C64 - %u - %u - %s", a, inputChar[0], m_modemCommandLength, m_modemCommand);
+					}
+					else
+					{
+						a = m_pUSBSerial->Write(inputChar, 1);//echo
+						m_modemCommand[ m_modemCommandLength ] = '\0';
+						logger->Write ("CSidekickNet", LogNotice, "USB serial read ENTER:  - %s", m_modemCommand);
+						
+						//BTX
+						if (
+							strcmp(m_modemCommand, "atd190") == 0 || 
+							strcmp(m_modemCommand, "atd 190") == 0 ||
+							strcmp(m_modemCommand, "atd\"btx.hanse.net\"") == 0
+						){
+							m_pUSBSerial->SetBaudRate(1200);
+							//btx.hanse.de 195.201.94.166
+							static const u8 BtxHanseDe[] = {195, 201, 94, 166}; //lazy, avoiding resolve
+							CIPAddress BTXIPAddress;
+							BTXIPAddress.Set(BtxHanseDe);
+							m_pBBSSocket = new CSocket (m_Net, IPPROTO_TCP);
+							m_isBBSTermReady = true;
+							if ( m_pBBSSocket->Connect ( BTXIPAddress, 20000) == 0)
+							{
+								m_isBBSSocketConnected = true;
+							}
+							else
+								logger->Write ("CSidekickNet", LogNotice, "Socket connect failed");
 						}
-						else
-							logger->Write ("CSidekickNet", LogNotice, "Socket connect failed");
+						
+						else if (strcmp(m_modemCommand, "atd\"rapidfire\"") == 0)
+						{
+							CIPAddress bbsIP = getIPForHost("rapidfire.hopto.org");
+							m_pBBSSocket = new CSocket (m_Net, IPPROTO_TCP);
+							m_isBBSTermReady = true;
+							if ( m_pBBSSocket->Connect ( bbsIP, 64128) == 0)
+								m_isBBSSocketConnected = true;
+							else
+								logger->Write ("CSidekickNet", LogNotice, "Socket connect failed");
+						}
+						
+						else if (strcmp(m_modemCommand, "atd\"raveolution\"") == 0)
+						{
+							CIPAddress bbsIP = getIPForHost("raveolution.hopto.org");
+							m_pBBSSocket = new CSocket (m_Net, IPPROTO_TCP);
+							m_isBBSTermReady = true;
+							if ( m_pBBSSocket->Connect ( bbsIP, 64128) == 0)
+								m_isBBSSocketConnected = true;
+							else
+								logger->Write ("CSidekickNet", LogNotice, "Socket connect failed");
+						}
+
+						else if (strcmp(m_modemCommand, "atd\"retrocampus\"") == 0)
+						{
+							CIPAddress bbsIP = getIPForHost("bbs.retrocampus.com");
+							m_pBBSSocket = new CSocket (m_Net, IPPROTO_TCP);
+							m_isBBSTermReady = true;
+							if ( m_pBBSSocket->Connect ( bbsIP, 6510) == 0)
+								m_isBBSSocketConnected = true;
+							else
+								logger->Write ("CSidekickNet", LogNotice, "Socket connect failed");
+						}
+
+						else if (strcmp(m_modemCommand, "atd\"coffeemud\"") == 0)
+						{
+							CIPAddress bbsIP = getIPForHost("coffeemud.net");
+							m_pBBSSocket = new CSocket (m_Net, IPPROTO_TCP);
+							m_isBBSTermReady = true;
+							if ( m_pBBSSocket->Connect ( bbsIP, 2323) == 0)
+								m_isBBSSocketConnected = true;
+							else
+								logger->Write ("CSidekickNet", LogNotice, "Socket connect failed");
+						}
+
+						else if (strcmp(m_modemCommand, "atd\"habitat\"") == 0)
+						{
+							CIPAddress bbsIP = getIPForHost("neohabitat.demo.spi.ne");
+							m_pBBSSocket = new CSocket (m_Net, IPPROTO_TCP);
+							m_isBBSTermReady = true;
+							if ( m_pBBSSocket->Connect ( bbsIP, 1986) == 0)
+								m_isBBSSocketConnected = true;
+							else
+								logger->Write ("CSidekickNet", LogNotice, "Socket connect failed");
+						}
+						
+						else if (strcmp(m_modemCommand, "atb1200") == 0)
+						{
+							a = m_pUSBSerial->Write("OK\r", 4);
+							m_pScheduler->MsSleep(100);
+							m_pUSBSerial->SetBaudRate(1200);
+						}
+						else if (strcmp(m_modemCommand, "atb2400") == 0)
+						{
+							a = m_pUSBSerial->Write("OK\r", 4);
+							m_pScheduler->MsSleep(100);
+							m_pUSBSerial->SetBaudRate(2400);
+						}
+						else if (strcmp(m_modemCommand, "atb4800") == 0)
+						{
+							a = m_pUSBSerial->Write("OK\r", 4);
+							m_pScheduler->MsSleep(100);
+							m_pUSBSerial->SetBaudRate(4800);
+						}
+						else if (strcmp(m_modemCommand, "atb9600") == 0)
+						{
+							a = m_pUSBSerial->Write("OK\r", 4);
+							m_pScheduler->MsSleep(100);
+							m_pUSBSerial->SetBaudRate(9600);
+						}
+						else if (strcmp(m_modemCommand, "ati") == 0)
+						{
+							a = m_pUSBSerial->Write("Sidekick64 userport modem emulation\rHave fun!\r", 46);
+						}
+						else if (m_modemCommandLength > 0){
+							a = m_pUSBSerial->Write("ERROR\r", 7);
+						}
+						//m_modemCommand = (char*) "";
+						m_modemCommandLength = 0;
+						m_modemCommand[0] = '\0';
 					}
 				}
 			}
 			if ( m_isBBSSocketConnected ){
 				
-				int x = m_pBBSSocket->Receive ( buffer, bsize -2, MSG_DONTWAIT);
-				if (x > 0)
+				int x = 1; //dummy start value
+				//boolean gotContent = false;
+				while (x > 0)
 				{
-					int a = m_pUSBSerial->Write(buffer, x);
-					logger->Write ("CSidekickNet", LogNotice, "USB serial wrote %u chars", x);
-				}
-				else
-				{
-					int a = m_pUSBSerial->Read(buffer, 80);
-					if ( a > 0 )
+					x = m_pBBSSocket->Receive ( buffer, bsize -2, MSG_DONTWAIT);
+					if (x > 0)
 					{
-						m_pBBSSocket->Send (buffer, a, MSG_DONTWAIT);
+						int a = m_pUSBSerial->Write(buffer, x);
+						logger->Write ("CSidekickNet", LogNotice, "USB serial wrote %u chars", x);
+						//gotContent = true;
 					}
+				}
+				//if ( !gotContent )
+				//	logger->Write ("CSidekickNet", LogNotice, "Didn't get content.");
+				
+				
+				int a = m_pUSBSerial->Read(buffer, bsize -2);
+				if ( a > 0 )
+				{
+					m_pBBSSocket->Send (buffer, a, MSG_DONTWAIT);
 				}
 			}
 		}
