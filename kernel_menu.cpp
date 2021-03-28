@@ -234,7 +234,7 @@ void deactivateCart()
 	latchSetClearImm( LATCH_RESET | LED_DEACTIVATE_CART2_HIGH, LED_DEACTIVATE_CART2_LOW | LATCH_ENABLE_KERNAL );
 	#ifdef WITH_NET
 	if (pSidekickNet != 0)
-		pSidekickNet->setCurrentKernel( (char*)'l' );	
+		pSidekickNet->setCurrentKernel( (char*)"l" );	
 	#endif
 }
 
@@ -300,6 +300,10 @@ void activateCart()
 		tftCopyBackground2Framebuffer();
 		tftSendFramebuffer16BitImm( tftFrameBuffer );
 	}
+	
+	if (pSidekickNet != 0)
+		pSidekickNet->setCurrentKernel( (char*)"m" );	
+	
 	//TODO
 	CleanDataCache();
 	InvalidateDataCache();
@@ -612,7 +616,7 @@ void CKernelMenu::Run( void )
 
 	#ifdef WITH_NET
 	m_timeStampOfLastNetworkEvent = 0;
-	m_SidekickNet.setCurrentKernel( (char*)'m' );
+	m_SidekickNet.setCurrentKernel( (char*)"m" );
 	unsigned keepNMILow = 0;
 	unsigned lastAutoRefresh = 0;
 	unsigned autoRefreshTimeLookup = 0;
@@ -1219,6 +1223,7 @@ int main( void )
 		default:
 			break;
 		}
+		pSidekickNet->setCurrentKernel( (char*)"m" );
 	}
 
 	logger->Write( "RaspiMenu", LogNotice, "Rebooting..." );

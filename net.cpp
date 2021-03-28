@@ -723,7 +723,7 @@ void CSidekickNet::handleQueuedNetworkAction()
 			EnableWebserver();
 		}
 		
-		if ( strcmp( m_currentKernelRunning, "m" ) == 0 && m_isBBSTermReady){
+		if ( m_pUSBSerial != 0 && (strcmp( m_currentKernelRunning, "m" ) == 0) && m_isBBSTermReady){
 			logger->Write ("CSidekickNet", LogNotice, "cleanup bbs connection");
 			m_isBBSTermReady = false;
 			if ( m_isBBSSocketConnected )
@@ -732,10 +732,9 @@ void CSidekickNet::handleQueuedNetworkAction()
 				delete(m_pBBSSocket);
 				m_pBBSSocket = 0;
 			}
-			if (m_pUSBSerial->Configure())
-				m_pUSBSerial->SetBaudRate(1200);
-			else
-				logger->Write ("CSidekickNet", LogNotice, "can't configure m_pUSBSerial");
+			m_pUSBSerial->SetBaudRate(1200);
+			m_modemCommandLength = 0;
+			m_modemCommand[0] = '\0';
 		}
 			
 		if (  m_pUSBSerial != 0 )
