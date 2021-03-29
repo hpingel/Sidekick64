@@ -166,6 +166,8 @@ private:
 	void EnableWebserver();
 	CIPAddress getIPForHost( const char * );
 	boolean HTTPGet (remoteHTTPTarget & target, const char * path, char *pBuffer, unsigned & nLengthRead);
+	void usbPnPUpdate();
+	void handleModemEmulation();
 	
 	CUSBHCIDevice     * m_USBHCI;
 	CMachineInfo      * m_pMachineInfo; //used for c64screen to display raspi model name
