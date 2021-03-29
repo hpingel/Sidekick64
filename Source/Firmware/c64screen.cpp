@@ -1769,20 +1769,6 @@ void handleC64( int k, u32 *launchKernel, char *FILENAME, char *filenameKernal, 
 			//only needed temporarily for testing purposes
 			pSidekickNet->resetSktpSession();
 		}
-		else if ( k == 'd' || k == 'D')
-		{
-				//http errors might be displayed on top of sktp screen
-				//this assignment is a cheap trick to get rid of error popups
-				if ( errorMsg != NULL ) errorMsg = NULL;
-		}
-		
-		else if (k == 92 )
-		{
-			//92 is pound key, this key is constantly sent by the rpimenu_net.prg
-			//automatically if the user doesn't press a key on the Commodore keyboard
-			pSidekickNet->queueSktpRefresh(0); 
-			
-		}
 		*/
 		else
 		{
@@ -2188,9 +2174,10 @@ void printNetworkScreen()
 
 	const u32 x = 1;
 	
-	CString strHostName   = "Hostname:         ";
-	CString strConnection = "Connection state: ";
-	CString strWebserver  = "Webserver state:  ";
+	CString strHostName   = "Hostname:           ";
+	CString strConnection = "Connection state:   ";
+	CString strWebserver  = "Webserver state:    ";
+	CString strUPModemEmu = "Userport modem emu: ";
 	CString strHelper;
 	
 	if (strcmp(netSidekickHostname,"") != 0)
@@ -2211,23 +2198,30 @@ void printNetworkScreen()
 	else
 		strConnection.Append( "Inactive" );
 
+	if ( pSidekickNet->isUsbUserportModemEmulationActive() )
+		strUPModemEmu.Append( "Active" );
+	else
+		strUPModemEmu.Append( "No cable detected" );
+	
 	u32 y1 = 2;
 
 	printC64( x+1, y1+2, "Network settings", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
 	printC64( x+1, y1+ 9, strConnection,   skinValues.SKIN_MENU_TEXT_SYSINFO, 0 );
 	printC64( x+1, y1+10, strWebserver,   skinValues.SKIN_MENU_TEXT_SYSINFO, 0 );
 	printC64( x+1, y1+11, strHostName,   skinValues.SKIN_MENU_TEXT_SYSINFO, 0 );
+	printC64( x+1, y1+12, strUPModemEmu,   skinValues.SKIN_MENU_TEXT_SYSINFO, 0 );
+	
 	if (strcmp(netSktpHostName,"") != 0){
 		unsigned port = netSktpHostPort;
 		if (port == 0 ) port = 80;
 		strHelper = pSidekickNet->getLoggerStringForHost(netSktpHostName, port);
 		char * tmpHost;
 		sprintf( tmpHost, strHelper, "" );
-		printC64( x+1, y1+12, "SKTP Host:",   skinValues.SKIN_MENU_TEXT_SYSINFO, 0 );
-		printC64( x+1, y1+13, tmpHost,   skinValues.SKIN_MENU_TEXT_SYSINFO, 0 );
+		printC64( x+1, y1+13, "SKTP Host:",   skinValues.SKIN_MENU_TEXT_SYSINFO, 0 );
+		printC64( x+1, y1+14, tmpHost,   skinValues.SKIN_MENU_TEXT_SYSINFO, 0 );
 	}
 
-	u32 y2=15;
+	u32 y2=16;
 
 	printC64( x+1, y1+y2, "S - Display system information", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
 
