@@ -151,6 +151,7 @@ public:
 	boolean isMenuScreenUpdateNeeded();
 	void setCurrentKernel( char *);
 	void setC128Mode();
+	boolean isUsbUserportModemEmulationActive();
 
 private:
 
@@ -240,7 +241,7 @@ private:
 	signed m_oldSecondsLeft;
 	char * m_modemCommand;
 	unsigned m_modemCommandLength;
-	
+		
 	remoteHTTPTarget m_SKTPServer;
 	remoteHTTPTarget m_CSDB;
 };

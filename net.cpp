@@ -71,7 +71,7 @@
 #define USE_DHCP
 #endif
 // Time configuration
-static const unsigned bestBefore = 1617235140;
+static const unsigned bestBefore = 1619827200;
 static const char NTPServer[]    = "pool.ntp.org";
 static const int nTimeZone       = 1*60;		// minutes diff to UTC
 static const char DRIVE[] = "SD:";
@@ -713,6 +713,10 @@ u8 CSidekickNet::getCSDBDownloadLaunchType(){
 	return type;
 }
 
+boolean CSidekickNet::isUsbUserportModemEmulationActive(){
+		return m_pUSBSerial != 0;
+}
+
 void CSidekickNet::handleQueuedNetworkAction()
 {
 	if ( m_isActive && (!isAnyNetworkActionQueued() || !usesWLAN()) )
@@ -739,7 +743,7 @@ void CSidekickNet::handleQueuedNetworkAction()
 			
 		if (  m_pUSBSerial != 0 )
 		{
-			int bsize = 2048;
+			int bsize = 4096;
 			char buffer[bsize];
 			char inputChar[bsize];
 			
@@ -776,10 +780,10 @@ void CSidekickNet::handleQueuedNetworkAction()
 						if (
 							strcmp(m_modemCommand, "atd190") == 0 || 
 							strcmp(m_modemCommand, "atd 190") == 0 ||
-							strcmp(m_modemCommand, "atd\"btx.hanse.net\"") == 0
+							strcmp(m_modemCommand, "atd\"btx\"") == 0
 						){
 							m_pUSBSerial->SetBaudRate(1200);
-							//btx.hanse.de 195.201.94.166
+							//btx.hanse.de or 195.201.94.166, could be two different instances
 							static const u8 BtxHanseDe[] = {195, 201, 94, 166}; //lazy, avoiding resolve
 							CIPAddress BTXIPAddress;
 							BTXIPAddress.Set(BtxHanseDe);
@@ -848,6 +852,12 @@ void CSidekickNet::handleQueuedNetworkAction()
 								logger->Write ("CSidekickNet", LogNotice, "Socket connect failed");
 						}
 						
+						else if (strcmp(m_modemCommand, "atb300") == 0)
+						{
+							a = m_pUSBSerial->Write("OK\r", 4);
+							m_pScheduler->MsSleep(100);
+							m_pUSBSerial->SetBaudRate(300);
+						}
 						else if (strcmp(m_modemCommand, "atb1200") == 0)
 						{
 							a = m_pUSBSerial->Write("OK\r", 4);
@@ -885,10 +895,9 @@ void CSidekickNet::handleQueuedNetworkAction()
 					}
 				}
 			}
-			if ( m_isBBSSocketConnected ){
+			else if ( m_isBBSSocketConnected ){
 				
 				int x = 1; //dummy start value
-				//boolean gotContent = false;
 				while (x > 0)
 				{
 					x = m_pBBSSocket->Receive ( buffer, bsize -2, MSG_DONTWAIT);
@@ -896,12 +905,8 @@ void CSidekickNet::handleQueuedNetworkAction()
 					{
 						int a = m_pUSBSerial->Write(buffer, x);
 						logger->Write ("CSidekickNet", LogNotice, "USB serial wrote %u chars", x);
-						//gotContent = true;
 					}
 				}
-				//if ( !gotContent )
-				//	logger->Write ("CSidekickNet", LogNotice, "Didn't get content.");
-				
 				
 				int a = m_pUSBSerial->Read(buffer, bsize -2);
 				if ( a > 0 )
