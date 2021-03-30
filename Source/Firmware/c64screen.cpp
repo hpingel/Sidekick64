@@ -2194,14 +2194,18 @@ void printNetworkScreen()
 		strWebserver.Append( "Stopped" );
 
 	if ( pSidekickNet->IsRunning() )
+	{
 		strConnection.Append( "Active" );
+		if ( pSidekickNet->isUsbUserportModemEmulationActive() )
+			strUPModemEmu.Append( "Active" );
+		else
+			strUPModemEmu.Append( "No cable detected" );
+	}
 	else
+	{
 		strConnection.Append( "Inactive" );
-
-	if ( pSidekickNet->isUsbUserportModemEmulationActive() )
-		strUPModemEmu.Append( "Active" );
-	else
-		strUPModemEmu.Append( "No cable detected" );
+		strUPModemEmu.Append( "Inactive" );
+	}
 	
 	u32 y1 = 2;
 
@@ -2221,7 +2225,7 @@ void printNetworkScreen()
 		printC64( x+1, y1+14, tmpHost,   skinValues.SKIN_MENU_TEXT_SYSINFO, 0 );
 	}
 
-	u32 y2=16;
+	u32 y2=17;
 
 	printC64( x+1, y1+y2, "S - Display system information", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
 

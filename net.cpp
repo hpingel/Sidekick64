@@ -1606,7 +1606,25 @@ void CSidekickNet::handleModemEmulation()
 						m_pBBSSocket = new CSocket (m_Net, IPPROTO_TCP);
 						m_isBBSTermReady = true;
 						if ( m_pBBSSocket->Connect ( bbsIP, 1986) == 0)
+						{
 							m_isBBSSocketConnected = true;
+							//a = m_pUSBSerial->Write("CONNECT 1200\r\n", 14);
+						}
+						else
+							logger->Write ("CSidekickNet", LogNotice, "Socket connect failed");
+					}
+					//Quantum Link / QLink
+					else if (strcmp(m_modemCommand, "atdt 5551212") == 0 )
+					{
+						m_pUSBSerial->SetBaudRate(1200);
+						CIPAddress bbsIP = getIPForHost("q-link.net");
+						m_pBBSSocket = new CSocket (m_Net, IPPROTO_TCP);
+						m_isBBSTermReady = true;
+						if ( m_pBBSSocket->Connect ( bbsIP, 5190) == 0)
+						{
+							m_isBBSSocketConnected = true;
+							a = m_pUSBSerial->Write("CONNECT 1200\r\n", 14);
+						}
 						else
 							logger->Write ("CSidekickNet", LogNotice, "Socket connect failed");
 					}
