@@ -263,26 +263,30 @@ boolean CSidekickNet::Initialize()
 
 	//TODO: the resolves could be postponed to the moment where the first 
 	//actual access takes place
+	bool success = false;
 	
 	m_CSDB.hostName = CSDB_HOST;
 	m_CSDB.port = 443;
-	m_CSDB.ipAddress = getIPForHost( CSDB_HOST );
+	m_CSDB.ipAddress = getIPForHost( CSDB_HOST, success );
 	m_CSDB.logPrefix = getLoggerStringForHost( CSDB_HOST, 443);
+	m_CSDB.valid = success;
 
-	m_NTPServerIP  = getIPForHost( NTPServer );
+	m_NTPServerIP  = getIPForHost( NTPServer, success );
 
 	if (strcmp(netSktpHostName,"") != 0)
 	{
 		int port = netSktpHostPort != 0 ? netSktpHostPort: HTTP_PORT;
 		m_SKTPServer.hostName = netSktpHostName;
 		m_SKTPServer.port = port;
-		m_SKTPServer.ipAddress = getIPForHost( netSktpHostName );
+		m_SKTPServer.ipAddress = getIPForHost( netSktpHostName, success );
 		m_SKTPServer.logPrefix = getLoggerStringForHost( netSktpHostName, port);
+		m_SKTPServer.valid = success;
 	}
 	else
 	{
 		m_SKTPServer.hostName = "";
 		m_SKTPServer.port = 0;
+		m_SKTPServer.valid = false;
 	}
 	
 	if ( netEnableWebserver ){
@@ -999,9 +1003,10 @@ CNetConfig * CSidekickNet::GetNetConfig(){
 	return m_Net->GetConfig ();
 }
 
-CIPAddress CSidekickNet::getIPForHost( const char * host )
+CIPAddress CSidekickNet::getIPForHost( const char * host, bool & success )
 {
 	assert (m_isActive);
+	success = false;
 	unsigned attempts = 0;
 	CIPAddress ip;
 	while ( attempts < 3)
@@ -1016,6 +1021,7 @@ CIPAddress CSidekickNet::getIPForHost( const char * host )
 		{
 			CString IPString;
 			ip.Format (&IPString);
+			success = true;
 			if (m_loglevel > 2)
 				logger->Write ("getIPForHost", LogNotice, "Resolved %s as %s",host, (const char* ) IPString);
 			break;
@@ -1492,12 +1498,19 @@ void CSidekickNet::handleModemEmulation()
 	{
 		int bsize = 4096;
 		char buffer[bsize];
-		char inputChar[bsize];
+		char inputChar[bsize]; //FIXME get rid of this
+		bool success = false;
 		
 		if (!m_isBBSTermReady)
 		{
-			int a = m_pUSBSerial->Read(inputChar, 1);
-			if ( a > 0 )
+			int a = m_pUSBSerial->Read(inputChar, bsize -2);
+			if ( a > 1 )
+			{
+				logger->Write ("CSidekickNet", LogNotice, "Read from USB serial more than one: %u - %s", a, inputChar);
+				//m_pBBSSocket->Send (buffer, a, MSG_DONTWAIT);
+				
+			}
+			else if ( a == 1 )
 			{
 				if (inputChar[0] == 20)
 				{
@@ -1509,12 +1522,16 @@ void CSidekickNet::handleModemEmulation()
 				else if ((inputChar[0] < 32 || inputChar[0] > 127) && inputChar[0] != 13)
 				{
 					//ignore key
-					//logger->Write ("CSidekickNet", LogNotice, "USB serial read char 0");
+					logger->Write ("CSidekickNet", LogNotice, "USB serial read ignored char %u", inputChar[0]);
 				}
 				else if (inputChar[0] != 13)
 				{
 					a = m_pUSBSerial->Write(inputChar, 1);//echo
+					#ifdef WITHOUT_STDLIB
+					m_modemCommand[ m_modemCommandLength++ ] = inputChar[0];
+					#else
 					m_modemCommand[ m_modemCommandLength++ ] = tolower(inputChar[0]);
+					#endif
 					m_modemCommand[ m_modemCommandLength ] = '\0';
 					//logger->Write ("CSidekickNet", LogNotice, "USB serial read %u chars from C64 - %u - %u - %s", a, inputChar[0], m_modemCommandLength, m_modemCommand);
 				}
@@ -1542,91 +1559,43 @@ void CSidekickNet::handleModemEmulation()
 						strcmp(m_modemCommand, "atd\"btx\"") == 0
 					){
 						m_pUSBSerial->SetBaudRate(1200);
+						SocketConnect("btx.hanse.de", 20000);
 						//btx.hanse.de or 195.201.94.166, could be two different instances
+/*
 						static const u8 BtxHanseDe[] = {195, 201, 94, 166}; //lazy, avoiding resolve
 						CIPAddress BTXIPAddress;
 						BTXIPAddress.Set(BtxHanseDe);
-						m_pBBSSocket = new CSocket (m_Net, IPPROTO_TCP);
-						m_isBBSTermReady = true;
-						if ( m_pBBSSocket->Connect ( BTXIPAddress, 20000) == 0)
-						{
-							m_isBBSSocketConnected = true;
-						}
-						else
-							logger->Write ("CSidekickNet", LogNotice, "Socket connect failed");
+*/
 					}
-					
 					else if (strcmp(m_modemCommand, "atd\"rapidfire\"") == 0)
 					{
-						CIPAddress bbsIP = getIPForHost("rapidfire.hopto.org");
-						m_pBBSSocket = new CSocket (m_Net, IPPROTO_TCP);
-						m_isBBSTermReady = true;
-						if ( m_pBBSSocket->Connect ( bbsIP, 64128) == 0)
-							m_isBBSSocketConnected = true;
-						else
-							logger->Write ("CSidekickNet", LogNotice, "Socket connect failed");
+						SocketConnect("rapidfire.hopto.org", 64128);
 					}
-					
+					else if (strcmp(m_modemCommand, "atd\"schnuppi\"") == 0)
+					{
+						SocketConnect("schnuppi246.hopto.org", 64128); //test resolve fail
+					}
 					else if (strcmp(m_modemCommand, "atd\"raveolution\"") == 0)
 					{
-						CIPAddress bbsIP = getIPForHost("raveolution.hopto.org");
-						m_pBBSSocket = new CSocket (m_Net, IPPROTO_TCP);
-						m_isBBSTermReady = true;
-						if ( m_pBBSSocket->Connect ( bbsIP, 64128) == 0)
-							m_isBBSSocketConnected = true;
-						else
-							logger->Write ("CSidekickNet", LogNotice, "Socket connect failed");
+						SocketConnect("raveolution.hopto.org", 64128);
 					}
-
 					else if (strcmp(m_modemCommand, "atd\"retrocampus\"") == 0)
 					{
-						CIPAddress bbsIP = getIPForHost("bbs.retrocampus.com");
-						m_pBBSSocket = new CSocket (m_Net, IPPROTO_TCP);
-						m_isBBSTermReady = true;
-						if ( m_pBBSSocket->Connect ( bbsIP, 6510) == 0)
-							m_isBBSSocketConnected = true;
-						else
-							logger->Write ("CSidekickNet", LogNotice, "Socket connect failed");
+						SocketConnect("bbs.retrocampus.com", 6510);
 					}
-
 					else if (strcmp(m_modemCommand, "atd\"coffeemud\"") == 0)
 					{
-						CIPAddress bbsIP = getIPForHost("coffeemud.net");
-						m_pBBSSocket = new CSocket (m_Net, IPPROTO_TCP);
-						m_isBBSTermReady = true;
-						if ( m_pBBSSocket->Connect ( bbsIP, 2323) == 0)
-							m_isBBSSocketConnected = true;
-						else
-							logger->Write ("CSidekickNet", LogNotice, "Socket connect failed");
+						SocketConnect("coffeemud.net", 2323);
 					}
-
 					else if (strcmp(m_modemCommand, "atd\"habitat\"") == 0)
 					{
-						CIPAddress bbsIP = getIPForHost("neohabitat.demo.spi.ne");
-						m_pBBSSocket = new CSocket (m_Net, IPPROTO_TCP);
-						m_isBBSTermReady = true;
-						if ( m_pBBSSocket->Connect ( bbsIP, 1986) == 0)
-						{
-							m_isBBSSocketConnected = true;
-							//a = m_pUSBSerial->Write("CONNECT 1200\r\n", 14);
-						}
-						else
-							logger->Write ("CSidekickNet", LogNotice, "Socket connect failed");
+						SocketConnect("neohabitat.demo.spi.ne", 1986);
 					}
 					//Quantum Link / QLink
 					else if (strcmp(m_modemCommand, "atdt 5551212") == 0 )
 					{
 						m_pUSBSerial->SetBaudRate(1200);
-						CIPAddress bbsIP = getIPForHost("q-link.net");
-						m_pBBSSocket = new CSocket (m_Net, IPPROTO_TCP);
-						m_isBBSTermReady = true;
-						if ( m_pBBSSocket->Connect ( bbsIP, 5190) == 0)
-						{
-							m_isBBSSocketConnected = true;
-							a = m_pUSBSerial->Write("CONNECT 1200\r\n", 14);
-						}
-						else
-							logger->Write ("CSidekickNet", LogNotice, "Socket connect failed");
+						SocketConnect("q-link.net", 5190);
 					}
 					
 					else if (strcmp(m_modemCommand, "atb300") == 0)
@@ -1672,7 +1641,7 @@ void CSidekickNet::handleModemEmulation()
 				}
 			}
 		}
-		else if ( m_isBBSSocketConnected ){
+		else if ( m_isBBSSocketConnected && m_isBBSTermReady ){
 			
 			int x = 1; //dummy start value
 			while (x > 0)
@@ -1688,8 +1657,46 @@ void CSidekickNet::handleModemEmulation()
 			int a = m_pUSBSerial->Read(buffer, bsize -2);
 			if ( a > 0 )
 			{
-				m_pBBSSocket->Send (buffer, a, MSG_DONTWAIT);
+/*				
+				if ( a == 4 && buffer[0] == '+' && buffer[1] == '+' && buffer[2] == '+' && buffer[3] == 13)
+				{
+					logger->Write ("CSidekickNet", LogNotice, "+++");
+					m_isBBSTermReady = false;
+				}
+				else
+*/				
+				{
+					logger->Write ("CSidekickNet", LogNotice, "Connected - Read from USB serial: %i ", a);
+					m_pBBSSocket->Send (buffer, a, MSG_DONTWAIT);
+				}
 			}
+		}
+	}
+}
+
+void CSidekickNet::SocketConnect( char * hostname, unsigned port )
+{
+	bool success = true;
+	int a;
+	CIPAddress bbsIP = getIPForHost( hostname, success);
+	if ( !success || bbsIP.IsNull() )
+	{
+		a = m_pUSBSerial->Write("FAILED DNS\r\n", 12);
+		logger->Write ("CSidekickNet", LogNotice, "Could'nt resolve IP address for %s", hostname);
+	}
+	else
+	{
+		m_pBBSSocket = new CSocket (m_Net, IPPROTO_TCP);
+		m_isBBSTermReady = true;
+		if ( m_pBBSSocket->Connect ( bbsIP, port) == 0)
+		{
+			a = m_pUSBSerial->Write("CONNECT\r\n", 11);
+			m_isBBSSocketConnected = true;
+		}
+		else
+		{
+			a = m_pUSBSerial->Write("FAILED PORT\r\n", 13);
+			logger->Write ("CSidekickNet", LogNotice, "Socket connect failed at port %u", port);
 		}
 	}
 }
