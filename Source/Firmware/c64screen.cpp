@@ -1808,17 +1808,6 @@ void handleC64( int k, u32 *launchKernel, char *FILENAME, char *filenameKernal, 
 			handleC64( 0xffffffff, launchKernel, FILENAME, filenameKernal, menuItemStr );
 			return;
 		}
-#ifdef WITH_NET
-/*
-		if ( k == VK_AT )
-		{
-			//jump to network menu from config menu - do we really need this?
-			menuScreen = MENU_NETWORK;
-			handleC64( 0xffffffff, launchKernel, FILENAME, filenameKernal, menuItemStr );
-			return;
-		}		
-*/
-#endif
 		if ( ( ( k == 'n' || k == 'N' ) || ( k == 13 && curSettingsLine == 1 ) )&& typeInName == 0 )
 		{
 			typeInName = 1;
