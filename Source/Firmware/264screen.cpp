@@ -39,6 +39,7 @@
 #include "crt.h"
 #include "kernel_menu264.h"
 
+#define KEY_AT 64
 #define KEY_F1	133
 #define KEY_F4	138
 #define KEY_F2	137
@@ -358,7 +359,7 @@ int getMainMenuSelection( int key, char **FILE, char **FILE2, int *addIdx )
 	if ( key == KEY_F1 ) { resetMenuState(1); return 3;/* GEORAM */ } else
 	if ( key == KEY_F2 ) { resetMenuState(2); return 4;/* SID */ } else
 	#ifdef WITH_NET
-	if ( key == KEY_F6 ) { resetMenuState(4); return 5;/* Network */ } else //hp: don't have a clue about these numbers here
+	if ( key == KEY_AT ) { resetMenuState(4); return 5;/* Network */ } else //hp: don't have a clue about these numbers here
 	#endif
 	{
 		if ( key >= 'A' && key < 'A' + menuItems[ 1 ] ) // PRG
@@ -477,8 +478,8 @@ void handleC64( int k, u32 *launchKernel, char *FILENAME, char *filenameKernal )
 			return;
 		}
 #ifdef WITH_NET
-		//entering the network menu via F6
-		if ( k == KEY_F6 )
+		//entering the network menu via at
+		if ( k == KEY_AT )
 		{
 			menuScreen = MENU_NETWORK;
 			handleC64( 0xffffffff, launchKernel, FILENAME, filenameKernal );
@@ -791,7 +792,7 @@ void handleC64( int k, u32 *launchKernel, char *FILENAME, char *filenameKernal )
 	if ( menuScreen == MENU_NETWORK )
 	{
 		//keypress handling while inside of open menu
-		if ( k == KEY_F7 || k == KEY_F6 )
+		if ( k == KEY_F7 )
 		{
 			menuScreen = MENU_MAIN;
 			handleC64( 0xffffffff, launchKernel, FILENAME, filenameKernal );
@@ -855,7 +856,7 @@ void handleC64( int k, u32 *launchKernel, char *FILENAME, char *filenameKernal )
 	if ( menuScreen == MENU_SKTP )
 	{
 	
-		if ( k == KEY_F7 || k == KEY_F6 )
+		if ( k == KEY_F7 )
 		{
 			pSidekickNet->leavingSktpScreen();
 			menuScreen = MENU_MAIN;
@@ -913,15 +914,6 @@ void handleC64( int k, u32 *launchKernel, char *FILENAME, char *filenameKernal )
 			handleC64( 0xffffffff, launchKernel, FILENAME, filenameKernal );
 			return;
 		}
-#ifdef WITH_NET
-		if ( k == KEY_F6 )
-		{
-			//jump to network menu from config menu - do we really need this?
-			menuScreen = MENU_NETWORK;
-			handleC64( 0xffffffff, launchKernel, FILENAME, filenameKernal );
-			return;
-		}		
-#endif
 		if ( ( ( k == 'n' || k == 'N' ) || ( k == 13 && curSettingsLine == 1 ) )&& typeInName == 0 )
 		{
 			typeInName = 1;
@@ -1119,7 +1111,7 @@ void printMainMenu()
 	printC64( menuX[ 0 ], menuY[ 0 ]+3, "F3", skinValues.SKIN_MENU_TEXT_KEY, 0 );
 	printC64( menuX[ 0 ]+3, menuY[ 0 ]+3, "Settings", skinValues.SKIN_MENU_TEXT_ITEM, 0 );
 #ifdef WITH_NET
-	printC64( menuX[ 0 ], menuY[ 0 ]+4, "F6", skinValues.SKIN_MENU_TEXT_KEY, 0 );
+	printC64( menuX[ 0 ], menuY[ 0 ]+4, "\x40", skinValues.SKIN_MENU_TEXT_KEY, 0, 1 );
 	printC64( menuX[ 0 ]+3, menuY[ 0 ]+4, "Network", skinValues.SKIN_MENU_TEXT_ITEM, 0 );
 #endif
 
@@ -1155,6 +1147,7 @@ void printNetworkScreen()
 	CString strHostName   = "Hostname:         ";
 	CString strConnection = "Connection state: ";
 	CString strWebserver  = "Webserver state:  ";
+	CString strUPModemEmu = "Userport modem emu: ";
 	CString strHelper;
 	
 	if (strcmp(netSidekickHostname,"") != 0)
@@ -1171,23 +1164,38 @@ void printNetworkScreen()
 		strWebserver.Append( "Stopped" );
 
 	if ( pSidekickNet->IsRunning() )
+	{
 		strConnection.Append( "Active" );
+		if ( pSidekickNet->isUsbUserportModemEmulationActive() )
+			strUPModemEmu.Append( "Active" );
+		else
+			strUPModemEmu.Append( "No cable detected" );
+	}
 	else
+	{
 		strConnection.Append( "Inactive" );
-
+		strUPModemEmu.Append( "Inactive" );
+	}
+	
 	u32 y1 = 2;
 
 	printC64( x+1, y1+2, "Network settings", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
 	printC64( x+1, y1+ 9, strConnection,   skinValues.SKIN_MENU_TEXT_SYSINFO, 0 );
 	printC64( x+1, y1+10, strWebserver,   skinValues.SKIN_MENU_TEXT_SYSINFO, 0 );
 	printC64( x+1, y1+11, strHostName,   skinValues.SKIN_MENU_TEXT_SYSINFO, 0 );
+	printC64( x+1, y1+12, strUPModemEmu,   skinValues.SKIN_MENU_TEXT_SYSINFO, 0 );
+	
 	if (strcmp(netSktpHostName,"") != 0){
-		strHelper = pSidekickNet->getLoggerStringForHost(netSktpHostName, netSktpHostPort);
-		printC64( x+1, y1+12, "SKTP Host:",   skinValues.SKIN_MENU_TEXT_SYSINFO, 0 );
-		printC64( x+1, y1+13, strHelper,   skinValues.SKIN_MENU_TEXT_SYSINFO, 0 );
+		unsigned port = netSktpHostPort;
+		if (port == 0 ) port = 80;
+		strHelper = pSidekickNet->getLoggerStringForHost(netSktpHostName, port);
+		char * tmpHost;
+		sprintf( tmpHost, strHelper, "" );
+		printC64( x+1, y1+13, "SKTP Host:",   skinValues.SKIN_MENU_TEXT_SYSINFO, 0 );
+		printC64( x+1, y1+14, tmpHost,   skinValues.SKIN_MENU_TEXT_SYSINFO, 0 );
 	}
 
-	u32 y2=15;
+	u32 y2=17;
 
 	printC64( x+1, y1+y2, "S - Display system information", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
 
@@ -1195,7 +1203,7 @@ void printNetworkScreen()
 	{
 		printC64( x+1, y1+4, "You are connected.",   skinValues.SKIN_MENU_TEXT_ITEM, 0 );
 		if (strcmp(netSktpHostName,"") != 0)
-			printC64( x+1, y1+(++y2), "X - Launch SKTP browser", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
+			printC64( x+1, y1+(++y2), "* - Launch SKTP browser", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
 		if (!netEnableWebserver)
 			printC64( x+1, y1+(++y2), "W - Start web server", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
 
@@ -1240,7 +1248,7 @@ void printSystemInfoScreen()
 	clearC64();
 	//               "012345678901234567890123456789012345XXXX"
 	printC64( 0,  1, "   .- Sidekick264 - Frenetic -.         ", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
-	printC64( 0, 23, "           F6/F7 Back to Menu           ", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
+	printC64( 0, 23, "            F7 Back to Menu             ", skinValues.SKIN_MENU_TEXT_HEADER, 0);
 
 	const u32 x = 1;
 	u32 y1 = 3;
