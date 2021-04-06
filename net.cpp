@@ -311,7 +311,7 @@ void CSidekickNet::usbPnPUpdate()
 			logger->Write( "CSidekickNet::Initialize", LogNotice, 
 				"USB TTY device detected."
 			);
-			m_pUSBSerial->SetBaudRate(1200);
+			m_pUSBSerial->SetBaudRate(2400);
 		}
 	}
 }
@@ -1503,14 +1503,16 @@ void CSidekickNet::handleModemEmulation()
 		
 		if (!m_isBBSTermReady)
 		{
-			int a = m_pUSBSerial->Read(inputChar, bsize -2);
+			//int a = m_pUSBSerial->Read(inputChar, bsize -2);
+			int a = m_pUSBSerial->Read(inputChar, 1);
+			/*
 			if ( a > 1 )
 			{
+				//this happens for example with the Quantum Link software
 				logger->Write ("CSidekickNet", LogNotice, "Read from USB serial more than one: %u - %s", a, inputChar);
-				//m_pBBSSocket->Send (buffer, a, MSG_DONTWAIT);
-				
-			}
-			else if ( a == 1 )
+				m_pBBSSocket->Send (buffer, a, MSG_DONTWAIT);
+			}*/
+			if ( a == 1 )
 			{
 				if (inputChar[0] == 20)
 				{
@@ -1550,22 +1552,23 @@ void CSidekickNet::handleModemEmulation()
 						m_modemCommandLength = 0;
 						m_modemCommand[0] = '\0';
 					}
-					
-					
 					//BTX
 					if (
+						strcmp(m_modemCommand, "atdt01910") == 0 || 
 						strcmp(m_modemCommand, "atd190") == 0 || 
 						strcmp(m_modemCommand, "atd 190") == 0 ||
 						strcmp(m_modemCommand, "atd\"btx\"") == 0
 					){
-						m_pUSBSerial->SetBaudRate(1200);
-						SocketConnect("btx.hanse.de", 20000);
+						if (strcmp(m_modemCommand, "atdt01910") == 0 )
+							m_pUSBSerial->SetBaudRate(2400); // Plus/4 online
+						else
+							m_pUSBSerial->SetBaudRate(1200);
+						//SocketConnect("btx.hanse.de", 20000);
 						//btx.hanse.de or 195.201.94.166, could be two different instances
-/*
-						static const u8 BtxHanseDe[] = {195, 201, 94, 166}; //lazy, avoiding resolve
+						static const u8 btx[] = {195, 201, 94, 166}; //lazy, avoiding resolve
 						CIPAddress BTXIPAddress;
-						BTXIPAddress.Set(BtxHanseDe);
-*/
+						BTXIPAddress.Set(btx);
+						SocketConnectIP(BTXIPAddress, 20000);
 					}
 					else if (strcmp(m_modemCommand, "atd\"rapidfire\"") == 0)
 					{
@@ -1686,6 +1689,8 @@ void CSidekickNet::SocketConnect( char * hostname, unsigned port )
 	}
 	else
 	{
+		SocketConnectIP( bbsIP, port);
+		/*
 		m_pBBSSocket = new CSocket (m_Net, IPPROTO_TCP);
 		m_isBBSTermReady = true;
 		if ( m_pBBSSocket->Connect ( bbsIP, port) == 0)
@@ -1698,5 +1703,22 @@ void CSidekickNet::SocketConnect( char * hostname, unsigned port )
 			a = m_pUSBSerial->Write("FAILED PORT\r\n", 13);
 			logger->Write ("CSidekickNet", LogNotice, "Socket connect failed at port %u", port);
 		}
+		*/
+	}
+}
+
+void CSidekickNet::SocketConnectIP( CIPAddress bbsIP, unsigned port )
+{
+	m_pBBSSocket = new CSocket (m_Net, IPPROTO_TCP);
+	m_isBBSTermReady = true;
+	if ( m_pBBSSocket->Connect ( bbsIP, port) == 0)
+	{
+		m_pUSBSerial->Write("CONNECT\r\n", 11);
+		m_isBBSSocketConnected = true;
+	}
+	else
+	{
+		m_pUSBSerial->Write("FAILED PORT\r\n", 13);
+		logger->Write ("CSidekickNet", LogNotice, "Socket connect failed at port %u", port);
 	}
 }
