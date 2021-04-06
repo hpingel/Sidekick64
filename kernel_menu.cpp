@@ -38,8 +38,6 @@ Copyright (c) 2019-2021 Carsten Dachsbacher <frenetic@dachsbacher.de>
 // we will read these files
 static const char DRIVE[] = "SD:";
 
-//#ifdef WITHOUT_STDLIB
-
 #ifdef WITH_NET
 
 //static 
@@ -301,8 +299,10 @@ void activateCart()
 		tftSendFramebuffer16BitImm( tftFrameBuffer );
 	}
 	
+	#ifdef WITH_NET
 	if (pSidekickNet != 0)
 		pSidekickNet->setCurrentKernel( (char*)"m" );	
+	#endif
 	
 	//TODO
 	CleanDataCache();
@@ -1223,7 +1223,9 @@ int main( void )
 		default:
 			break;
 		}
+		#ifdef WITH_NET
 		pSidekickNet->setCurrentKernel( (char*)"m" );
+		#endif
 	}
 
 	logger->Write( "RaspiMenu", LogNotice, "Rebooting..." );
