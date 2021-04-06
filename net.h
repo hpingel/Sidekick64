@@ -170,6 +170,7 @@ private:
 	void usbPnPUpdate();
 	void handleModemEmulation();
 	void SocketConnect( char *, unsigned );
+	void SocketConnectIP( CIPAddress, unsigned );
 	
 	CUSBHCIDevice     * m_USBHCI;
 	CMachineInfo      * m_pMachineInfo; //used for c64screen to display raspi model name
