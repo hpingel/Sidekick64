@@ -651,12 +651,14 @@ void CKernelMenu::Run( void )
 				pullIRQ = 64;
 			}
 		}
+		#ifdef WITH_NET
 		else if ( ( m_SidekickNet.IsConnecting() || m_SidekickNet.IsRunning()) &&  ++m_timeStampOfLastNetworkEvent > 1500000)
 		{
 			if ( handleNetwork( false)) //this makes the webserver respond quickly even when there is no keypress user action
 			{
 			}
 		}
+		#endif
 
 		
 	#endif
