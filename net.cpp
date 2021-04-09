@@ -311,7 +311,7 @@ void CSidekickNet::usbPnPUpdate()
 			logger->Write( "CSidekickNet::Initialize", LogNotice, 
 				"USB TTY device detected."
 			);
-			m_pUSBSerial->SetBaudRate(2400);
+			m_pUSBSerial->SetBaudRate(1200);
 		}
 	}
 }
@@ -1480,7 +1480,9 @@ void CSidekickNet::handleModemEmulation()
 {
 	usbPnPUpdate();
 
-	if ( m_pUSBSerial != 0 && (strcmp( m_currentKernelRunning, "m" ) == 0) && m_isBBSTermReady){
+	if (  m_pUSBSerial == 0 ) return;
+
+	if ( (strcmp( m_currentKernelRunning, "m" ) == 0) && m_isBBSTermReady){
 		logger->Write ("CSidekickNet", LogNotice, "cleanup bbs connection");
 		m_isBBSTermReady = false;
 		if ( m_isBBSSocketConnected )
@@ -1494,114 +1496,147 @@ void CSidekickNet::handleModemEmulation()
 		m_modemCommand[0] = '\0';
 	}
 		
-	if (  m_pUSBSerial != 0 )
+	int bsize = 4096;
+	char buffer[bsize];
+	char inputChar[bsize]; //FIXME get rid of this
+	bool success = false;
+	
+	if (!m_isBBSTermReady)
 	{
-		int bsize = 4096;
-		char buffer[bsize];
-		char inputChar[bsize]; //FIXME get rid of this
-		bool success = false;
-		
-		if (!m_isBBSTermReady)
+		//int a = m_pUSBSerial->Read(inputChar, bsize -2);
+		int a = m_pUSBSerial->Read(inputChar, 1);
+		/*
+		if ( a > 1 )
 		{
-			//int a = m_pUSBSerial->Read(inputChar, bsize -2);
-			int a = m_pUSBSerial->Read(inputChar, 1);
-			/*
-			if ( a > 1 )
+			//this happens for example with the Quantum Link software
+			logger->Write ("CSidekickNet", LogNotice, "Read from USB serial more than one: %u - %s", a, inputChar);
+			m_pBBSSocket->Send (buffer, a, MSG_DONTWAIT);
+		}*/
+		if ( a == 1 )
+		{
+			if (inputChar[0] == 20)
 			{
-				//this happens for example with the Quantum Link software
-				logger->Write ("CSidekickNet", LogNotice, "Read from USB serial more than one: %u - %s", a, inputChar);
-				m_pBBSSocket->Send (buffer, a, MSG_DONTWAIT);
-			}*/
-			if ( a == 1 )
+				a = m_pUSBSerial->Write(inputChar, 1);//echo
+				//logger->Write ("CSidekickNet", LogNotice, "USB serial read char delete");
+				if (m_modemCommandLength > 0)
+					m_modemCommand[ --m_modemCommandLength ] = '\0';
+			}
+			else if ((inputChar[0] < 32 || inputChar[0] > 127) && inputChar[0] != 13)
 			{
-				if (inputChar[0] == 20)
+				//ignore key
+				logger->Write ("CSidekickNet", LogNotice, "USB serial read ignored char %u", inputChar[0]);
+			}
+			else if (inputChar[0] != 13)
+			{
+				a = m_pUSBSerial->Write(inputChar, 1);//echo
+				#ifdef WITHOUT_STDLIB
+				m_modemCommand[ m_modemCommandLength++ ] = inputChar[0];
+				#else
+				m_modemCommand[ m_modemCommandLength++ ] = tolower(inputChar[0]);
+				#endif
+				m_modemCommand[ m_modemCommandLength ] = '\0';
+				//logger->Write ("CSidekickNet", LogNotice, "USB serial read %u chars from C64 - %u - %u - %s", a, inputChar[0], m_modemCommandLength, m_modemCommand);
+			}
+			else
+			{
+				//RETURN KEY was pressed
+				a = m_pUSBSerial->Write(inputChar, 1);//echo
+				m_modemCommand[ m_modemCommandLength ] = '\0';
+				logger->Write ("CSidekickNet", LogNotice, "USB serial read ENTER:  - %s", m_modemCommand);
+				
+				//trim command, remove spaces TODO
+				
+				if ( m_modemCommand[0] != 'a' && m_modemCommand[0] != 't')
 				{
-					a = m_pUSBSerial->Write(inputChar, 1);//echo
-					//logger->Write ("CSidekickNet", LogNotice, "USB serial read char delete");
-					if (m_modemCommandLength > 0)
-						m_modemCommand[ --m_modemCommandLength ] = '\0';
+					logger->Write ("CSidekickNet", LogNotice, "ERROR - cmd has to start with at");
+					SendErrorResponse();
+					return;
 				}
-				else if ((inputChar[0] < 32 || inputChar[0] > 127) && inputChar[0] != 13)
-				{
-					//ignore key
-					logger->Write ("CSidekickNet", LogNotice, "USB serial read ignored char %u", inputChar[0]);
+				
+				//trim spaces
+				unsigned start = 2, stop = m_modemCommandLength;
+				while (m_modemCommand[start] == 32){start++;};
+				while (m_modemCommand[stop] == 32){stop--;};
+				
+				if ( start == stop){
+					logger->Write ("CSidekickNet", LogNotice, "ERROR - no chars after at");
+					SendErrorResponse();
+					return;
 				}
-				else if (inputChar[0] != 13)
+				assert( stop > start);
+				if ( m_modemCommand[start] == 'd')
 				{
-					a = m_pUSBSerial->Write(inputChar, 1);//echo
-					#ifdef WITHOUT_STDLIB
-					m_modemCommand[ m_modemCommandLength++ ] = inputChar[0];
-					#else
-					m_modemCommand[ m_modemCommandLength++ ] = tolower(inputChar[0]);
-					#endif
-					m_modemCommand[ m_modemCommandLength ] = '\0';
-					//logger->Write ("CSidekickNet", LogNotice, "USB serial read %u chars from C64 - %u - %u - %s", a, inputChar[0], m_modemCommandLength, m_modemCommand);
-				}
-				else
-				{
-					//RETURN KEY was pressed
-					a = m_pUSBSerial->Write(inputChar, 1);//echo
-					m_modemCommand[ m_modemCommandLength ] = '\0';
-					logger->Write ("CSidekickNet", LogNotice, "USB serial read ENTER:  - %s", m_modemCommand);
+					start++;
+					while (m_modemCommand[start] == 32){start++;};
 					
-					//trim command, remove spaces TODO
-					
-					if ( m_modemCommand[0] != 'a' && m_modemCommand[0] != 't')
+					//begin and end have to be quotes
+					if (  stop -1 > start && m_modemCommand[start] == '"' && m_modemCommand[stop-1] == '"')
 					{
-						a = m_pUSBSerial->Write("ERROR\r", 7);
+						logger->Write ("CSidekickNet", LogNotice, "surrounding quotes detected, nice");
+						start++;stop--;
+					}
+					else{
+						char keyword[256];
+						memcpy( keyword, &m_modemCommand[start], stop - start );
+						keyword[ stop - start ] = '\0';
+						if (!checkShortcut( keyword ))
+						{
+							logger->Write ("CSidekickNet", LogNotice, "ERROR - no quotes detected");
+							SendErrorResponse();
+						}
 						m_modemCommandLength = 0;
 						m_modemCommand[0] = '\0';
-					}
-					//BTX
-					if (
-						strcmp(m_modemCommand, "atdt01910") == 0 || 
-						strcmp(m_modemCommand, "atd190") == 0 || 
-						strcmp(m_modemCommand, "atd 190") == 0 ||
-						strcmp(m_modemCommand, "atd\"btx\"") == 0
-					){
-						if (strcmp(m_modemCommand, "atdt01910") == 0 )
-							m_pUSBSerial->SetBaudRate(2400); // Plus/4 online
-						else
-							m_pUSBSerial->SetBaudRate(1200);
-						//SocketConnect("btx.hanse.de", 20000);
-						//btx.hanse.de or 195.201.94.166, could be two different instances
-						static const u8 btx[] = {195, 201, 94, 166}; //lazy, avoiding resolve
-						CIPAddress BTXIPAddress;
-						BTXIPAddress.Set(btx);
-						SocketConnectIP(BTXIPAddress, 20000);
-					}
-					else if (strcmp(m_modemCommand, "atd\"rapidfire\"") == 0)
-					{
-						SocketConnect("rapidfire.hopto.org", 64128);
-					}
-					else if (strcmp(m_modemCommand, "atd\"schnuppi\"") == 0)
-					{
-						SocketConnect("schnuppi246.hopto.org", 64128); //test resolve fail
-					}
-					else if (strcmp(m_modemCommand, "atd\"raveolution\"") == 0)
-					{
-						SocketConnect("raveolution.hopto.org", 64128);
-					}
-					else if (strcmp(m_modemCommand, "atd\"retrocampus\"") == 0)
-					{
-						SocketConnect("bbs.retrocampus.com", 6510);
-					}
-					else if (strcmp(m_modemCommand, "atd\"coffeemud\"") == 0)
-					{
-						SocketConnect("coffeemud.net", 2323);
-					}
-					else if (strcmp(m_modemCommand, "atd\"habitat\"") == 0)
-					{
-						SocketConnect("neohabitat.demo.spi.ne", 1986);
-					}
-					//Quantum Link / QLink
-					else if (strcmp(m_modemCommand, "atdt 5551212") == 0 )
-					{
-						m_pUSBSerial->SetBaudRate(1200);
-						SocketConnect("q-link.net", 5190);
+						return;
 					}
 					
-					else if (strcmp(m_modemCommand, "atb300") == 0)
+					if ( start == stop){
+						SendErrorResponse();
+						logger->Write ("CSidekickNet", LogNotice, "ERROR - no chars between quotes");
+						return;
+					}
+					assert( stop > start);
+					
+					unsigned separator = 0, c;
+					for ( c = start; c <= stop; c++)
+					{
+						if ( m_modemCommand[c] == ':' )
+						{
+							if (separator > 0)
+							{
+								logger->Write ("CSidekickNet", LogNotice, "ERROR - more than one separator");
+								SendErrorResponse();
+								return;
+								
+							}
+							separator = c;
+						}
+						else if ( m_modemCommand[c] == 32 )
+						{
+							logger->Write ("CSidekickNet", LogNotice, "ERROR - no blanks allowed in here");
+							SendErrorResponse();
+							return;
+						}	
+
+					}
+					if ( separator == 0 || separator == stop || separator == start)
+					{
+						logger->Write ("CSidekickNet", LogNotice, "ERROR - no separator found between hostname and port");
+						SendErrorResponse();
+						return;
+					}
+
+					char hostStr[256], portStr[256];
+					memcpy( hostStr, &m_modemCommand[start], separator - start );
+					memcpy( portStr, &m_modemCommand[separator+1], stop - separator );
+					hostStr[ separator - start ] = '\0';
+					portStr[ stop - separator ] = '\0';
+					unsigned portNo = atoi(portStr);
+					//logger->Write ("CSidekickNet", LogNotice, "hostStr: '%s' portNo: '%s' %i", hostStr, portStr, portNo);
+					SocketConnect( hostStr, portNo);
+				} //end of d command (atd)
+				else if ( m_modemCommand[start] == 'b')
+				{
+					if (strcmp(m_modemCommand, "atb300") == 0)
 					{
 						a = m_pUSBSerial->Write("OK\r", 4);
 						m_pScheduler->MsSleep(100);
@@ -1631,50 +1666,59 @@ void CSidekickNet::handleModemEmulation()
 						m_pScheduler->MsSleep(100);
 						m_pUSBSerial->SetBaudRate(9600);
 					}
-					else if (strcmp(m_modemCommand, "ati") == 0)
-					{
-						a = m_pUSBSerial->Write("Sidekick64 userport modem emulation\rHave fun!\r", 46);
-					}
-					else if (m_modemCommandLength > 0){
-						a = m_pUSBSerial->Write("ERROR\r", 7);
-					}
-					//m_modemCommand = (char*) "";
-					m_modemCommandLength = 0;
-					m_modemCommand[0] = '\0';
 				}
+				else if ( m_modemCommand[start] == 'i')
+				{
+					a = m_pUSBSerial->Write("sidekick64 userport modem emulation\rhave fun!\r", 46);
+				}
+				else if (m_modemCommandLength > 0){
+					logger->Write ("CSidekickNet", LogNotice, "ERROR - unknown command");
+					SendErrorResponse();
+					return;
+				}
+				
+				m_modemCommandLength = 0;
+				m_modemCommand[0] = '\0';
+			} //end of return key
+		} //end of read one char from serial
+	} // end of command mode
+	else if ( m_isBBSSocketConnected && m_isBBSTermReady ){
+		
+		int x = 1; //dummy start value
+		while (x > 0)
+		{
+			x = m_pBBSSocket->Receive ( buffer, bsize -2, MSG_DONTWAIT);
+			if (x > 0)
+			{
+				int a = m_pUSBSerial->Write(buffer, x);
+				logger->Write ("CSidekickNet", LogNotice, "USB serial wrote %u chars", x);
 			}
 		}
-		else if ( m_isBBSSocketConnected && m_isBBSTermReady ){
-			
-			int x = 1; //dummy start value
-			while (x > 0)
-			{
-				x = m_pBBSSocket->Receive ( buffer, bsize -2, MSG_DONTWAIT);
-				if (x > 0)
-				{
-					int a = m_pUSBSerial->Write(buffer, x);
-					logger->Write ("CSidekickNet", LogNotice, "USB serial wrote %u chars", x);
-				}
-			}
-			
-			int a = m_pUSBSerial->Read(buffer, bsize -2);
-			if ( a > 0 )
-			{
+		
+		int a = m_pUSBSerial->Read(buffer, bsize -2);
+		if ( a > 0 )
+		{
 /*				
-				if ( a == 4 && buffer[0] == '+' && buffer[1] == '+' && buffer[2] == '+' && buffer[3] == 13)
-				{
-					logger->Write ("CSidekickNet", LogNotice, "+++");
-					m_isBBSTermReady = false;
-				}
-				else
+			if ( a == 4 && buffer[0] == '+' && buffer[1] == '+' && buffer[2] == '+' && buffer[3] == 13)
+			{
+				logger->Write ("CSidekickNet", LogNotice, "+++");
+				m_isBBSTermReady = false;
+			}
+			else
 */				
-				{
-					logger->Write ("CSidekickNet", LogNotice, "Connected - Read from USB serial: %i ", a);
-					m_pBBSSocket->Send (buffer, a, MSG_DONTWAIT);
-				}
+			{
+				logger->Write ("CSidekickNet", LogNotice, "Connected - Read from USB serial: %i ", a);
+				m_pBBSSocket->Send (buffer, a, MSG_DONTWAIT);
 			}
 		}
 	}
+}
+
+void CSidekickNet::SendErrorResponse()
+{
+	m_pUSBSerial->Write("ERROR\r", 7);
+	m_modemCommandLength = 0;
+	m_modemCommand[0] = '\0';
 }
 
 void CSidekickNet::SocketConnect( char * hostname, unsigned port )
@@ -1688,23 +1732,7 @@ void CSidekickNet::SocketConnect( char * hostname, unsigned port )
 		logger->Write ("CSidekickNet", LogNotice, "Could'nt resolve IP address for %s", hostname);
 	}
 	else
-	{
 		SocketConnectIP( bbsIP, port);
-		/*
-		m_pBBSSocket = new CSocket (m_Net, IPPROTO_TCP);
-		m_isBBSTermReady = true;
-		if ( m_pBBSSocket->Connect ( bbsIP, port) == 0)
-		{
-			a = m_pUSBSerial->Write("CONNECT\r\n", 11);
-			m_isBBSSocketConnected = true;
-		}
-		else
-		{
-			a = m_pUSBSerial->Write("FAILED PORT\r\n", 13);
-			logger->Write ("CSidekickNet", LogNotice, "Socket connect failed at port %u", port);
-		}
-		*/
-	}
 }
 
 void CSidekickNet::SocketConnectIP( CIPAddress bbsIP, unsigned port )
@@ -1721,4 +1749,55 @@ void CSidekickNet::SocketConnectIP( CIPAddress bbsIP, unsigned port )
 		m_pUSBSerial->Write("FAILED PORT\r\n", 13);
 		logger->Write ("CSidekickNet", LogNotice, "Socket connect failed at port %u", port);
 	}
+}
+
+boolean CSidekickNet::checkShortcut( char * keyword )
+{
+	boolean found = true;
+	logger->Write ("CSidekickNet", LogNotice, "keyword: '%s'", keyword);
+	//unsigned key = atoi(keyword);
+	//shortcuts for btx, qlink, habitat
+	//Quantum Link / QLink
+	if (strcmp(keyword, "t 5551212") == 0 ||
+					strcmp(keyword, "t5551212") == 0 )
+	{
+		m_pUSBSerial->SetBaudRate(1200);
+		SocketConnect("q-link.net", 5190);
+	}
+	//BTX
+	else if (
+		strcmp(keyword, "t01910") == 0 || 
+		strcmp(keyword, "190") == 0 || 
+		strcmp(keyword, "btx") == 0
+	){
+		if (strcmp(keyword, "t01910") == 0 )
+			m_pUSBSerial->SetBaudRate(2400); // Plus/4 online
+		else
+			m_pUSBSerial->SetBaudRate(1200);
+		
+		//btx.hanse.de or 195.201.94.166, could be two different instances
+		//static const u8 btx[] = {195, 201, 94, 166}; //lazy, avoiding resolve
+		//CIPAddress BTXIPAddress;
+		//BTXIPAddress.Set(btx);
+		//SocketConnectIP(BTXIPAddress, 20000);
+		SocketConnect("static.166.94.201.195.clients.your-server.de", 20000);
+	}
+	else if (strcmp(keyword, "@habitat") == 0)
+	{
+		m_pUSBSerial->SetBaudRate(1200);
+		SocketConnect("neohabitat.demo.spi.ne", 1986);
+	}
+	else if (strcmp(keyword, "@rf") == 0)
+		SocketConnect("rapidfire.hopto.org", 64128);
+	else if (strcmp(keyword, "@ro") == 0)
+		SocketConnect("raveolution.hopto.org", 64128);
+	else if (strcmp(keyword, "@rc") == 0)
+		SocketConnect("bbs.retrocampus.com", 6510);
+	else if (strcmp(keyword, "@cm") == 0)
+		SocketConnect("coffeemud.net", 2323);
+	else if (strcmp(keyword, "@dnsfail") == 0)
+		SocketConnect("doesnotexist246789.hopto.org.bla", 64128); //test dns resolve fail
+	else
+		found = false;
+	return found;
 }
