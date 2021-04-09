@@ -1738,10 +1738,10 @@ void CSidekickNet::SocketConnect( char * hostname, unsigned port )
 void CSidekickNet::SocketConnectIP( CIPAddress bbsIP, unsigned port )
 {
 	m_pBBSSocket = new CSocket (m_Net, IPPROTO_TCP);
-	m_isBBSTermReady = true;
 	if ( m_pBBSSocket->Connect ( bbsIP, port) == 0)
 	{
 		m_pUSBSerial->Write("CONNECT\r\n", 11);
+		m_isBBSTermReady = true;
 		m_isBBSSocketConnected = true;
 	}
 	else
