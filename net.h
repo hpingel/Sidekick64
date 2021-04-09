@@ -169,9 +169,11 @@ private:
 	boolean HTTPGet (remoteHTTPTarget & target, const char * path, char *pBuffer, unsigned & nLengthRead);
 	void usbPnPUpdate();
 	void handleModemEmulation();
+	void SendErrorResponse();
 	void SocketConnect( char *, unsigned );
 	void SocketConnectIP( CIPAddress, unsigned );
-	
+	boolean checkShortcut( char *);
+
 	CUSBHCIDevice     * m_USBHCI;
 	CMachineInfo      * m_pMachineInfo; //used for c64screen to display raspi model name
 	CScheduler        * m_pScheduler;
