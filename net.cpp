@@ -1542,8 +1542,14 @@ void CSidekickNet::handleModemEmulation()
 				//RETURN KEY was pressed
 				a = m_pUSBSerial->Write(inputChar, 1);//echo
 				m_modemCommand[ m_modemCommandLength ] = '\0';
-				logger->Write ("CSidekickNet", LogNotice, "USB serial read ENTER:  - %s", m_modemCommand);
+				logger->Write ("CSidekickNet", LogNotice, "USB serial read ENTER:  '%s', length %i", m_modemCommand, m_modemCommandLength);
 				
+				if(m_modemCommandLength < 2)
+				{
+					m_modemCommandLength = 0;
+					m_modemCommand[0] = '\0';
+					return;
+				}
 				//trim command, remove spaces TODO
 				
 				if ( m_modemCommand[0] != 'a' && m_modemCommand[0] != 't')
@@ -1575,7 +1581,18 @@ void CSidekickNet::handleModemEmulation()
 						logger->Write ("CSidekickNet", LogNotice, "surrounding quotes detected, nice");
 						start++;stop--;
 					}
-					else{
+					else if (  stop -1 > start && m_modemCommand[start] == '"')
+					{
+						logger->Write ("CSidekickNet", LogNotice, "opening quotes detected, still acceptable");
+						start++;
+					}
+					else if ( m_modemCommand[start] == 't')
+					{
+						logger->Write ("CSidekickNet", LogNotice, "no quotes but atdt detected, still acceptable");
+							start++;
+					}
+					else
+					{
 						char keyword[256];
 						memcpy( keyword, &m_modemCommand[start], stop - start );
 						keyword[ stop - start ] = '\0';
@@ -1670,6 +1687,11 @@ void CSidekickNet::handleModemEmulation()
 				else if ( m_modemCommand[start] == 'i')
 				{
 					a = m_pUSBSerial->Write("sidekick64 userport modem emulation\rhave fun!\r", 46);
+				}
+				else if ( m_modemCommand[start] == 'v')
+				{
+					a = m_pUSBSerial->Write("OK\r", 4);
+					logger->Write ("CSidekickNet", LogNotice, "Command tolerated but not implemented :)");
 				}
 				else if (m_modemCommandLength > 0){
 					logger->Write ("CSidekickNet", LogNotice, "ERROR - unknown command");
