@@ -90,7 +90,8 @@ public:
 		m_Screen( m_Options.GetWidth(), m_Options.GetHeight() ),
 	#endif
 		m_Timer( &m_Interrupt ),
-		m_Logger( m_Options.GetLogLevel(), &m_Timer ),
+		m_Logger( 0, &m_Timer ),
+		//m_Logger( m_Options.GetLogLevel(), &m_Timer ),
 		m_InputPin( PHI2, GPIOModeInput, &m_Interrupt ),
 		m_EMMC( &m_Interrupt, &m_Timer, 0 )
 	{
