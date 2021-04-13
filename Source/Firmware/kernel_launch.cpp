@@ -46,6 +46,7 @@ unsigned swiftLinkBaudOld = 0;
 bool swiftLinkConnect = false;
 unsigned swiftLinkOutputCount = 0;
 u32 swiftLinkRegisterCmd = 0;
+static const char swiftLinkGreeting[] = "\r\rsidekick64 emulating swiftlink";
 #endif
 
 // we will read this .PRG file
@@ -296,18 +297,17 @@ void CKernelLaunch::Run( void )
 					SET_GPIO( bNMI );
 		};
 		
-		/*
 		if ( swiftLinkEnabled && keepNMILow == 0 && swiftLinkDoNMI == 0 && swiftLinkConnect && swiftLinkEcho == 0){
-				if ( ++swiftLinkOutputCount > 40)
+				if ( ++swiftLinkOutputCount > strlen(swiftLinkGreeting))
 				{ 
 					swiftLinkOutputCount = 0; 
 					swiftLinkConnect = false;
 				}
-				unsigned tmp = 48 + swiftLinkOutputCount;
-				swiftLinkEcho = tmp;
-				swiftLinkDoNMI = 200;
+				else{
+					swiftLinkEcho = swiftLinkGreeting[swiftLinkOutputCount];;
+					swiftLinkDoNMI = 200;
+				}
 		}
-		*/
 		
 		#endif
 		
@@ -342,18 +342,20 @@ void CKernelLaunch::Run( void )
 			{
 				boolean justEnabled = !swiftLinkEnabled;
 				swiftLinkEnabled = true;
-				netDelay = _playingPSID ? 3000: 900000000;
+				netDelay = _playingPSID ? 3000: 300000000;
 				m_InputPin.DisableInterrupt();
 				m_InputPin.DisconnectInterrupt();
 				EnableIRQs();
 				if(justEnabled){
 					logger->Write( "sk", LogNotice, "swiftLinkEnabled unlocked");
 				}
-				else
-					logger->Write( "sk", LogNotice, "netdelay is zero, sw data reads = %i", swiftLinkDataReads);
+				//else
+				//	logger->Write( "sk", LogNotice, "netdelay is zero, sw data reads = %i", swiftLinkDataReads);
 
 				if ( swiftLinkEnabled )
 				{
+					#ifdef SW_DEBUG
+
 					if ( swiftLinkCounter > 0 && swiftLinkCounter <200)
 					{
 						logger->Write( "sk", LogNotice, "swiftLinkLog: '%s', (%i)",swiftLinkLog, swiftLinkCounter );
@@ -373,6 +375,7 @@ void CKernelLaunch::Run( void )
 						logger->Write( "sk", LogNotice, "swiftLinkByte: '%i', received: '%s'",swiftLinkByte , swiftLinkReceived);
 						swiftLinkByte = 0;
 					}
+					#endif
 					if  ( swiftLinkBaud != swiftLinkBaudOld){
 						swiftLinkBaudOld = swiftLinkBaud;
 						unsigned baud = 0;
@@ -425,10 +428,10 @@ void CKernelLaunch::Run( void )
 					swiftLinkDoNMI == 0 && 
 					swiftLinkEcho == 0 && 
 					!swiftLinkConnect && 
-					strcmp( swiftLinkReceived, "ZXC") == 0 
+					strcmp( swiftLinkReceived, "WHO AM I?") == 0 
 			){
 				swiftLinkConnect = true;
-				swiftLinkEcho = 65;
+				swiftLinkEcho = swiftLinkGreeting[0];
 				swiftLinkDoNMI = 1000;
 				swiftLinkOutputCount=0;
 				swiftLinkReceivedCounter = 0;
@@ -444,7 +447,7 @@ void CKernelLaunch::Run( void )
 					keepNMILow = 20;
 					CLR_GPIO( bNMI );
 					//temp
-					swiftLinkConnect = false;
+					//swiftLinkConnect = false;
 				}
 			}
 
@@ -544,6 +547,7 @@ void CKernelLaunch::FIQHandler (void *pParam)
 				}
 				WRITE_D0to7_TO_BUS( D )
 				
+				#ifdef SW_DEBUG
 				unsigned hh = D/16, hl = D % 16;
 				
 				hh = hh < 10 ? hh + 48 : hh+55;
@@ -558,6 +562,7 @@ void CKernelLaunch::FIQHandler (void *pParam)
 					swiftLinkLog[swiftLinkCounter++] = '/';
 					swiftLinkLog[swiftLinkCounter] = '\0';
 				}
+				#endif
 				//FINISH_BUS_HANDLING
 			}
 			else if ( IO1_ACCESS && CPU_WRITES_TO_BUS  )
@@ -566,8 +571,12 @@ void CKernelLaunch::FIQHandler (void *pParam)
 				
 				unsigned hh = D/16, hl = D % 16;
 				
+				#ifdef SW_DEBUG
 				unsigned hh2 = hh < 10 ? hh + 48 : hh+55;
+				#endif
 				unsigned hl2 = hl < 10 ? hl + 48 : hl+55;
+				
+				#ifdef SW_DEBUG
 				
 				boolean doLog = swiftLinkCounter + 20 < swiftLinkLogLengthMax;
 				if (doLog){
@@ -576,6 +585,7 @@ void CKernelLaunch::FIQHandler (void *pParam)
 					swiftLinkLog[swiftLinkCounter++] = hh2;
 					swiftLinkLog[swiftLinkCounter++] = hl2;
 				}
+				#endif
 				if ( GET_IO12_ADDRESS == 0x03) //control register
 				{ 
 					swiftLinkBaud = hl;
@@ -605,10 +615,12 @@ void CKernelLaunch::FIQHandler (void *pParam)
 					}
 				}
 
+				#ifdef SW_DEBUG
 				if (doLog){
 					swiftLinkLog[swiftLinkCounter++] = '/';
 					swiftLinkLog[swiftLinkCounter] = '\0';
 				}
+				#endif
 				//FINISH_BUS_HANDLING
 			}
 			
