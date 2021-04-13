@@ -43,6 +43,9 @@ unsigned swiftLinkCounter = 0;
 unsigned swiftLinkReceivedCounter = 0;
 unsigned swiftLinkBaud = 0;
 unsigned swiftLinkBaudOld = 0;
+bool swiftLinkConnect = false;
+unsigned swiftLinkOutputCount = 0;
+u32 swiftLinkRegisterCmd = 0;
 #endif
 
 // we will read this .PRG file
@@ -223,6 +226,9 @@ void CKernelLaunch::Run( void )
 	swiftLinkReceived[0] = '\0';
 	swiftLinkDataReads = 0;
 	unsigned keepNMILow = 0;
+	swiftLinkConnect = false;
+	swiftLinkOutputCount = 0;
+	swiftLinkRegisterCmd = 0;
 
 	pSidekickNet->setCurrentKernel( (char*)"l" );
 	unsigned netDelay = _playingPSID ? 900000000: 30000000; //TODO: improve this
@@ -283,11 +289,26 @@ void CKernelLaunch::Run( void )
 		}
 
 		#ifdef WITH_NET
+
 		if ( keepNMILow > 0 ){
 				keepNMILow --;
 				if ( keepNMILow == 0 )
 					SET_GPIO( bNMI );
 		};
+		
+		/*
+		if ( swiftLinkEnabled && keepNMILow == 0 && swiftLinkDoNMI == 0 && swiftLinkConnect && swiftLinkEcho == 0){
+				if ( ++swiftLinkOutputCount > 40)
+				{ 
+					swiftLinkOutputCount = 0; 
+					swiftLinkConnect = false;
+				}
+				unsigned tmp = 48 + swiftLinkOutputCount;
+				swiftLinkEcho = tmp;
+				swiftLinkDoNMI = 200;
+		}
+		*/
+		
 		#endif
 		
 		#ifdef COMPILE_MENU
@@ -321,7 +342,7 @@ void CKernelLaunch::Run( void )
 			{
 				boolean justEnabled = !swiftLinkEnabled;
 				swiftLinkEnabled = true;
-				netDelay = _playingPSID ? 3000: 300000000;
+				netDelay = _playingPSID ? 3000: 900000000;
 				m_InputPin.DisableInterrupt();
 				m_InputPin.DisconnectInterrupt();
 				EnableIRQs();
@@ -352,7 +373,6 @@ void CKernelLaunch::Run( void )
 						logger->Write( "sk", LogNotice, "swiftLinkByte: '%i', received: '%s'",swiftLinkByte , swiftLinkReceived);
 						swiftLinkByte = 0;
 					}
-
 					if  ( swiftLinkBaud != swiftLinkBaudOld){
 						swiftLinkBaudOld = swiftLinkBaud;
 						unsigned baud = 0;
@@ -398,14 +418,36 @@ void CKernelLaunch::Run( void )
 				m_InputPin.EnableInterrupt( GPIOInterruptOnRisingEdge );
 				
 			}
+			
+			if ( 
+					swiftLinkEnabled && 
+					keepNMILow == 0 && 
+					swiftLinkDoNMI == 0 && 
+					swiftLinkEcho == 0 && 
+					!swiftLinkConnect && 
+					strcmp( swiftLinkReceived, "ZXC") == 0 
+			){
+				swiftLinkConnect = true;
+				swiftLinkEcho = 65;
+				swiftLinkDoNMI = 1000;
+				swiftLinkOutputCount=0;
+				swiftLinkReceivedCounter = 0;
+				swiftLinkReceived[0] = '\0';
+			}
+
 			if ( swiftLinkDoNMI > 0 ){
-				if ( --swiftLinkDoNMI == 0)
+				//check for disabled receive interrupts
+				if ( ((swiftLinkRegisterCmd) >> (1 & 1)) && swiftLinkDoNMI > 2)
+					swiftLinkDoNMI--;
+				else if ( --swiftLinkDoNMI == 0)
 				{
 					keepNMILow = 20;
 					CLR_GPIO( bNMI );
+					//temp
+					swiftLinkConnect = false;
 				}
 			}
-			
+
 		}
 		#endif
 
@@ -489,12 +531,19 @@ void CKernelLaunch::FIQHandler (void *pParam)
 					else
 						D = 8; //8; //set data register flag, show c64 that it may now pick up a byte
 				}
-				else if ( GET_IO12_ADDRESS == 0x00){ //} && swiftLinkEcho > 0){ //data register
+				else if ( GET_IO12_ADDRESS == 0x00) //data register
+				{ 
 					 D = swiftLinkEcho;
 					 swiftLinkEcho = 0;
 					 if (D == 0) D = 72;//fake echo
 					 swiftLinkDataReads++;
 				}
+				else if ( GET_IO12_ADDRESS == 0x02) // command register
+				{
+					D = swiftLinkRegisterCmd;
+				}
+				WRITE_D0to7_TO_BUS( D )
+				
 				unsigned hh = D/16, hl = D % 16;
 				
 				hh = hh < 10 ? hh + 48 : hh+55;
@@ -509,9 +558,7 @@ void CKernelLaunch::FIQHandler (void *pParam)
 					swiftLinkLog[swiftLinkCounter++] = '/';
 					swiftLinkLog[swiftLinkCounter] = '\0';
 				}
-				
-				WRITE_D0to7_TO_BUS( D )
-				FINISH_BUS_HANDLING
+				//FINISH_BUS_HANDLING
 			}
 			else if ( IO1_ACCESS && CPU_WRITES_TO_BUS  )
 			{
@@ -529,20 +576,33 @@ void CKernelLaunch::FIQHandler (void *pParam)
 					swiftLinkLog[swiftLinkCounter++] = hh2;
 					swiftLinkLog[swiftLinkCounter++] = hl2;
 				}
-				if ( GET_IO12_ADDRESS == 0x03){ //control register
+				if ( GET_IO12_ADDRESS == 0x03) //control register
+				{ 
 					swiftLinkBaud = hl;
 				}
-				else if ( GET_IO12_ADDRESS == 0x02){ //command register
-//					if ( D & (1 << 4))
-//					swiftLinkLog[swiftLinkCounter++] = 'e';
+				else if ( GET_IO12_ADDRESS == 0x02) //command register
+				{ 
+					swiftLinkRegisterCmd = D;
 				}
-				else if ( GET_IO12_ADDRESS == 0x00){ //data register
+				else if ( GET_IO12_ADDRESS == 0x00) //data register
+				{
 					swiftLinkByte = D;
-					swiftLinkEcho = D;
-					swiftLinkDoNMI = 5;
-					
-					swiftLinkReceived[ swiftLinkReceivedCounter++ ] = D;
-					swiftLinkReceived[ swiftLinkReceivedCounter ] = '\0';
+					if ((swiftLinkRegisterCmd) >> (4 & 1))
+					{
+						swiftLinkEcho = D;
+						swiftLinkDoNMI = 10;
+					}
+
+					if ( D == 13)
+					{
+						swiftLinkReceivedCounter = 0;
+						swiftLinkReceived[0] = '\0';
+					}
+					else
+					{
+						swiftLinkReceived[ swiftLinkReceivedCounter++ ] = D;
+						swiftLinkReceived[ swiftLinkReceivedCounter ] = '\0';
+					}
 				}
 
 				if (doLog){
@@ -564,16 +624,19 @@ void CKernelLaunch::FIQHandler (void *pParam)
 				READ_D0to7_FROM_BUS( D )
 				//FINISH_BUS_HANDLING
 			}
+			//return;
 		}
 		#endif
 	}
 
-	if ( swiftLinkEnabled )
-	{
-		OUTPUT_LATCH_AND_FINISH_BUS_HANDLING
+	#ifdef WITH_NET
+ 	if ( swiftLinkEnabled )
+	{ 
+		FINISH_BUS_HANDLING
 		return;
 	}
-	
+ 	#endif
+
 	// access to CBM80 ROM (launch code)
 	if ( CPU_READS_FROM_BUS && ACCESS( ROM_LH ) )
 	{
