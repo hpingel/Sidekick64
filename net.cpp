@@ -323,8 +323,10 @@ void CSidekickNet::usbPnPUpdate()
 			logger->Write( "CSidekickNet::Initialize", LogNotice, 
 				"USB TTY device detected."
 			);
-			m_modemEmuType = SK_MODEM_USERPORT_USB;
-			setModemEmuBaudrate(1200);
+			if (m_modemEmuType == 0){
+				m_modemEmuType = SK_MODEM_USERPORT_USB;
+				setModemEmuBaudrate(1200);
+			}
 		}
 	}
 }
@@ -1571,8 +1573,8 @@ char CSidekickNet::getCharFromInputBuffer()
 
 void CSidekickNet::handleModemEmulation( bool silent = false)
 {
-	if ( !silent && m_modemEmuType == 0)
-		usbPnPUpdate(); //still try to detect usb modem hot plugged
+	//if ( !silent && m_modemEmuType == 0)
+	//	usbPnPUpdate(); //still try to detect usb modem hot plugged
 
 	if (  m_modemEmuType == 0 ) return;
 
@@ -1786,7 +1788,10 @@ void CSidekickNet::handleModemEmulation( bool silent = false)
 				}
 				else if ( m_modemCommand[start] == 'i')
 				{
-					a = writeCharsToFrontend((char *)"sidekick64 userport modem emulation\rhave fun!\r", 46);
+					if ( m_modemEmuType == SK_MODEM_USERPORT_USB )
+						a = writeCharsToFrontend((char *)"sidekick64 userport modem emulation\rhave fun!\r", 46);
+					else
+						a = writeCharsToFrontend((char *)"sidekick64 swiftlink modem emulation\rhave fun!\r", 47);
 				}
 				else if ( m_modemCommand[start] == 'v')
 				{
