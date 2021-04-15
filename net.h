@@ -151,8 +151,13 @@ public:
 	boolean isMenuScreenUpdateNeeded();
 	void setCurrentKernel( char *);
 	void setC128Mode();
-	boolean isUsbUserportModemEmulationActive();
-
+	boolean isUsbUserportModemConnected();
+	void addToModemOutputBuffer( char );
+	char getCharFromInputBuffer();
+	void handleModemEmulation(bool);
+	unsigned getModemEmuType();
+	void setModemEmuType(unsigned);
+	
 private:
 
 	typedef struct  {
@@ -168,11 +173,14 @@ private:
 	CIPAddress getIPForHost( const char *, bool & );
 	boolean HTTPGet (remoteHTTPTarget & target, const char * path, char *pBuffer, unsigned & nLengthRead);
 	void usbPnPUpdate();
-	void handleModemEmulation();
+	void cleanUpModemEmuSocket();
+	int readCharFromFrontend( char * );
+	int writeCharsToFrontend( char * buffer, unsigned length);
 	void SendErrorResponse();
 	void SocketConnect( char *, unsigned );
 	void SocketConnectIP( CIPAddress, unsigned );
 	boolean checkShortcut( char *);
+	void setModemEmuBaudrate( unsigned );
 
 	CUSBHCIDevice     * m_USBHCI;
 	CMachineInfo      * m_pMachineInfo; //used for c64screen to display raspi model name
@@ -230,7 +238,6 @@ private:
 	unsigned m_timeoutCounterStart;
 	unsigned m_skipSktpRefresh;
 	unsigned m_sktpScreenPosition;
-	char * m_sktpResponseBuffer[8193];
 	unsigned m_sktpResponseLength;
 	unsigned m_sktpResponseType;
 	unsigned m_sktpKey;
@@ -248,6 +255,13 @@ private:
 	signed m_oldSecondsLeft;
 	char * m_modemCommand;
 	unsigned m_modemCommandLength;
+	unsigned m_modemEmuType;
+	char * m_modemOutputBuffer;
+	char * m_modemInputBuffer;
+	unsigned m_modemOutputBufferLength;
+	unsigned m_modemOutputBufferPos;
+	unsigned m_modemInputBufferLength;
+	unsigned m_modemInputBufferPos;
 		
 	remoteHTTPTarget m_SKTPServer;
 	remoteHTTPTarget m_CSDB;

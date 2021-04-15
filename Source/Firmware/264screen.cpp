@@ -1166,7 +1166,7 @@ void printNetworkScreen()
 	if ( pSidekickNet->IsRunning() )
 	{
 		strConnection.Append( "Active" );
-		if ( pSidekickNet->isUsbUserportModemEmulationActive() )
+		if ( pSidekickNet->isUsbUserportModemConnected() )
 			strUPModemEmu.Append( "Active" );
 		else
 			strUPModemEmu.Append( "No cable detected" );
