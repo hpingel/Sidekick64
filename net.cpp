@@ -1757,31 +1757,31 @@ void CSidekickNet::handleModemEmulation( bool silent = false)
 				{
 					if (strcmp(m_modemCommand, "atb300") == 0)
 					{
-						a = writeCharsToFrontend((char *)"OK\r", 4);
+						a = writeCharsToFrontend((char *)"OK\r", 3);
 						m_pScheduler->MsSleep(100);
 						setModemEmuBaudrate(300);
 					}
 					else if (strcmp(m_modemCommand, "atb1200") == 0)
 					{
-						a = writeCharsToFrontend((char *)"OK\r", 4);
+						a = writeCharsToFrontend((char *)"OK\r", 3);
 						m_pScheduler->MsSleep(100);
 						setModemEmuBaudrate(1200);
 					}
 					else if (strcmp(m_modemCommand, "atb2400") == 0)
 					{
-						a = writeCharsToFrontend((char *)"OK\r", 4);
+						a = writeCharsToFrontend((char *)"OK\r", 3);
 						m_pScheduler->MsSleep(100);
 						setModemEmuBaudrate(2400);
 					}
 					else if (strcmp(m_modemCommand, "atb4800") == 0)
 					{
-						a = writeCharsToFrontend((char *)"OK\r", 4);
+						a = writeCharsToFrontend((char *)"OK\r", 3);
 						m_pScheduler->MsSleep(100);
 						setModemEmuBaudrate(4800);
 					}
 					else if (strcmp(m_modemCommand, "atb9600") == 0)
 					{
-						a = writeCharsToFrontend((char *)"OK\r", 4);
+						a = writeCharsToFrontend((char *)"OK\r", 3);
 						m_pScheduler->MsSleep(100);
 						setModemEmuBaudrate(9600);
 					}
@@ -1791,11 +1791,11 @@ void CSidekickNet::handleModemEmulation( bool silent = false)
 					if ( m_modemEmuType == SK_MODEM_USERPORT_USB )
 						a = writeCharsToFrontend((char *)"sidekick64 userport modem emulation\rhave fun!\r", 46);
 					else
-						a = writeCharsToFrontend((char *)"sidekick64 swiftlink modem emulation\rhave fun!\r", 47);
+						a = writeCharsToFrontend((char *)"-sidekick64 swiftlink modem emulation\rhave fun!\r", 48);
 				}
 				else if ( m_modemCommand[start] == 'v')
 				{
-					a = writeCharsToFrontend((char *)"OK\r", 4);
+					a = writeCharsToFrontend((char *)"OK\r", 3);
 					if ( !silent)
 						logger->Write ("CSidekickNet", LogNotice, "Command tolerated but not implemented :)");
 				}
@@ -1847,7 +1847,7 @@ void CSidekickNet::handleModemEmulation( bool silent = false)
 
 void CSidekickNet::SendErrorResponse()
 {
-	writeCharsToFrontend((char *) "ERROR\r", 7);
+	writeCharsToFrontend((char *) "ERROR\r", 6);
 	m_modemCommandLength = 0;
 	m_modemCommand[0] = '\0';
 }
@@ -1871,7 +1871,7 @@ void CSidekickNet::SocketConnectIP( CIPAddress bbsIP, unsigned port )
 	m_pBBSSocket = new CSocket (m_Net, IPPROTO_TCP);
 	if ( m_pBBSSocket->Connect ( bbsIP, port) == 0)
 	{
-		writeCharsToFrontend((char *) "CONNECT\r\n", 11);
+		writeCharsToFrontend((char *) "CONNECT\r\n", 9);
 		m_isBBSTermReady = true;
 		m_isBBSSocketConnected = true;
 	}
