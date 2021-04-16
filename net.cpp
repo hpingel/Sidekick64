@@ -150,7 +150,6 @@ CSidekickNet::CSidekickNet(
 		m_isMenuScreenUpdateNeeded( false ),
 		m_isC128( false ),
 		m_isBBSSocketConnected (false),
-		m_isBBSTermReady( false ),
 		m_CSDBDownloadPath( (char * ) ""),
 		m_CSDBDownloadExtension( (char * ) ""),
 		m_CSDBDownloadFilename( (char * ) ""),
@@ -168,7 +167,6 @@ CSidekickNet::CSidekickNet(
 		m_sktpKey(0),
 		m_sktpSession(0),
 		m_videoFrameCounter(1),
-		//m_sysMonInfo(""),
 		m_sysMonHeapFree(0),
 		m_sysMonCPUTemp(0),
 		m_loglevel(2),
@@ -180,9 +178,10 @@ CSidekickNet::CSidekickNet(
 		m_modemOutputBuffer( (char * ) ""),
 		m_modemOutputBufferLength(0),
 		m_modemOutputBufferPos(0),
-		m_modemInputBuffer( (char * ) ""),
 		m_modemInputBufferLength(0),
-		m_modemInputBufferPos(0)
+		m_modemInputBufferPos(0),
+		m_socketPort(0)
+		
 {
 	assert (m_pTimer != 0);
 	assert (& m_pScheduler != 0);
@@ -191,6 +190,8 @@ CSidekickNet::CSidekickNet(
 	m_pTimer->SetTimeZone (nTimeZone);
 	
 	m_modemCommand[0] = '\0';
+	m_modemInputBuffer[0] = '\0';
+	m_socketHost[0] = '\0';
 }
 
 void CSidekickNet::setErrorMsgC64( char * msg, boolean sticky = true ){ 
@@ -1506,7 +1507,6 @@ void CSidekickNet::setModemEmuBaudrate( unsigned rate )
 void CSidekickNet::cleanUpModemEmuSocket()
 {
 	logger->Write ("CSidekickNet", LogNotice, "cleanup modem socket connection");
-	m_isBBSTermReady = false;
 	if ( m_isBBSSocketConnected )
 	{
 		m_isBBSSocketConnected = false;
@@ -1518,7 +1518,7 @@ void CSidekickNet::cleanUpModemEmuSocket()
 	m_modemCommand[0] = '\0';
 }
 
-int CSidekickNet::readCharFromFrontend( char * buffer)
+int CSidekickNet::readCharFromFrontend( unsigned char * buffer)
 {
 		if ( m_modemEmuType == SK_MODEM_USERPORT_USB )
 		{
@@ -1526,17 +1526,27 @@ int CSidekickNet::readCharFromFrontend( char * buffer)
 		}
 		else if ( m_modemEmuType == SK_MODEM_SWIFTLINK )
 		{
-			if (m_modemOutputBufferLength > 0 && m_modemOutputBufferPos < m_modemOutputBufferLength)
+			if (m_modemOutputBufferLength > 0)
 			{
-				buffer[0] = m_modemOutputBuffer[m_modemOutputBufferPos++];
-				return 1;
+				if ( m_modemOutputBufferPos < m_modemOutputBufferLength)
+				{
+					buffer[0] = m_modemOutputBuffer[m_modemOutputBufferPos++];
+					return 1;
+				}
+				/*
+				else{
+					m_modemOutputBufferLength = 0;
+					m_modemOutputBufferPos = 0;
+					//m_modemOutputBuffer = (char * ) "";
+					//m_modemOutputBuffer[0] = '\0';
+				}*/
 			}
 		}
 		buffer[0] = '0';
 		return 0;
 }
 
-int CSidekickNet::writeCharsToFrontend( char * buffer, unsigned length)
+int CSidekickNet::writeCharsToFrontend( unsigned char * buffer, unsigned length)
 {
 	if ( m_modemEmuType == SK_MODEM_USERPORT_USB )
 	{
@@ -1544,16 +1554,24 @@ int CSidekickNet::writeCharsToFrontend( char * buffer, unsigned length)
 	}
 	else if ( m_modemEmuType == SK_MODEM_SWIFTLINK )
 	{
-			if ( m_modemInputBufferLength > 0 && m_modemInputBufferPos >= m_modemInputBufferLength)
+			if ( m_modemInputBufferLength > 0 && m_modemInputBufferPos == m_modemInputBufferLength )
 			{
 				m_modemInputBufferPos = 0;
 				m_modemInputBufferLength = 0;
 				m_modemInputBuffer[0] = '\0';
+				logger->Write ("CSidekickNet", LogNotice, "writeCharsToFrontend - resetting m_modemInputBuffer to empty string");
 			}
 			//char * tmp;
 			//memcpy( tmp, &buffer[0], length );
 		  //strcat( m_modemInputBuffer, tmp );
-			strcat( m_modemInputBuffer, buffer );
+			logger->Write ("CSidekickNet", LogNotice, "writeCharsToFrontend - adding %i to %i chars", length, m_modemInputBufferLength);
+			
+			for ( int c = 0; c < length; c++)
+			{
+				m_modemInputBuffer[m_modemInputBufferLength + c] = buffer[c];
+			}
+			m_modemInputBuffer[m_modemInputBufferLength + length]  = '\0';
+			//strcat( m_modemInputBuffer, buffer );
 			m_modemInputBufferLength += length;
 			return length;
 	}
@@ -1561,14 +1579,25 @@ int CSidekickNet::writeCharsToFrontend( char * buffer, unsigned length)
 	return 0;
 }
 
-char CSidekickNet::getCharFromInputBuffer()
+unsigned char CSidekickNet::getCharFromInputBuffer()
 {
-	if (m_modemInputBufferLength == 0 || m_modemInputBufferPos > m_modemInputBufferLength){
+	if (m_modemInputBufferLength == 0 || m_modemInputBufferPos == m_modemInputBufferLength ){
 			return 0;
 	}
-	char payload = m_modemInputBuffer[m_modemInputBufferPos++];
+	unsigned char payload = m_modemInputBuffer[m_modemInputBufferPos];
+	m_modemInputBufferPos++;
 
 	return payload;
+}
+
+bool CSidekickNet::areCharsInInputBuffer()
+{
+	return ( m_modemInputBufferLength > 0 && m_modemInputBufferPos +1 < m_modemInputBufferLength );
+}
+
+bool CSidekickNet::areCharsInOutputBuffer()
+{
+	return ( m_modemOutputBufferLength > 0 && m_modemOutputBufferPos < m_modemOutputBufferLength );
 }
 
 void CSidekickNet::handleModemEmulation( bool silent = false)
@@ -1578,18 +1607,29 @@ void CSidekickNet::handleModemEmulation( bool silent = false)
 
 	if (  m_modemEmuType == 0 ) return;
 
-	if ( (strcmp( m_currentKernelRunning, "m" ) == 0) && m_isBBSTermReady){
+	if ( m_modemEmuType == SK_MODEM_SWIFTLINK )
+	{
+		if ( silent && m_isBBSSocketConnected)
+			return; // come back in none-silent case
+		else if ( !silent && m_socketPort > 0 && !m_isBBSSocketConnected)
+		{
+			SocketConnect( m_socketHost, m_socketPort, false);
+			m_socketPort = 0; //prevent retry
+			return;
+		}
+	}
+
+	if ( (strcmp( m_currentKernelRunning, "m" ) == 0) && m_isBBSSocketConnected){
 		cleanUpModemEmuSocket();
 	}
 		
 	int bsize = 4096;
-	char buffer[bsize];
-	char inputChar[bsize]; //FIXME get rid of this
+	unsigned char buffer[bsize];
+	unsigned char inputChar[bsize]; //FIXME get rid of this
 	bool success = false;
 	
-	if (!m_isBBSTermReady)
+	if (!m_isBBSSocketConnected)
 	{
-		//int a = m_pUSBSerial->Read(inputChar, 1);
 		
 		int a = readCharFromFrontend(inputChar);
 		/*
@@ -1693,7 +1733,7 @@ void CSidekickNet::handleModemEmulation( bool silent = false)
 						char keyword[256];
 						memcpy( keyword, &m_modemCommand[start], stop - start );
 						keyword[ stop - start ] = '\0';
-						if (!checkShortcut( keyword ))
+						if (!checkShortcut( keyword, silent ))
 						{
 							if ( !silent)
 								logger->Write ("CSidekickNet", LogNotice, "ERROR - no quotes detected");
@@ -1751,37 +1791,37 @@ void CSidekickNet::handleModemEmulation( bool silent = false)
 					portStr[ stop - separator ] = '\0';
 					unsigned portNo = atoi(portStr);
 					//logger->Write ("CSidekickNet", LogNotice, "hostStr: '%s' portNo: '%s' %i", hostStr, portStr, portNo);
-					SocketConnect( hostStr, portNo);
+					SocketConnect( hostStr, portNo, silent);
 				} //end of d command (atd)
 				else if ( m_modemCommand[start] == 'b')
 				{
 					if (strcmp(m_modemCommand, "atb300") == 0)
 					{
-						a = writeCharsToFrontend((char *)"OK\r", 3);
+						a = writeCharsToFrontend((unsigned char *)"OK\r", 3);
 						m_pScheduler->MsSleep(100);
 						setModemEmuBaudrate(300);
 					}
 					else if (strcmp(m_modemCommand, "atb1200") == 0)
 					{
-						a = writeCharsToFrontend((char *)"OK\r", 3);
+						a = writeCharsToFrontend((unsigned char *)"OK\r", 3);
 						m_pScheduler->MsSleep(100);
 						setModemEmuBaudrate(1200);
 					}
 					else if (strcmp(m_modemCommand, "atb2400") == 0)
 					{
-						a = writeCharsToFrontend((char *)"OK\r", 3);
+						a = writeCharsToFrontend((unsigned char *)"OK\r", 3);
 						m_pScheduler->MsSleep(100);
 						setModemEmuBaudrate(2400);
 					}
 					else if (strcmp(m_modemCommand, "atb4800") == 0)
 					{
-						a = writeCharsToFrontend((char *)"OK\r", 3);
+						a = writeCharsToFrontend((unsigned char *)"OK\r", 3);
 						m_pScheduler->MsSleep(100);
 						setModemEmuBaudrate(4800);
 					}
 					else if (strcmp(m_modemCommand, "atb9600") == 0)
 					{
-						a = writeCharsToFrontend((char *)"OK\r", 3);
+						a = writeCharsToFrontend((unsigned char *)"OK\r", 3);
 						m_pScheduler->MsSleep(100);
 						setModemEmuBaudrate(9600);
 					}
@@ -1789,13 +1829,36 @@ void CSidekickNet::handleModemEmulation( bool silent = false)
 				else if ( m_modemCommand[start] == 'i')
 				{
 					if ( m_modemEmuType == SK_MODEM_USERPORT_USB )
-						a = writeCharsToFrontend((char *)"sidekick64 userport modem emulation\rhave fun!\r", 46);
+						a = writeCharsToFrontend((unsigned char *)"sidekick64 userport modem emulation\rhave fun!\r", 46);
 					else
-						a = writeCharsToFrontend((char *)"-sidekick64 swiftlink modem emulation\rhave fun!\r", 48);
+						a = writeCharsToFrontend((unsigned char *)"sidekick64 swiftlink modem emulation\rhave fun!\r", 47);
+						//a = writeCharsToFrontend((unsigned char *)"\x40\x60 \x9f \x7dc\x05 1w\x1c 2w\x1e 3g\x1f 4b\x95 5b\x96 6r\x97 7g\x98 8g\x99 9g\x9a ab\x9c bp\x9e cy\x05-" ,13*4+4 );
+						
+						
+						/*
+								 colors
+								 
+								 white 	5     \x05
+								 red 		28		\x1c
+								 grn 		30		\x1e
+								 blue 	31		\x1f
+								 blk 		144   
+								 brown 	149   \x95
+								 lt red 150		\x96
+								 grey1 	151		\x97
+								 grey2 	152		\x98
+								 lt green 153	\x99
+								 lt blue 154  \x9a
+								 pur		156		\x9c
+								 yel 		158   \x9e
+								 cyan 	159   \x9f
+						
+						*/
+						
 				}
 				else if ( m_modemCommand[start] == 'v')
 				{
-					a = writeCharsToFrontend((char *)"OK\r", 3);
+					a = writeCharsToFrontend((unsigned char *)"OK\r", 3);
 					if ( !silent)
 						logger->Write ("CSidekickNet", LogNotice, "Command tolerated but not implemented :)");
 				}
@@ -1811,7 +1874,7 @@ void CSidekickNet::handleModemEmulation( bool silent = false)
 			} //end of return key
 		} //end of read one char from serial
 	} // end of command mode
-	else if ( m_isBBSSocketConnected && m_isBBSTermReady ){
+	else if ( m_isBBSSocketConnected ){
 		
 		int x = 1; //dummy start value
 		while (x > 0)
@@ -1820,25 +1883,25 @@ void CSidekickNet::handleModemEmulation( bool silent = false)
 			if (x > 0)
 			{
 				int a = writeCharsToFrontend(buffer, x);
-				if ( !silent)
-					logger->Write ("CSidekickNet", LogNotice, "USB serial wrote %u chars", x);
+				//if ( !silent)
+					logger->Write ("CSidekickNet", LogNotice, "Terminal: wrote %u chars to frontend", x);
 			}
 		}
 		
-		int a = m_pUSBSerial->Read(buffer, bsize -2);
+		int a =readCharFromFrontend( buffer );
 		if ( a > 0 )
 		{
 /*				
 			if ( a == 4 && buffer[0] == '+' && buffer[1] == '+' && buffer[2] == '+' && buffer[3] == 13)
 			{
 				logger->Write ("CSidekickNet", LogNotice, "+++");
-				m_isBBSTermReady = false;
+				m_isBBSSocketConnected = false;
 			}
 			else
 */				
 			{
-				if ( !silent)
-					logger->Write ("CSidekickNet", LogNotice, "Connected - Read from USB serial: %i ", a);
+				//if ( !silent)
+					logger->Write ("CSidekickNet", LogNotice, "Terminal: sent %i chars to modem", a);
 				m_pBBSSocket->Send (buffer, a, MSG_DONTWAIT);
 			}
 		}
@@ -1847,20 +1910,38 @@ void CSidekickNet::handleModemEmulation( bool silent = false)
 
 void CSidekickNet::SendErrorResponse()
 {
-	writeCharsToFrontend((char *) "ERROR\r", 6);
+	writeCharsToFrontend((unsigned char *) "ERROR\r", 6);
 	m_modemCommandLength = 0;
 	m_modemCommand[0] = '\0';
 }
 
-void CSidekickNet::SocketConnect( char * hostname, unsigned port )
+void CSidekickNet::SocketConnect( char * hostname, unsigned port, bool silent )
 {
 	bool success = true;
 	int a;
+	
+	if ( silent )
+	{
+		unsigned c = 0;
+		//for (unsigned c = 0; c < strlen(hostname); c++)
+		while ( hostname[c] != '\0')
+		{
+			m_socketHost[c] = hostname[c];
+			c++;
+		}
+		m_socketHost[c] = '\0';
+		//m_socketHost[strlen(hostname)] = '\0';
+		//strcpy(m_socketHost, hostname);
+		//m_socketHost[strlen(hostname)] = '\0';
+		m_socketPort = port;
+		return;
+	}
+	
 	CIPAddress bbsIP = getIPForHost( hostname, success);
 	if ( !success || bbsIP.IsNull() )
 	{
-		a = writeCharsToFrontend((char *) "FAILED DNS\r\n", 12);
-		logger->Write ("CSidekickNet", LogNotice, "Could'nt resolve IP address for %s", hostname);
+		a = writeCharsToFrontend((unsigned char *) "FAILED DNS\r\n", 12);
+		logger->Write ("CSidekickNet", LogNotice, "Couldn't resolve IP address for %s", hostname);
 	}
 	else
 		SocketConnectIP( bbsIP, port);
@@ -1871,18 +1952,17 @@ void CSidekickNet::SocketConnectIP( CIPAddress bbsIP, unsigned port )
 	m_pBBSSocket = new CSocket (m_Net, IPPROTO_TCP);
 	if ( m_pBBSSocket->Connect ( bbsIP, port) == 0)
 	{
-		writeCharsToFrontend((char *) "CONNECT\r\n", 9);
-		m_isBBSTermReady = true;
+		writeCharsToFrontend((unsigned char *) "CONNECT\r\n", 9);
 		m_isBBSSocketConnected = true;
 	}
 	else
 	{
-		writeCharsToFrontend((char *) "FAILED PORT\r\n", 13);
+		writeCharsToFrontend((unsigned char *) "FAILED PORT\r\n", 13);
 		logger->Write ("CSidekickNet", LogNotice, "Socket connect failed at port %u", port);
 	}
 }
 
-boolean CSidekickNet::checkShortcut( char * keyword )
+boolean CSidekickNet::checkShortcut( char * keyword, bool silent )
 {
 	boolean found = true;
 	logger->Write ("CSidekickNet", LogNotice, "keyword: '%s'", keyword);
@@ -1893,7 +1973,7 @@ boolean CSidekickNet::checkShortcut( char * keyword )
 					strcmp(keyword, "t5551212") == 0 )
 	{
 		setModemEmuBaudrate(1200);
-		SocketConnect("q-link.net", 5190);
+		SocketConnect("q-link.net", 5190, silent);
 	}
 	//BTX
 	else if (
@@ -1911,23 +1991,23 @@ boolean CSidekickNet::checkShortcut( char * keyword )
 		//CIPAddress BTXIPAddress;
 		//BTXIPAddress.Set(btx);
 		//SocketConnectIP(BTXIPAddress, 20000);
-		SocketConnect("static.166.94.201.195.clients.your-server.de", 20000);
+		SocketConnect("static.166.94.201.195.clients.your-server.de", 20000, silent);
 	}
 	else if (strcmp(keyword, "@habitat") == 0)
 	{
 		setModemEmuBaudrate(1200);
-		SocketConnect("neohabitat.demo.spi.ne", 1986);
+		SocketConnect("neohabitat.demo.spi.ne", 1986, silent);
 	}
 	else if (strcmp(keyword, "@rf") == 0)
-		SocketConnect("rapidfire.hopto.org", 64128);
+		SocketConnect("rapidfire.hopto.org", 64128, silent);
 	else if (strcmp(keyword, "@ro") == 0)
-		SocketConnect("raveolution.hopto.org", 64128);
+		SocketConnect("raveolution.hopto.org", 64128, silent);
 	else if (strcmp(keyword, "@rc") == 0)
-		SocketConnect("bbs.retrocampus.com", 6510);
+		SocketConnect("bbs.retrocampus.com", 6510, silent);
 	else if (strcmp(keyword, "@cm") == 0)
-		SocketConnect("coffeemud.net", 2323);
+		SocketConnect("coffeemud.net", 2323, silent);
 	else if (strcmp(keyword, "@dnsfail") == 0)
-		SocketConnect("doesnotexist246789.hopto.org.bla", 64128); //test dns resolve fail
+		SocketConnect("doesnotexist246789.hopto.org.bla", 64128, silent); //test dns resolve fail
 	else
 		found = false;
 	return found;
@@ -1945,4 +2025,8 @@ unsigned CSidekickNet::getModemEmuType(){
 
 void CSidekickNet::setModemEmuType( unsigned type ){
 	m_modemEmuType = type;
+}
+
+bool CSidekickNet::isModemSocketConnected(){
+	return m_isBBSSocketConnected;
 }
