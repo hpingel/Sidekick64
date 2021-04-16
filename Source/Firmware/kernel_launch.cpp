@@ -35,9 +35,9 @@ bool swiftLinkEnabled = false;
 static const unsigned swiftLinkLogLengthMax = 64000;
 char swiftLinkLog[ swiftLinkLogLengthMax ];
 char swiftLinkReceived[ swiftLinkLogLengthMax ];
-char swiftLinkByte = 0; //incoming byte from frontend
-char swiftLinkEcho = 0; //byte to be echoed at frontend
-char swiftLinkResponse = 0; //byte that comes to frontend from terminal
+unsigned char swiftLinkByte = 0; //incoming byte from frontend
+unsigned char swiftLinkEcho = 0; //byte to be echoed at frontend
+unsigned char swiftLinkResponse = 0; //byte that comes to frontend from terminal
 unsigned swiftLinkDataReads = 0; //how many times did c64 read from swiftlink data register
 unsigned swiftLinkDoNMI = 0;
 unsigned swiftLinkCounter = 0; //for debugging register communication
@@ -45,6 +45,7 @@ unsigned swiftLinkReceivedCounter = 0; //byte count sent from terminal to fronte
 unsigned swiftLinkBaud = 0;
 unsigned swiftLinkBaudOld = 0;
 u32 swiftLinkRegisterCmd = 0;
+u32 swiftLinkRegisterCtrl = 0;
 #endif
 
 // we will read this .PRG file
@@ -230,7 +231,7 @@ void CKernelLaunch::Run( void )
 
 	pSidekickNet->setCurrentKernel( (char*)"l" );
 	unsigned netDelay = _playingPSID ? 900000000: 300; //TODO: improve this
-	unsigned followUpDelay = (pSidekickNet->getModemEmuType() == 1) ? 300000 : 300;
+	unsigned followUpDelay = (pSidekickNet->getModemEmuType() == 1) ? 9000000 : 300;
 	#endif
 
 	// setup FIQ
@@ -313,9 +314,9 @@ void CKernelLaunch::Run( void )
 		#ifdef WITH_NET
 		if ( pSidekickNet->IsRunning() )
 		{
-			if ( disableCart && transferStarted)
+			if ( disableCart && transferStarted && netDelay > 0)
 				netDelay--;
-			if (netDelay <= 0 )
+			if (netDelay <= 0 && swiftLinkResponse == 0 && (!pSidekickNet->isModemSocketConnected() || !pSidekickNet->areCharsInInputBuffer() || pSidekickNet->areCharsInOutputBuffer()))
 			{
 				boolean justEnabled = !swiftLinkEnabled;
 				if (pSidekickNet->getModemEmuType() == 1) swiftLinkEnabled = true;
@@ -331,12 +332,9 @@ void CKernelLaunch::Run( void )
 					else
 						logger->Write( "sk", LogNotice, "netdelay is zero, received count = %i, sw data reads = %i", swiftLinkReceivedCounter, swiftLinkDataReads);
 
-					if ( swiftLinkReceivedCounter > 0){
-					  //logger->Write( "sk", LogNotice, "swiftLinkByte: '%i', '%s'",swiftLinkByte, swiftLinkByte );
-						
-						logger->Write( "sk", LogNotice, "received: '%s'", swiftLinkReceived);
-						//swiftLinkByte = 0;
-					}
+//					if ( swiftLinkReceivedCounter > 0){
+//						logger->Write( "sk", LogNotice, "received: '%s'", swiftLinkReceived);
+//					}
 					
 					#ifdef SW_DEBUG
 
@@ -398,23 +396,27 @@ void CKernelLaunch::Run( void )
 				m_InputPin.EnableInterrupt( GPIOInterruptOnRisingEdge );
 				
 			} //end of netdelay
-			else if (pSidekickNet->getModemEmuType() == 1 && swiftLinkEnabled)
+			else if (pSidekickNet->getModemEmuType() == 1 && !pSidekickNet->isModemSocketConnected() && swiftLinkEnabled)
 			 	pSidekickNet->handleModemEmulation( true );
 
 			if (swiftLinkEnabled && 
 				keepNMILow == 0 && 
 				swiftLinkDoNMI == 0 && 
-				swiftLinkEcho == 0 && 
-				swiftLinkResponse == 0)
+				swiftLinkEcho == 0)
 			{
-				char tmpOutput = pSidekickNet->getCharFromInputBuffer();
-				if ( tmpOutput > 0)
+				if ( swiftLinkResponse == 0 )
 				{
-					swiftLinkResponse = tmpOutput;
-					swiftLinkReceived[swiftLinkReceivedCounter++] = tmpOutput;
-					swiftLinkReceived[swiftLinkReceivedCounter] = '\0';
-					swiftLinkDoNMI = 1000;
+					unsigned char tmpOutput = pSidekickNet->getCharFromInputBuffer();
+					if ( tmpOutput > 0)
+					{
+						swiftLinkResponse = tmpOutput;
+						swiftLinkReceived[swiftLinkReceivedCounter++] = tmpOutput;
+						swiftLinkReceived[swiftLinkReceivedCounter] = '\0';
+						swiftLinkDoNMI = 20000; //500
+					}
 				}
+				else
+					swiftLinkDoNMI = 20000; //500
 			}
 			
 			if ( swiftLinkDoNMI > 0 ){
@@ -427,7 +429,7 @@ void CKernelLaunch::Run( void )
 				else */
 				if ( --swiftLinkDoNMI < 1)
 				{
-						keepNMILow = 20;
+						keepNMILow = 20; //10
 						CLR_GPIO( bNMI );
 				}
 			}
@@ -528,6 +530,10 @@ void CKernelLaunch::FIQHandler (void *pParam)
 					  D = 72;//fake echo
 					swiftLinkDataReads++;
 				}
+				if ( GET_IO12_ADDRESS == 0x03) //control register
+				{ 
+					D = swiftLinkRegisterCtrl;
+				}
 				else if ( GET_IO12_ADDRESS == 0x02) // command register
 				{
 					D = swiftLinkRegisterCmd;
@@ -576,6 +582,7 @@ void CKernelLaunch::FIQHandler (void *pParam)
 				if ( GET_IO12_ADDRESS == 0x03) //control register
 				{ 
 					swiftLinkBaud = hl;
+					swiftLinkRegisterCtrl = D;
 				}
 				else if ( GET_IO12_ADDRESS == 0x02) //command register
 				{ 
@@ -586,7 +593,7 @@ void CKernelLaunch::FIQHandler (void *pParam)
 					swiftLinkByte = D;
 					pSidekickNet->addToModemOutputBuffer( D );
 					
-					if ((swiftLinkRegisterCmd) >> (4 & 1)) //if echo is on
+					if ((swiftLinkRegisterCmd) >> (4 & 1) && !pSidekickNet->isModemSocketConnected()) //if echo is on
 					{
 						swiftLinkEcho = D;
 						swiftLinkDoNMI = 10;

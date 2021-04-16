@@ -153,11 +153,14 @@ public:
 	void setC128Mode();
 	boolean isUsbUserportModemConnected();
 	void addToModemOutputBuffer( char );
-	char getCharFromInputBuffer();
+	unsigned char getCharFromInputBuffer();
 	void handleModemEmulation(bool);
 	unsigned getModemEmuType();
 	void setModemEmuType(unsigned);
-	
+	bool isModemSocketConnected();
+	bool areCharsInInputBuffer();
+	bool areCharsInOutputBuffer();
+
 private:
 
 	typedef struct  {
@@ -174,12 +177,12 @@ private:
 	boolean HTTPGet (remoteHTTPTarget & target, const char * path, char *pBuffer, unsigned & nLengthRead);
 	void usbPnPUpdate();
 	void cleanUpModemEmuSocket();
-	int readCharFromFrontend( char * );
-	int writeCharsToFrontend( char * buffer, unsigned length);
+	int readCharFromFrontend( unsigned char * );
+	int writeCharsToFrontend( unsigned char * buffer, unsigned length);
 	void SendErrorResponse();
-	void SocketConnect( char *, unsigned );
+	void SocketConnect( char *, unsigned, bool );
 	void SocketConnectIP( CIPAddress, unsigned );
-	boolean checkShortcut( char *);
+	boolean checkShortcut( char *, bool);
 	void setModemEmuBaudrate( unsigned );
 
 	CUSBHCIDevice     * m_USBHCI;
@@ -246,7 +249,6 @@ private:
 	boolean  m_isMenuScreenUpdateNeeded;
 	boolean  m_isC128;
 	boolean  m_isBBSSocketConnected;
-	boolean  m_isBBSTermReady;
 	unsigned m_videoFrameCounter;
 	size_t m_sysMonHeapFree;
 	unsigned m_sysMonCPUTemp;
@@ -257,11 +259,13 @@ private:
 	unsigned m_modemCommandLength;
 	unsigned m_modemEmuType;
 	char * m_modemOutputBuffer;
-	char * m_modemInputBuffer;
+	unsigned char m_modemInputBuffer[4096];
 	unsigned m_modemOutputBufferLength;
 	unsigned m_modemOutputBufferPos;
 	unsigned m_modemInputBufferLength;
 	unsigned m_modemInputBufferPos;
+	char m_socketHost[256];
+	unsigned m_socketPort;
 		
 	remoteHTTPTarget m_SKTPServer;
 	remoteHTTPTarget m_CSDB;
