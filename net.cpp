@@ -175,7 +175,6 @@ CSidekickNet::CSidekickNet(
 		m_modemCommand( (char * ) ""),
 		m_modemCommandLength(0),
 		m_modemEmuType(0),
-		m_modemOutputBuffer( (char * ) ""),
 		m_modemOutputBufferLength(0),
 		m_modemOutputBufferPos(0),
 		m_modemInputBufferLength(0),
@@ -191,6 +190,7 @@ CSidekickNet::CSidekickNet(
 	
 	m_modemCommand[0] = '\0';
 	m_modemInputBuffer[0] = '\0';
+	m_modemOutputBuffer[0] = '\0';
 	m_socketHost[0] = '\0';
 }
 
@@ -1516,6 +1516,15 @@ void CSidekickNet::cleanUpModemEmuSocket()
 	setModemEmuBaudrate(1200);
 	m_modemCommandLength = 0;
 	m_modemCommand[0] = '\0';
+
+	m_modemInputBufferPos = 0;
+	m_modemInputBufferLength = 0;
+	m_modemInputBuffer[0] = '\0';
+
+	m_modemOutputBufferPos = 0;
+	m_modemOutputBufferLength = 0;
+	m_modemOutputBuffer[0] = '\0';
+
 }
 
 int CSidekickNet::readCharFromFrontend( unsigned char * buffer)
@@ -1528,18 +1537,18 @@ int CSidekickNet::readCharFromFrontend( unsigned char * buffer)
 		{
 			if (m_modemOutputBufferLength > 0)
 			{
-				if ( m_modemOutputBufferPos < m_modemOutputBufferLength)
+				if ( m_modemOutputBufferPos == m_modemOutputBufferLength)
 				{
-					buffer[0] = m_modemOutputBuffer[m_modemOutputBufferPos++];
-					return 1;
-				}
-				/*
-				else{
 					m_modemOutputBufferLength = 0;
 					m_modemOutputBufferPos = 0;
 					//m_modemOutputBuffer = (char * ) "";
 					//m_modemOutputBuffer[0] = '\0';
-				}*/
+					logger->Write ("CSidekickNet", LogNotice, "readCharFromFrontend - resetting m_modemOutputBuffer to empty string");
+				}
+				else{
+					buffer[0] = m_modemOutputBuffer[m_modemOutputBufferPos++];
+					return 1;
+				}
 			}
 		}
 		buffer[0] = '0';
@@ -1625,7 +1634,7 @@ void CSidekickNet::handleModemEmulation( bool silent = false)
 		
 	int bsize = 4096;
 	unsigned char buffer[bsize];
-	unsigned char inputChar[bsize]; //FIXME get rid of this
+	unsigned char inputChar[bsize];
 	bool success = false;
 	
 	if (!m_isBBSSocketConnected)
@@ -1643,8 +1652,7 @@ void CSidekickNet::handleModemEmulation( bool silent = false)
 		{
 			if (inputChar[0] == 20)
 			{
-				if ( m_modemEmuType == SK_MODEM_USERPORT_USB )
-					a = writeCharsToFrontend(inputChar, 1);//echo
+				a = writeCharsToFrontend(inputChar, 1);//echo
 				//logger->Write ("CSidekickNet", LogNotice, "USB serial read char delete");
 				if (m_modemCommandLength > 0)
 					m_modemCommand[ --m_modemCommandLength ] = '\0';
@@ -1657,8 +1665,7 @@ void CSidekickNet::handleModemEmulation( bool silent = false)
 			}
 			else if (inputChar[0] != 13)
 			{
-				if ( m_modemEmuType == SK_MODEM_USERPORT_USB )
-					a = writeCharsToFrontend(inputChar, 1);//echo
+				a = writeCharsToFrontend(inputChar, 1);//echo
 				#ifdef WITHOUT_STDLIB
 				m_modemCommand[ m_modemCommandLength++ ] = inputChar[0];
 				#else
@@ -1670,8 +1677,7 @@ void CSidekickNet::handleModemEmulation( bool silent = false)
 			else
 			{
 				//RETURN KEY was pressed
-				if ( m_modemEmuType == SK_MODEM_USERPORT_USB )
-					a = writeCharsToFrontend(inputChar, 1);//echo
+				a = writeCharsToFrontend(inputChar, 1);//echo
 				m_modemCommand[ m_modemCommandLength ] = '\0';
 				if ( !silent)
 					logger->Write ("CSidekickNet", LogNotice, "USB serial read ENTER:  '%s', length %i", m_modemCommand, m_modemCommandLength);
@@ -1875,21 +1881,9 @@ void CSidekickNet::handleModemEmulation( bool silent = false)
 		} //end of read one char from serial
 	} // end of command mode
 	else if ( m_isBBSSocketConnected ){
-		
-		int x = 1; //dummy start value
-		while (x > 0)
-		{
-			x = m_pBBSSocket->Receive ( buffer, bsize -2, MSG_DONTWAIT);
-			if (x > 0)
-			{
-				int a = writeCharsToFrontend(buffer, x);
-				//if ( !silent)
-					logger->Write ("CSidekickNet", LogNotice, "Terminal: wrote %u chars to frontend", x);
-			}
-		}
-		
-		int a =readCharFromFrontend( buffer );
-		if ( a > 0 )
+
+		int fromFrontend = readCharFromFrontend( inputChar );
+		if ( fromFrontend > 0 )
 		{
 /*				
 			if ( a == 4 && buffer[0] == '+' && buffer[1] == '+' && buffer[2] == '+' && buffer[3] == 13)
@@ -1901,10 +1895,27 @@ void CSidekickNet::handleModemEmulation( bool silent = false)
 */				
 			{
 				//if ( !silent)
-					logger->Write ("CSidekickNet", LogNotice, "Terminal: sent %i chars to modem", a);
-				m_pBBSSocket->Send (buffer, a, MSG_DONTWAIT);
+					logger->Write ("CSidekickNet", LogNotice, "Terminal: sent %i chars to modem", fromFrontend);
+				m_pBBSSocket->Send (inputChar, fromFrontend, MSG_DONTWAIT);
 			}
 		}
+		
+		unsigned x = 1, attempts = 5; //dummy start value
+		while (x > 0)
+		{
+			x = m_pBBSSocket->Receive ( buffer, bsize -2, MSG_DONTWAIT);
+			if (x > 0)
+			{
+				int a = writeCharsToFrontend(buffer, x);
+				logger->Write ("CSidekickNet", LogNotice, "Terminal: wrote %u chars to frontend", x);
+				if ( m_modemEmuType == SK_MODEM_SWIFTLINK )
+					x=0;
+			}
+		}
+		
+
+		
+		
 	}
 }
 
@@ -2013,7 +2024,7 @@ boolean CSidekickNet::checkShortcut( char * keyword, bool silent )
 	return found;
 }
 
-void CSidekickNet::addToModemOutputBuffer( char mchar)
+void CSidekickNet::addToModemOutputBuffer( unsigned char mchar)
 {
 	m_modemOutputBuffer[m_modemOutputBufferLength++] = mchar;
 	m_modemOutputBuffer[m_modemOutputBufferLength] = '\0';

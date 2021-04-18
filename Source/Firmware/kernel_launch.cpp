@@ -31,7 +31,7 @@
 
 #ifdef WITH_NET
 extern CSidekickNet * pSidekickNet;
-bool swiftLinkEnabled = false;
+bool swiftLinkEnabled = false; //indicates if the FIQ handler should care for swiftlink register handling
 static const unsigned swiftLinkLogLengthMax = 64000;
 char swiftLinkLog[ swiftLinkLogLengthMax ];
 char swiftLinkReceived[ swiftLinkLogLengthMax ];
@@ -226,12 +226,15 @@ void CKernelLaunch::Run( void )
 	swiftLinkReceivedCounter = 0;
 	swiftLinkReceived[0] = '\0';
 	swiftLinkDataReads = 0;
-	unsigned keepNMILow = 0;
 	swiftLinkRegisterCmd = 0;
+	unsigned keepNMILow = 0;
+	bool isDoubleDirect = false;
+	unsigned swiftLinkNmiDelay = 20000 * 2400 / 2400;
+
 
 	pSidekickNet->setCurrentKernel( (char*)"l" );
-	unsigned netDelay = _playingPSID ? 900000000: 300; //TODO: improve this
-	unsigned followUpDelay = (pSidekickNet->getModemEmuType() == 1) ? 9000000 : 300;
+	unsigned netDelay = _playingPSID ? 900000000: 3000; //TODO: improve this
+	unsigned followUpDelay = (pSidekickNet->getModemEmuType() == 1) ? 18000000 : 300;
 	#endif
 
 	// setup FIQ
@@ -316,18 +319,33 @@ void CKernelLaunch::Run( void )
 		{
 			if ( disableCart && transferStarted && netDelay > 0)
 				netDelay--;
-			if (netDelay <= 0 && swiftLinkResponse == 0 && (!pSidekickNet->isModemSocketConnected() || !pSidekickNet->areCharsInInputBuffer() || pSidekickNet->areCharsInOutputBuffer()))
+			
+			bool swiftLinkDirectNetAccess = 
+				swiftLinkEnabled &&
+				//pSidekickNet->getModemEmuType() == 1 && 
+				pSidekickNet->isModemSocketConnected() &&
+				!isDoubleDirect &&
+				(swiftLinkResponse == 0) && //there is no char prepared to be sent to frontend
+				(!pSidekickNet->areCharsInInputBuffer() || pSidekickNet->areCharsInOutputBuffer());
+				
+			if (swiftLinkDirectNetAccess)
 			{
-				boolean justEnabled = !swiftLinkEnabled;
-				if (pSidekickNet->getModemEmuType() == 1) swiftLinkEnabled = true;
+				netDelay = 0;
+				isDoubleDirect = true;
+			}
+				
+			if (netDelay <= 0 )
+			{
 				netDelay = _playingPSID ? 3000: followUpDelay;
 				m_InputPin.DisableInterrupt();
 				m_InputPin.DisconnectInterrupt();
 				EnableIRQs();
-				if ( swiftLinkEnabled )
+				if (pSidekickNet->getModemEmuType() == 1) //swiftlink emulation is configured by user
 				{
-					if(justEnabled){
-						logger->Write( "sk", LogNotice, "swiftLinkEnabled unlocked");
+					if ( !swiftLinkEnabled )
+					{
+						logger->Write( "sk", LogNotice, "swiftLink handling unlocked");
+						swiftLinkEnabled = true;
 					}
 					else
 						logger->Write( "sk", LogNotice, "netdelay is zero, received count = %i, sw data reads = %i", swiftLinkReceivedCounter, swiftLinkDataReads);
@@ -372,8 +390,9 @@ void CKernelLaunch::Run( void )
 							case 14: baud = 19200;	break;
 							case 15: baud = 38400;	break;
 							default: baud = 77777; break;
-						}					
-						logger->Write( "sk", LogNotice, "swiftLinkBaud change to: %i", baud);	
+						}
+						swiftLinkNmiDelay = 20000 * 2400 / baud;
+						logger->Write( "sk", LogNotice, "swiftLinkBaud change to: %i, nmi delay = %i", baud, swiftLinkNmiDelay);	
 					}
 				}
 
@@ -381,8 +400,16 @@ void CKernelLaunch::Run( void )
 					return;
 				
 				kernelMenu->updateSystemMonitor();
-				pSidekickNet->handleQueuedNetworkAction();
-				//pSidekickNet->requireCacheWellnessTreatment();
+				if ( swiftLinkDirectNetAccess )
+				{
+					logger->Write( "sk", LogNotice, "swiftLinkDirectNetAccess");	
+					pSidekickNet->handleModemEmulation( false );
+				}
+				else
+				{
+					pSidekickNet->handleQueuedNetworkAction();
+					isDoubleDirect = false;
+				}
 
 				// warm caches
 				prepareOnReset( true );
@@ -397,8 +424,10 @@ void CKernelLaunch::Run( void )
 				
 			} //end of netdelay
 			else if (pSidekickNet->getModemEmuType() == 1 && !pSidekickNet->isModemSocketConnected() && swiftLinkEnabled)
+			{
 			 	pSidekickNet->handleModemEmulation( true );
-
+			}
+			
 			if (swiftLinkEnabled && 
 				keepNMILow == 0 && 
 				swiftLinkDoNMI == 0 && 
@@ -412,24 +441,22 @@ void CKernelLaunch::Run( void )
 						swiftLinkResponse = tmpOutput;
 						swiftLinkReceived[swiftLinkReceivedCounter++] = tmpOutput;
 						swiftLinkReceived[swiftLinkReceivedCounter] = '\0';
-						swiftLinkDoNMI = 20000; //500
+						swiftLinkDoNMI = 10;// swiftLinkNmiDelay;
 					}
 				}
 				else
-					swiftLinkDoNMI = 20000; //500
+					swiftLinkDoNMI = swiftLinkNmiDelay;
 			}
 			
 			if ( swiftLinkDoNMI > 0 ){
 				//check for disabled receive interrupts
-				/*if ( ((swiftLinkRegisterCmd) >> (1 & 1)))
+				if ( swiftLinkDoNMI > 1)
+					swiftLinkDoNMI--;
+//				if ( swiftLinkRegisterCmd & 1 != 0 && swiftLinkDoNMI == 1)
+				if ( swiftLinkDoNMI == 1)
 				{
-					if ( swiftLinkDoNMI > 2)
-						swiftLinkDoNMI--;
-				}
-				else */
-				if ( --swiftLinkDoNMI < 1)
-				{
-						keepNMILow = 20; //10
+						swiftLinkDoNMI = 0;
+						keepNMILow = 4; //10
 						CLR_GPIO( bNMI );
 				}
 			}
@@ -593,11 +620,13 @@ void CKernelLaunch::FIQHandler (void *pParam)
 					swiftLinkByte = D;
 					pSidekickNet->addToModemOutputBuffer( D );
 					
+					/*
 					if ((swiftLinkRegisterCmd) >> (4 & 1) && !pSidekickNet->isModemSocketConnected()) //if echo is on
 					{
 						swiftLinkEcho = D;
 						swiftLinkDoNMI = 10;
 					}
+					*/
 				}
 
 				#ifdef SW_DEBUG
