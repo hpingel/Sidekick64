@@ -152,7 +152,7 @@ public:
 	void setCurrentKernel( char *);
 	void setC128Mode();
 	boolean isUsbUserportModemConnected();
-	void addToModemOutputBuffer( char );
+	void addToModemOutputBuffer( unsigned char );
 	unsigned char getCharFromInputBuffer();
 	void handleModemEmulation(bool);
 	unsigned getModemEmuType();
@@ -258,7 +258,7 @@ private:
 	char * m_modemCommand;
 	unsigned m_modemCommandLength;
 	unsigned m_modemEmuType;
-	char * m_modemOutputBuffer;
+	unsigned char m_modemOutputBuffer[512];
 	unsigned char m_modemInputBuffer[4096];
 	unsigned m_modemOutputBufferLength;
 	unsigned m_modemOutputBufferPos;
