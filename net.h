@@ -259,7 +259,7 @@ private:
 	unsigned m_modemCommandLength;
 	unsigned m_modemEmuType;
 	unsigned char m_modemOutputBuffer[512];
-	unsigned char m_modemInputBuffer[4096];
+	unsigned char m_modemInputBuffer[8192];
 	unsigned m_modemOutputBufferLength;
 	unsigned m_modemOutputBufferPos;
 	unsigned m_modemInputBufferLength;

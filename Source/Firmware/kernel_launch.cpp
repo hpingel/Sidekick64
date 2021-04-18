@@ -229,12 +229,12 @@ void CKernelLaunch::Run( void )
 	swiftLinkRegisterCmd = 0;
 	unsigned keepNMILow = 0;
 	bool isDoubleDirect = false;
-	unsigned swiftLinkNmiDelay = 20000 * 2400 / 2400;
+	unsigned swiftLinkNmiDelay = 20000;
 
 
 	pSidekickNet->setCurrentKernel( (char*)"l" );
 	unsigned netDelay = _playingPSID ? 900000000: 3000; //TODO: improve this
-	unsigned followUpDelay = (pSidekickNet->getModemEmuType() == 1) ? 18000000 : 300;
+	unsigned followUpDelay = (pSidekickNet->getModemEmuType() == 1) ? 200000 : 300;
 	#endif
 
 	// setup FIQ
@@ -347,8 +347,8 @@ void CKernelLaunch::Run( void )
 						logger->Write( "sk", LogNotice, "swiftLink handling unlocked");
 						swiftLinkEnabled = true;
 					}
-					else
-						logger->Write( "sk", LogNotice, "netdelay is zero, received count = %i, sw data reads = %i", swiftLinkReceivedCounter, swiftLinkDataReads);
+//					else
+//						logger->Write( "sk", LogNotice, "netdelay is zero, received count = %i, sw data reads = %i", swiftLinkReceivedCounter, swiftLinkDataReads);
 
 //					if ( swiftLinkReceivedCounter > 0){
 //						logger->Write( "sk", LogNotice, "received: '%s'", swiftLinkReceived);
@@ -391,7 +391,8 @@ void CKernelLaunch::Run( void )
 							case 15: baud = 38400;	break;
 							default: baud = 77777; break;
 						}
-						swiftLinkNmiDelay = 20000 * 2400 / baud;
+						//if ( baud <= 4800)
+							swiftLinkNmiDelay = 20000 * 2400 / baud;
 						logger->Write( "sk", LogNotice, "swiftLinkBaud change to: %i, nmi delay = %i", baud, swiftLinkNmiDelay);	
 					}
 				}
@@ -402,7 +403,7 @@ void CKernelLaunch::Run( void )
 				kernelMenu->updateSystemMonitor();
 				if ( swiftLinkDirectNetAccess )
 				{
-					logger->Write( "sk", LogNotice, "swiftLinkDirectNetAccess");	
+					//logger->Write( "sk", LogNotice, "swiftLinkDirectNetAccess");	
 					pSidekickNet->handleModemEmulation( false );
 				}
 				else
