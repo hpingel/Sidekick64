@@ -1573,8 +1573,9 @@ int CSidekickNet::writeCharsToFrontend( unsigned char * buffer, unsigned length)
 			//char * tmp;
 			//memcpy( tmp, &buffer[0], length );
 		  //strcat( m_modemInputBuffer, tmp );
-			logger->Write ("CSidekickNet", LogNotice, "writeCharsToFrontend - adding %i to %i chars", length, m_modemInputBufferLength);
+			logger->Write ("CSidekickNet", LogNotice, "writeCharsToFrontend - adding %u to %u chars", length, m_modemInputBufferLength);
 			
+			//FIXME: add sanity length check
 			for ( int c = 0; c < length; c++)
 			{
 				m_modemInputBuffer[m_modemInputBufferLength + c] = buffer[c];
@@ -1900,15 +1901,16 @@ void CSidekickNet::handleModemEmulation( bool silent = false)
 			}
 		}
 		
-		unsigned x = 1, attempts = 5; //dummy start value
+		unsigned x = 1, attempts = 0; //dummy start value
 		while (x > 0)
 		{
+			attempts++;
 			x = m_pBBSSocket->Receive ( buffer, bsize -2, MSG_DONTWAIT);
 			if (x > 0)
 			{
 				int a = writeCharsToFrontend(buffer, x);
 				logger->Write ("CSidekickNet", LogNotice, "Terminal: wrote %u chars to frontend", x);
-				if ( m_modemEmuType == SK_MODEM_SWIFTLINK )
+				if ( m_modemEmuType == SK_MODEM_SWIFTLINK && attempts >= 5)
 					x=0;
 			}
 		}
