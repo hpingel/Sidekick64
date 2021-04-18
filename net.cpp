@@ -1901,12 +1901,12 @@ void CSidekickNet::handleModemEmulation( bool silent = false)
 			}
 		}
 		
-		unsigned x = 1, attempts = 0; //dummy start value
+		int x = 1, attempts = 0; //dummy start value
 		while (x > 0)
 		{
 			attempts++;
 			x = m_pBBSSocket->Receive ( buffer, bsize -2, MSG_DONTWAIT);
-			if (x > 0)
+			if (x > 0 && x < 4096)
 			{
 				int a = writeCharsToFrontend(buffer, x);
 				logger->Write ("CSidekickNet", LogNotice, "Terminal: wrote %u chars to frontend", x);
