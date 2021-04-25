@@ -42,6 +42,7 @@
 #include <circle/sched/scheduler.h>
 #include <circle/usb/usbhcidevice.h>
 #include <circle/usb/usbserialft231x.h>
+#include <circle/usb/usbmidi.h>
 #include <circle/util.h>
 #include <SDCard/emmc.h>
 
@@ -208,6 +209,7 @@ private:
 	//CActLED							m_ActLED;
 	CWebServer        * m_WebServer;
 	CUSBSerialFT231XDevice * volatile m_pUSBSerial;
+	CUSBMIDIDevice * volatile m_pUSBMidi;
 	CDeviceNameService	* m_DeviceNameService;
 	CSocket             *m_pBBSSocket;	
 

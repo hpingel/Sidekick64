@@ -129,6 +129,7 @@ CSidekickNet::CSidekickNet(
 		m_pBBSSocket(0),
 		m_WebServer(0),
 		m_pUSBSerial(0),
+		m_pUSBMidi(0),
 		m_isFSMounted( false ),
 		m_isActive( false ),
 		m_isPrepared( false ),
@@ -316,17 +317,30 @@ boolean CSidekickNet::Initialize()
 void CSidekickNet::usbPnPUpdate()
 {
 	boolean bUpdated = m_USBHCI->UpdatePlugAndPlay();
-	if ( bUpdated && m_pUSBSerial == 0)
+	if ( bUpdated )
 	{
-		m_pUSBSerial = (CUSBSerialFT231XDevice *) m_DeviceNameService->GetDevice ("utty1", FALSE);
-		if (m_pUSBSerial != 0)
+		if ( m_pUSBSerial == 0 )
 		{
-			logger->Write( "CSidekickNet::Initialize", LogNotice, 
-				"USB TTY device detected."
-			);
-			if (m_modemEmuType == 0){
-				m_modemEmuType = SK_MODEM_USERPORT_USB;
-				setModemEmuBaudrate(1200);
+			m_pUSBSerial = (CUSBSerialFT231XDevice *) m_DeviceNameService->GetDevice ("utty1", FALSE);
+			if (m_pUSBSerial != 0)
+			{
+				logger->Write( "CSidekickNet::Initialize", LogNotice, 
+					"USB TTY device detected."
+				);
+				if (m_modemEmuType == 0){
+					m_modemEmuType = SK_MODEM_USERPORT_USB;
+					setModemEmuBaudrate(1200);
+				}
+			}
+		}
+		if ( m_pUSBMidi == 0 )
+		{
+			m_pUSBMidi = (CUSBMIDIDevice *) m_DeviceNameService->GetDevice ("umidi1", FALSE);
+			if (m_pUSBMidi != 0)
+			{
+				logger->Write( "CSidekickNet::Initialize", LogNotice, 
+					"USB Midi device detected."
+				);
 			}
 		}
 	}
@@ -1543,7 +1557,7 @@ int CSidekickNet::readCharFromFrontend( unsigned char * buffer)
 					m_modemOutputBufferPos = 0;
 					//m_modemOutputBuffer = (char * ) "";
 					//m_modemOutputBuffer[0] = '\0';
-					logger->Write ("CSidekickNet", LogNotice, "readCharFromFrontend - resetting m_modemOutputBuffer to empty string");
+				//	logger->Write ("CSidekickNet", LogNotice, "readCharFromFrontend - resetting m_modemOutputBuffer to empty string");
 				}
 				else{
 					buffer[0] = m_modemOutputBuffer[m_modemOutputBufferPos++];
@@ -1568,7 +1582,7 @@ int CSidekickNet::writeCharsToFrontend( unsigned char * buffer, unsigned length)
 				m_modemInputBufferPos = 0;
 				m_modemInputBufferLength = 0;
 				m_modemInputBuffer[0] = '\0';
-				logger->Write ("CSidekickNet", LogNotice, "writeCharsToFrontend - resetting m_modemInputBuffer to empty string");
+				//logger->Write ("CSidekickNet", LogNotice, "writeCharsToFrontend - resetting m_modemInputBuffer to empty string");
 			}
 			//char * tmp;
 			//memcpy( tmp, &buffer[0], length );
@@ -1632,7 +1646,8 @@ void CSidekickNet::handleModemEmulation( bool silent = false)
 	if ( (strcmp( m_currentKernelRunning, "m" ) == 0) && m_isBBSSocketConnected){
 		cleanUpModemEmuSocket();
 	}
-		
+
+	//buffers should be at least of size FRAME_BUFFER_SIZE (1600)
 	int bsize = 4096;
 	unsigned char buffer[bsize];
 	unsigned char inputChar[bsize];
@@ -1883,6 +1898,8 @@ void CSidekickNet::handleModemEmulation( bool silent = false)
 	} // end of command mode
 	else if ( m_isBBSSocketConnected ){
 
+		//buffers should be at least of size FRAME_BUFFER_SIZE (1600)
+
 		int fromFrontend = readCharFromFrontend( inputChar );
 		if ( fromFrontend > 0 )
 		{
@@ -1901,22 +1918,30 @@ void CSidekickNet::handleModemEmulation( bool silent = false)
 			}
 		}
 		
-		int x = 1, attempts = 0; //dummy start value
-		while (x > 0)
+		unsigned harvest = 0, attempts = 0; //dummy start value
+		int x = 0;
+		bool again = true;
+		while (again)
 		{
+			m_pScheduler->Yield();
 			attempts++;
 			x = m_pBBSSocket->Receive ( buffer, bsize -2, MSG_DONTWAIT);
-			if (x > 0 && x < 4096)
+			if (x > 0)
 			{
 				int a = writeCharsToFrontend(buffer, x);
 				logger->Write ("CSidekickNet", LogNotice, "Terminal: wrote %u chars to frontend", x);
-				if ( m_modemEmuType == SK_MODEM_SWIFTLINK && attempts >= 5)
-					x=0;
+				harvest += x;
 			}
-		}
-		
 
-		
+			if ( m_modemEmuType == SK_MODEM_SWIFTLINK && attempts <= 20 )
+			{
+				again = true;
+			}
+			else again = false;
+			
+		}
+		if (harvest > 0) 
+			logger->Write ("CSidekickNet", LogNotice, "Terminal: %u attempts. harvest %u", attempts, harvest);
 		
 	}
 }
