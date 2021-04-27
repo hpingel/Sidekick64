@@ -251,6 +251,7 @@ private:
 	boolean  m_isMenuScreenUpdateNeeded;
 	boolean  m_isC128;
 	boolean  m_isBBSSocketConnected;
+	boolean  m_isBBSSocketFirstReceive;
 	unsigned m_videoFrameCounter;
 	size_t m_sysMonHeapFree;
 	unsigned m_sysMonCPUTemp;

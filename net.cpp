@@ -150,7 +150,8 @@ CSidekickNet::CSidekickNet(
 		m_isSktpScreenActive( false ),
 		m_isMenuScreenUpdateNeeded( false ),
 		m_isC128( false ),
-		m_isBBSSocketConnected (false),
+		m_isBBSSocketConnected(false),
+		m_isBBSSocketFirstReceive(true),
 		m_CSDBDownloadPath( (char * ) ""),
 		m_CSDBDownloadExtension( (char * ) ""),
 		m_CSDBDownloadFilename( (char * ) ""),
@@ -1526,6 +1527,7 @@ void CSidekickNet::cleanUpModemEmuSocket()
 		m_isBBSSocketConnected = false;
 		delete(m_pBBSSocket);
 		m_pBBSSocket = 0;
+		m_isBBSSocketFirstReceive = false;
 	}
 	setModemEmuBaudrate(1200);
 	m_modemCommandLength = 0;
@@ -1915,6 +1917,7 @@ void CSidekickNet::handleModemEmulation( bool silent = false)
 				//if ( !silent)
 					logger->Write ("CSidekickNet", LogNotice, "Terminal: sent %i chars to modem", fromFrontend);
 				m_pBBSSocket->Send (inputChar, fromFrontend, MSG_DONTWAIT);
+				m_isBBSSocketFirstReceive = true;
 			}
 		}
 		
@@ -1923,9 +1926,8 @@ void CSidekickNet::handleModemEmulation( bool silent = false)
 		bool again = true;
 		while (again)
 		{
-			m_pScheduler->Yield();
 			attempts++;
-			x = m_pBBSSocket->Receive ( buffer, bsize -2, MSG_DONTWAIT);
+			x = m_pBBSSocket->Receive ( buffer, bsize -2, m_isBBSSocketFirstReceive ? 0 : MSG_DONTWAIT);
 			if (x > 0)
 			{
 				int a = writeCharsToFrontend(buffer, x);
@@ -1933,11 +1935,16 @@ void CSidekickNet::handleModemEmulation( bool silent = false)
 				harvest += x;
 			}
 
-			if ( m_modemEmuType == SK_MODEM_SWIFTLINK && attempts <= 20 )
+			if ( m_modemEmuType == SK_MODEM_SWIFTLINK && attempts <= 20 && !m_isBBSSocketFirstReceive)
 			{
 				again = true;
+				//m_pScheduler->Yield();
 			}
-			else again = false;
+			else
+			{
+				again = false;
+			}
+			m_isBBSSocketFirstReceive = false;
 			
 		}
 		if (harvest > 0) 
@@ -1992,6 +1999,7 @@ void CSidekickNet::SocketConnectIP( CIPAddress bbsIP, unsigned port )
 	{
 		writeCharsToFrontend((unsigned char *) "CONNECT\r\n", 9);
 		m_isBBSSocketConnected = true;
+		m_isBBSSocketFirstReceive = true;
 	}
 	else
 	{
