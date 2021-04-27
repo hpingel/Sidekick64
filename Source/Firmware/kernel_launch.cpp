@@ -32,24 +32,26 @@
 #ifdef WITH_NET
 extern CSidekickNet * pSidekickNet;
 bool swiftLinkEnabled = false; //indicates if the FIQ handler should care for swiftlink register handling
+static const unsigned swiftLinknetDelayDMADefault = 30000;
+
+#ifdef SW_DEBUG
 static const unsigned swiftLinkLogLengthMax = 64000;
 char swiftLinkLog[ swiftLinkLogLengthMax ];
-char swiftLinkReceived[ swiftLinkLogLengthMax ];
-unsigned char swiftLinkByte = 0; //incoming byte from frontend
-//unsigned char swiftLinkEcho = 0; //byte to be echoed at frontend
-unsigned char swiftLinkResponse = 0; //byte that comes to frontend from terminal
-unsigned swiftLinkDataReads = 0; //how many times did c64 read from swiftlink data register
-unsigned swiftLinkDoNMI = 0;
+unsigned swiftLinkDataReads = 0; //how many times did c64 read from swiftlink data register, for debugging only
 unsigned swiftLinkCounter = 0; //for debugging register communication
-unsigned swiftLinkReceivedCounter = 0; //byte count sent from terminal to frontend
+#endif
+//char swiftLinkReceived[ swiftLinkLogLengthMax ];
+
+unsigned char swiftLinkByte = 0; //incoming byte from frontend
+unsigned char swiftLinkResponse = 0; //byte that comes to frontend from terminal
+unsigned swiftLinkDoNMI = 0;
+//unsigned swiftLinkReceivedCounter = 0; //byte count sent from terminal to frontend
 unsigned swiftLinkBaud = 0;
 unsigned swiftLinkBaudOld = 0;
 u32 swiftLinkRegisterCmd = 0,
-		swiftLinkRegisterCtrl = 0,
-		swiftLinkTriggerDMA = 0;
-//		swiftLinkReleaseDMA = 0;
+		swiftLinkRegisterCtrl = 0;
+//		swiftLinkTriggerDMA = 0;
 bool swiftLinkReleaseDMA = false;
-unsigned swiftLinknetDelayDMADefault = 30000;
 unsigned swiftLinknetDelayDMA = swiftLinknetDelayDMADefault;
 
 #endif
@@ -228,20 +230,24 @@ void CKernelLaunch::Run( void )
 	#ifdef WITH_NET
 	swiftLinkEnabled = false; //too early to enable here
 	swiftLinkByte = 0;
-	//swiftLinkEcho = 0;
 	swiftLinkResponse = 0;
 	swiftLinkDoNMI = 0;
+	#ifdef SW_DEBUG
 	swiftLinkCounter = 0;
 	swiftLinkLog[0] = '\0';
-	swiftLinkReceivedCounter = 0;
-	swiftLinkReceived[0] = '\0';
 	swiftLinkDataReads = 0;
+	//swiftLinkReceivedCounter = 0;
+	//swiftLinkReceived[0] = '\0';
+	#endif
 	swiftLinkRegisterCmd = 0;
+	swiftLinkRegisterCtrl = 0;
 	unsigned keepNMILow = 0;
-	bool isDoubleDirect = false;
+	//bool isDoubleDirect = false;
 	unsigned swiftLinkNmiDelay = 2000;
 	//bool oldConnectState = false;
 	bool firstEntry = false;
+	swiftLinknetDelayDMA = swiftLinknetDelayDMADefault;
+
 
 	pSidekickNet->setCurrentKernel( (char*)"l" );
 	//unsigned netDelay = _playingPSID ? 900000000: 300; //TODO: improve this
@@ -393,10 +399,10 @@ void CKernelLaunch::Run( void )
 					}
 					else if (swiftLinkReleaseDMA)
 					{
-						logger->Write( "sk", LogNotice, "DMA is pulled");
+						//logger->Write( "sk", LogNotice, "DMA is pulled");
 					}
-					else
-						logger->Write( "sk", LogNotice, "netdelay is zero, received count = %i, sw data reads = %i", swiftLinkReceivedCounter, swiftLinkDataReads);
+					//else
+					//	logger->Write( "sk", LogNotice, "netdelay is zero, received count = %i, sw data reads = %i", swiftLinkReceivedCounter, swiftLinkDataReads);
 
 				
 
@@ -461,8 +467,8 @@ void CKernelLaunch::Run( void )
 					//isDoubleDirect = false;
 				//}
 
-				if ( swiftLinkEnabled && swiftLinkReleaseDMA )
-					logger->Write( "sk", LogNotice, "end of netloop - releasing DMA soon");
+//				if ( swiftLinkEnabled && swiftLinkReleaseDMA )
+//					logger->Write( "sk", LogNotice, "end of netloop - releasing DMA soon");
 //				else
 //					logger->Write( "sk", LogNotice, "end of netloop");
 
@@ -494,12 +500,9 @@ void CKernelLaunch::Run( void )
 			 	pSidekickNet->handleModemEmulation( true );
 			}
 			
-
-			
 			if (swiftLinkEnabled && 
 				keepNMILow == 0 && 
 				swiftLinkDoNMI == 0  
-				//&& swiftLinkEcho == 0
 			){
 				if ( swiftLinkResponse == 0 )
 				{
@@ -507,8 +510,8 @@ void CKernelLaunch::Run( void )
 					if ( tmpOutput > 0)
 					{
 						swiftLinkResponse = tmpOutput;
-						swiftLinkReceived[swiftLinkReceivedCounter++] = tmpOutput;
-						swiftLinkReceived[swiftLinkReceivedCounter] = '\0';
+//						swiftLinkReceived[swiftLinkReceivedCounter++] = tmpOutput;
+//						swiftLinkReceived[swiftLinkReceivedCounter] = '\0';
 						swiftLinkDoNMI = swiftLinkNmiDelay;
 					}
 				}
@@ -606,7 +609,6 @@ void CKernelLaunch::FIQHandler (void *pParam)
 				u32 D = 0;
 				bool hasReadByte = false;
 				if ( GET_IO12_ADDRESS == 0x01){ //status register
-//					if ( swiftLinkEcho == 0 && swiftLinkResponse == 0)
 					if ( swiftLinkResponse == 0)
 						D = 16 + 32; //set transmit flag ( +DSR), show that we are ready to get next byte from C64
 					else
@@ -614,14 +616,6 @@ void CKernelLaunch::FIQHandler (void *pParam)
 				}
 				else if ( GET_IO12_ADDRESS == 0x00) //data register
 				{ 
-/*				
-					if (swiftLinkEcho > 0)
-					{
-						D = swiftLinkEcho;
-						swiftLinkEcho = 0;
-					}
-					else
-*/					
 					hasReadByte = true;
 					if ( swiftLinkResponse > 0)
 					{
@@ -630,7 +624,9 @@ void CKernelLaunch::FIQHandler (void *pParam)
 					}
 					else 
 					  D = 72;//fake echo
+					#ifdef SW_DEBUG
 					swiftLinkDataReads++;
+					#endif
 				}
 				if ( GET_IO12_ADDRESS == 0x03) //control register
 				{ 
@@ -643,8 +639,8 @@ void CKernelLaunch::FIQHandler (void *pParam)
 				WRITE_D0to7_TO_BUS( D )
 
 				if ( pSidekickNet->isModemSocketConnected() && 
-				 	(!pSidekickNet->areCharsInInputBuffer() // hasReadByte &&  
-					||	swiftLinknetDelayDMA < 1 )
+				 	(!pSidekickNet->areCharsInInputBuffer()) // hasReadByte &&  
+					//||	swiftLinknetDelayDMA < 1 )
 					//swiftLinkResponse == 0 && //there is no char prepared to be sent to frontend
 				){
 					//FINISH_BUS_HANDLING
@@ -736,13 +732,6 @@ void CKernelLaunch::FIQHandler (void *pParam)
 						swiftLinknetDelayDMA = swiftLinknetDelayDMADefault;
 						return;
 					}
-					/*
-					if ((swiftLinkRegisterCmd) >> (4 & 1) && !pSidekickNet->isModemSocketConnected()) //if echo is on
-					{
-						swiftLinkEcho = D;
-						swiftLinkDoNMI = 10;
-					}
-					*/
 				}
 
 				#ifdef SW_DEBUG
