@@ -32,7 +32,7 @@
 #ifdef WITH_NET
 extern CSidekickNet * pSidekickNet;
 bool swiftLinkEnabled = false; //indicates if the FIQ handler should care for swiftlink register handling
-static const unsigned swiftLinknetDelayDMADefault = 30000;
+static const unsigned swiftLinknetDelayDMADefault = 60000;
 
 #ifdef SW_DEBUG
 static const unsigned swiftLinkLogLengthMax = 64000;
@@ -50,7 +50,6 @@ unsigned swiftLinkBaud = 0;
 unsigned swiftLinkBaudOld = 0;
 u32 swiftLinkRegisterCmd = 0,
 		swiftLinkRegisterCtrl = 0;
-//		swiftLinkTriggerDMA = 0;
 bool swiftLinkReleaseDMA = false;
 unsigned swiftLinknetDelayDMA = swiftLinknetDelayDMADefault;
 
@@ -241,9 +240,12 @@ void CKernelLaunch::Run( void )
 	#endif
 	swiftLinkRegisterCmd = 0;
 	swiftLinkRegisterCtrl = 0;
+	swiftLinkBaud = 0;
+	swiftLinkBaudOld = 0;
+	
 	unsigned keepNMILow = 0;
 	//bool isDoubleDirect = false;
-	unsigned swiftLinkNmiDelay = 2000;
+	unsigned swiftLinkNmiDelay = 10;
 	//bool oldConnectState = false;
 	bool firstEntry = false;
 	swiftLinknetDelayDMA = swiftLinknetDelayDMADefault;
@@ -392,6 +394,8 @@ void CKernelLaunch::Run( void )
 				
 				if (pSidekickNet->getModemEmuType() == 1) //swiftlink emulation is configured by user
 				{
+					swiftLinknetDelayDMA = swiftLinknetDelayDMADefault; //reset to high value
+					
 					if ( !swiftLinkEnabled )
 					{
 						logger->Write( "sk", LogNotice, "swiftLink handling unlocked");
@@ -425,7 +429,8 @@ void CKernelLaunch::Run( void )
 					#endif
 					
 					
-					if  ( swiftLinkEnabled && swiftLinkBaud != swiftLinkBaudOld){
+					if  ( swiftLinkEnabled && swiftLinkBaud != swiftLinkBaudOld)
+					{
 						swiftLinkBaudOld = swiftLinkBaud;
 						unsigned baud = 0;
 						switch ( swiftLinkBaud )
@@ -472,6 +477,7 @@ void CKernelLaunch::Run( void )
 //				else
 //					logger->Write( "sk", LogNotice, "end of netloop");
 
+
 				// warm caches
 				prepareOnReset( true );
 				DELAY(1<<18);
@@ -487,8 +493,8 @@ void CKernelLaunch::Run( void )
 				{
 					swiftLinkReleaseDMA = false;
 					SET_GPIO( bDMA );
-					clrLatchFIQ( LATCH_LED0 );
-					FINISH_BUS_HANDLING
+//					clrLatchFIQ( LATCH_LED0 );
+					//FINISH_BUS_HANDLING
 				}
 
 			} //end of netdelay
@@ -497,7 +503,7 @@ void CKernelLaunch::Run( void )
 			{
 				//oldConnectState = pSidekickNet->isModemSocketConnected();
 				//logger->Write( "sk", LogNotice, "handle modem emu without connection");
-			 	pSidekickNet->handleModemEmulation( true );
+			 	pSidekickNet->handleModemEmulation( true ); //silent - without network access
 			}
 			
 			if (swiftLinkEnabled && 
@@ -506,6 +512,8 @@ void CKernelLaunch::Run( void )
 			){
 				if ( swiftLinkResponse == 0 )
 				{
+					if ( pSidekickNet->areCharsInInputBuffer())
+					{
 					unsigned char tmpOutput = pSidekickNet->getCharFromInputBuffer();
 					if ( tmpOutput > 0)
 					{
@@ -515,16 +523,22 @@ void CKernelLaunch::Run( void )
 						swiftLinkDoNMI = swiftLinkNmiDelay;
 					}
 				}
+				}
 				else
 					swiftLinkDoNMI = swiftLinkNmiDelay;
 			}
 
 			if ( swiftLinkDoNMI > 0 ){
-				//check for disabled receive interrupts
+				/*if (swiftLinkResponse == 0)
+				{
+					swiftLinkDoNMI = 0; // turn it off
+				}	
+				else */
 				if ( swiftLinkDoNMI > 1)
 					swiftLinkDoNMI--;
-//				if ( swiftLinkRegisterCmd & 1 != 0 && swiftLinkDoNMI == 1)
-				if ( swiftLinkDoNMI == 1)
+					//check for disabled receive interrupts
+				if ( (swiftLinkRegisterCmd & 1) != 0 && swiftLinkDoNMI == 1)
+//				if ( swiftLinkDoNMI == 1)
 				{
 						swiftLinkDoNMI = 0;
 						keepNMILow = ( pSidekickNet->usesWLAN() ? 20 : 4);
@@ -639,8 +653,8 @@ void CKernelLaunch::FIQHandler (void *pParam)
 				WRITE_D0to7_TO_BUS( D )
 
 				if ( pSidekickNet->isModemSocketConnected() && 
-				 	(!pSidekickNet->areCharsInInputBuffer()) // hasReadByte &&  
-					//||	swiftLinknetDelayDMA < 1 )
+				 	(!pSidekickNet->areCharsInInputBuffer() // hasReadByte &&  
+					||	swiftLinknetDelayDMA < 1 )
 					//swiftLinkResponse == 0 && //there is no char prepared to be sent to frontend
 				){
 					//FINISH_BUS_HANDLING
@@ -726,7 +740,7 @@ void CKernelLaunch::FIQHandler (void *pParam)
 					{
 						WAIT_UP_TO_CYCLE( WAIT_TRIGGER_DMA );
 						CLR_GPIO( bDMA );
-						setLatchFIQ( LATCH_LED0 );
+						//setLatchFIQ( LATCH_LED0 );
 						FINISH_BUS_HANDLING
 						swiftLinkReleaseDMA = true;
 						swiftLinknetDelayDMA = swiftLinknetDelayDMADefault;
@@ -748,7 +762,7 @@ void CKernelLaunch::FIQHandler (void *pParam)
 				){
 					WAIT_UP_TO_CYCLE( WAIT_TRIGGER_DMA );
 					CLR_GPIO( bDMA );
-					setLatchFIQ( LATCH_LED0 );
+					//setLatchFIQ( LATCH_LED0 );
 					FINISH_BUS_HANDLING
 					swiftLinknetDelayDMA = swiftLinknetDelayDMADefault;
 					swiftLinkReleaseDMA = true;
