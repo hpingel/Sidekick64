@@ -71,7 +71,7 @@
 #define USE_DHCP
 #endif
 // Time configuration
-static const unsigned bestBefore = 1619827200;
+static const unsigned bestBefore = 1622505600;
 static const char NTPServer[]    = "pool.ntp.org";
 static const int nTimeZone       = 1*60;		// minutes diff to UTC
 static const char DRIVE[] = "SD:";
@@ -438,7 +438,7 @@ boolean CSidekickNet::isReturnToMenuRequired(){
 boolean CSidekickNet::isRebootRequested(){
 	if (!m_isRebootRequested)
 		return false;
-	unsigned waitDuration = 5;
+	unsigned waitDuration = 3;
 	signed secondsLeft = waitDuration - (m_pTimer->GetUptime() - m_timeoutCounterStart);
 	if ( secondsLeft < 0 ) secondsLeft = 0;
 	if ( secondsLeft <= 0){
@@ -1532,6 +1532,7 @@ void CSidekickNet::cleanUpModemEmuSocket()
 	setModemEmuBaudrate(1200);
 	m_modemCommandLength = 0;
 	m_modemCommand[0] = '\0';
+	m_socketHost[0] = '\0';
 
 	m_modemInputBufferPos = 0;
 	m_modemInputBufferLength = 0;
@@ -1559,10 +1560,11 @@ int CSidekickNet::readCharFromFrontend( unsigned char * buffer)
 					m_modemOutputBufferPos = 0;
 					//m_modemOutputBuffer = (char * ) "";
 					//m_modemOutputBuffer[0] = '\0';
-				//	logger->Write ("CSidekickNet", LogNotice, "readCharFromFrontend - resetting m_modemOutputBuffer to empty string");
+					logger->Write ("CSidekickNet", LogNotice, "readCharFromFrontend - resetting m_modemOutputBuffer to empty string");
 				}
 				else{
 					buffer[0] = m_modemOutputBuffer[m_modemOutputBufferPos++];
+					logger->Write ("CSidekickNet", LogNotice, "readCharFromFrontend - got '%u' from m_modemOutputBuffer",buffer[0],buffer[0] );
 					return 1;
 				}
 			}
@@ -1584,7 +1586,7 @@ int CSidekickNet::writeCharsToFrontend( unsigned char * buffer, unsigned length)
 				m_modemInputBufferPos = 0;
 				m_modemInputBufferLength = 0;
 				m_modemInputBuffer[0] = '\0';
-				//logger->Write ("CSidekickNet", LogNotice, "writeCharsToFrontend - resetting m_modemInputBuffer to empty string");
+				logger->Write ("CSidekickNet", LogNotice, "writeCharsToFrontend - resetting m_modemInputBuffer to empty string");
 			}
 			//char * tmp;
 			//memcpy( tmp, &buffer[0], length );
@@ -1592,13 +1594,14 @@ int CSidekickNet::writeCharsToFrontend( unsigned char * buffer, unsigned length)
 			logger->Write ("CSidekickNet", LogNotice, "writeCharsToFrontend - adding %u to %u chars", length, m_modemInputBufferLength);
 			
 			//FIXME: add sanity length check
-			for ( int c = 0; c < length; c++)
+			for ( unsigned c = 0; c < length; c++)
 			{
-				m_modemInputBuffer[m_modemInputBufferLength + c] = buffer[c];
+				m_modemInputBuffer[m_modemInputBufferLength] = buffer[c];
+				m_modemInputBufferLength++;
 			}
-			m_modemInputBuffer[m_modemInputBufferLength + length]  = '\0';
+			m_modemInputBuffer[m_modemInputBufferLength]  = '\0';
 			//strcat( m_modemInputBuffer, buffer );
-			m_modemInputBufferLength += length;
+			//m_modemInputBufferLength += length;
 			return length;
 	}
 	buffer[0] = '0';
@@ -1607,18 +1610,16 @@ int CSidekickNet::writeCharsToFrontend( unsigned char * buffer, unsigned length)
 
 unsigned char CSidekickNet::getCharFromInputBuffer()
 {
-	if (m_modemInputBufferLength == 0 || m_modemInputBufferPos == m_modemInputBufferLength ){
+	if (m_modemInputBufferLength == 0 || m_modemInputBufferPos >= m_modemInputBufferLength ){
 			return 0;
 	}
-	unsigned char payload = m_modemInputBuffer[m_modemInputBufferPos];
-	m_modemInputBufferPos++;
-
+	unsigned char payload = m_modemInputBuffer[m_modemInputBufferPos++];
 	return payload;
 }
 
 bool CSidekickNet::areCharsInInputBuffer()
 {
-	return ( m_modemInputBufferLength > 0 && m_modemInputBufferPos +1 < m_modemInputBufferLength );
+	return ( m_modemInputBufferLength > 0 && m_modemInputBufferPos < m_modemInputBufferLength );
 }
 
 bool CSidekickNet::areCharsInOutputBuffer()
@@ -1921,6 +1922,11 @@ void CSidekickNet::handleModemEmulation( bool silent = false)
 			}
 		}
 		
+		//if ( m_modemEmuType == SK_MODEM_SWIFTLINK)
+		//	m_isBBSSocketFirstReceive = true;
+				
+		//logger->Write ("CSidekickNet", LogNotice, "Terminal: now checking if we can receive something");
+		
 		unsigned harvest = 0, attempts = 0; //dummy start value
 		int x = 0;
 		bool again = true;
@@ -1935,10 +1941,15 @@ void CSidekickNet::handleModemEmulation( bool silent = false)
 				harvest += x;
 			}
 
-			if ( m_modemEmuType == SK_MODEM_SWIFTLINK && attempts <= 20 && !m_isBBSSocketFirstReceive)
+			if ( m_modemEmuType == SK_MODEM_SWIFTLINK && attempts <= 10 ) // && !m_isBBSSocketFirstReceive)
 			{
 				again = true;
+				//m_pScheduler->MsSleep(1);
 				//m_pScheduler->Yield();
+			}
+			else if ( m_modemEmuType == SK_MODEM_USERPORT_USB && attempts <= 5)
+			{
+				again = true;
 			}
 			else
 			{
