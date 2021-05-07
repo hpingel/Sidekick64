@@ -685,7 +685,7 @@ u8 CSidekickNet::getCSDBDownloadLaunchType(){
 	u8 type = 0;
 	if ( strcmp( m_CSDBDownloadExtension, "crt") == 0 )
 	{
-		type = 12;
+		type = 99;
 		if (m_loglevel > 2)
 			logger->Write ("CSidekickNet::getCSDBDownloadLaunchType", LogNotice, "CRT detected: >%s<",m_CSDBDownloadExtension);
 	}
@@ -694,7 +694,7 @@ u8 CSidekickNet::getCSDBDownloadLaunchType(){
 #ifndef IS264		
 		//with the new d2ef approach available within Sidekick we try to launch the D64
 		//as an dynamically created EF crt!
-		type = 12;
+		type = 99;
 		extern int createD2EF( unsigned char *diskimage, int imageSize, unsigned char *cart, int build, int mode, int autostart );
 		unsigned char *cart = new unsigned char[ 1024 * 1025 ];
 		u32 crtSize = createD2EF( prgDataLaunch, prgSizeLaunch, cart, 2, 0, true );

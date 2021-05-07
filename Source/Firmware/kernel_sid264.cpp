@@ -253,6 +253,7 @@ unsigned long long cycleCountC64;
 #define SAMPLERATE 44100
 u32 SAMPLERATE_ADJUSTED = SAMPLERATE;
 u32 trackSampleProgress;
+u32 fillSoundBuffer;
 
 #ifdef COMPILE_MENU
 extern CLogger			*logger;
