@@ -1039,7 +1039,7 @@ int main( void )
 	extern void KernelKernalRun( CGPIOPinFIQ m_InputPin, CKernelMenu *kernelMenu, char *FILENAME );
 	//extern void KernelGeoRAMRun( CGPIOPinFIQ m_InputPin, CKernelMenu *kernelMenu ); unused
 	extern void KernelLaunchRun( CGPIOPinFIQ m_InputPin, CKernelMenu *kernelMenu, const char *FILENAME, bool hasData = false, u8 *prgDataExt = NULL, u32 prgSizeExt = 0, u32 c128PRG = 0, u32 playingPSID = 0 );
-	extern void KernelEFRun( CGPIOPinFIQ m_InputPin, CKernelMenu *kernelMenu, const char *FILENAME, const char *menuItemStr, , bool hasData = false, u8 *crtDataExt = NULL, u32 crtSizeExt = 0, const char *FILENAME_KERNAL = NULL );
+	extern void KernelEFRun( CGPIOPinFIQ m_InputPin, CKernelMenu *kernelMenu, const char *FILENAME, const char *menuItemStr, bool hasData = false, u8 *crtDataExt = NULL, u32 crtSizeExt = 0, const char *FILENAME_KERNAL = NULL );
 	extern void KernelFC3Run( CGPIOPinFIQ m_InputPin, CKernelMenu *kernelMenu, char *FILENAME = NULL, const char *FILENAME_KERNAL = NULL );
 	extern void KernelKCSRun( CGPIOPinFIQ m_InputPin, CKernelMenu *kernelMenu, char *FILENAME = NULL, const char *FILENAME_KERNAL = NULL );
 	extern void KernelSS5Run( CGPIOPinFIQ m_InputPin, CKernelMenu *kernelMenu, char *FILENAME = NULL, const char *FILENAME_KERNAL = NULL );
@@ -1166,7 +1166,7 @@ int main( void )
 				KernelEFRun( kernel.m_InputPin, &kernel, FILENAME, menuItemStr, false, NULL, 0 );else
 		 		KernelEFRun( kernel.m_InputPin, &kernel, FILENAME, menuItemStr, false, NULL, 0, filenameKernal ); 
 			break;
-		case 11:
+		case 99:
 			if ( subHasKernal == -1 )
 				KernelEFRun( kernel.m_InputPin, &kernel, FILENAME, menuItemStr, true, prgDataLaunch, prgSizeLaunch );else
 				KernelEFRun( kernel.m_InputPin, &kernel, FILENAME, menuItemStr, true, prgDataLaunch, prgSizeLaunch, filenameKernal );
