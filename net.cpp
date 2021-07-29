@@ -112,10 +112,12 @@ CSidekickNet::CSidekickNet(
 		m_pInterrupt(pInterruptSystem),
 		m_pTimer(pTimer),
 		m_EMMC( *pEmmcDevice),
+#ifdef WITH_USB_SERIAL
 		m_DeviceNameService( pDeviceNameService ),
+#endif
 		m_kMenu(pKernelMenu),
 		m_Net (0),
-#ifdef WITH_WLAN		
+#ifdef WITH_WLAN
 		m_WLAN (0),
 		m_WPASupplicant (0),
 		m_useWLAN (true),
@@ -128,8 +130,10 @@ CSidekickNet::CSidekickNet(
 #endif
 		m_pBBSSocket(0),
 		m_WebServer(0),
+#ifdef WITH_USB_SERIAL
 		m_pUSBSerial(0),
 		m_pUSBMidi(0),
+#endif
 		m_isFSMounted( false ),
 		m_isActive( false ),
 		m_isPrepared( false ),
@@ -239,7 +243,9 @@ boolean CSidekickNet::Initialize()
 	}
 	while (!m_Net->IsRunning () && sleepCount < sleepLimit)
 	{
+		#ifdef WITH_USB_SERIAL
 		usbPnPUpdate();
+		#endif
 		m_pScheduler->Yield ();
 		m_pScheduler->MsSleep(100);
 		sleepCount ++;
@@ -315,6 +321,8 @@ boolean CSidekickNet::Initialize()
 	return true;
 }
 
+#ifdef WITH_USB_SERIAL
+
 void CSidekickNet::usbPnPUpdate()
 {
 	boolean bUpdated = m_USBHCI->UpdatePlugAndPlay();
@@ -346,6 +354,7 @@ void CSidekickNet::usbPnPUpdate()
 		}
 	}
 }
+#endif
 
 void CSidekickNet::EnableWebserver(){
 	if (m_loglevel > 1)
@@ -753,9 +762,12 @@ u8 CSidekickNet::getCSDBDownloadLaunchType(){
 	return type;
 }
 
+#ifdef WITH_USB_SERIAL
+
 boolean CSidekickNet::isUsbUserportModemConnected(){
 		return m_pUSBSerial != 0;
 }
+#endif
 
 void CSidekickNet::handleQueuedNetworkAction()
 {
@@ -1509,6 +1521,7 @@ void CSidekickNet::setC128Mode()
 
 void CSidekickNet::setModemEmuBaudrate( unsigned rate )
 {
+	#ifdef WITH_USB_SERIAL
 	if ( m_modemEmuType == SK_MODEM_USERPORT_USB )
 	{
 		m_pUSBSerial->SetBaudRate(rate);
@@ -1517,6 +1530,7 @@ void CSidekickNet::setModemEmuBaudrate( unsigned rate )
 	{
 		//...
 	}
+	#endif
 }
 
 void CSidekickNet::cleanUpModemEmuSocket()
@@ -1546,11 +1560,14 @@ void CSidekickNet::cleanUpModemEmuSocket()
 
 int CSidekickNet::readCharFromFrontend( unsigned char * buffer)
 {
+		#ifdef WITH_USB_SERIAL
 		if ( m_modemEmuType == SK_MODEM_USERPORT_USB )
 		{
 			return m_pUSBSerial->Read(buffer, 1);
 		}
-		else if ( m_modemEmuType == SK_MODEM_SWIFTLINK )
+		else 
+		#endif
+		if ( m_modemEmuType == SK_MODEM_SWIFTLINK )
 		{
 			if (m_modemOutputBufferLength > 0)
 			{
@@ -1575,11 +1592,14 @@ int CSidekickNet::readCharFromFrontend( unsigned char * buffer)
 
 int CSidekickNet::writeCharsToFrontend( unsigned char * buffer, unsigned length)
 {
+	#ifdef WITH_USB_SERIAL
 	if ( m_modemEmuType == SK_MODEM_USERPORT_USB )
 	{
 		return m_pUSBSerial->Write(buffer, length);
 	}
-	else if ( m_modemEmuType == SK_MODEM_SWIFTLINK )
+	else 
+	#endif
+	if ( m_modemEmuType == SK_MODEM_SWIFTLINK )
 	{
 			if ( m_modemInputBufferLength > 0 && m_modemInputBufferPos == m_modemInputBufferLength )
 			{
