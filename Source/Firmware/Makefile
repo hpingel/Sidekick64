@@ -1,7 +1,7 @@
 #
 # Makefile
 #
-EXTRACLEAN = OLED/*.o resid/*.o
+EXTRACLEAN = OLED/*.o resid/*.o OLED/*.d resid/*.d PSID/libpsid64/*.o PSID/psid64/*.o D2EF/*.o
 
 CIRCLEHOME = ../..
 OBJS = lowlevel_arm64.o gpio_defs.o helpers.o latch.o oled.o ./OLED/num2str.o 
