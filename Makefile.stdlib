@@ -49,7 +49,7 @@ LIBS	= $(CIRCLEHOME)/addon/vc4/sound/libvchiqsound.a \
         $(CIRCLEHOME)/addon/linux/liblinuxemu.a
 
 ifeq ($(net), on)
-CPPFLAGS += -DWITH_NET=1 
+CPPFLAGS += -DWITH_NET=1 -DWITH_USB_SERIAL=1 
 OBJS += net.o webserver.o
 LIBS += $(CIRCLEHOME)/lib/net/libnet.a
 ifeq ($(wlan), on)
