@@ -43,6 +43,10 @@ static const char DRIVE[] = "SD:";
 //static 
 const u8 RPIMENUPRG[] =
 {
+//Caution: Whenever upstream rpimenu.prg changes we have to manually call converttool!
+//./webcontent/converttool -b rpimenu.prg > rpimenu_prg.h
+//This has to be put into the workflow
+
 #include "C64Side/rpimenu_prg.h"
 };
 
@@ -415,7 +419,7 @@ boolean CKernelMenu::Initialize( void )
 	readFile( logger, (char*)DRIVE, (char*)FILENAME_PRG, prgData, &prgSize );
 	#else
 	prgSize = sizeof RPIMENUPRG;
-  memcpy( &prgData[0], RPIMENUPRG, prgSize );
+	memcpy( &prgData[0], RPIMENUPRG, prgSize );
 	logger->Write( "SidekickMenu", LogNotice, "rpimenu.prg was read from memory." );
 	#endif
 	
@@ -553,7 +557,8 @@ boolean CKernelMenu::handleNetwork( boolean doRender)
 	
 	if ( doRender ){
 		renderC64(); //puts the active menu page into the raspi memory
-		doCacheWellnessTreatment();
+		warmCache( pFIQ );
+		//doCacheWellnessTreatment();
 	}
 	m_timeStampOfLastNetworkEvent = 0;
 	enableFIQInterrupt();
@@ -714,7 +719,9 @@ void CKernelMenu::Run( void )
 			//handleC64 - processes the key the user has pressed to determine how 
 			//the screen has to change (e.g. jump from page a to page b)
 			handleC64( lastChar, &launchKernel, FILENAME, filenameKernal, menuItemStr, &startForC128 );
+			lastChar = 0xfffffff;
 			refresh++;
+			//temperature = m_CPUThrottle.GetTemperature();
 			renderC64(); //puts the active menu page into the raspi memory
 			warmCache( pFIQ );
 			#endif
@@ -1170,6 +1177,7 @@ int main( void )
 			if ( subHasKernal == -1 )
 				KernelEFRun( kernel.m_InputPin, &kernel, FILENAME, menuItemStr, true, prgDataLaunch, prgSizeLaunch );else
 				KernelEFRun( kernel.m_InputPin, &kernel, FILENAME, menuItemStr, true, prgDataLaunch, prgSizeLaunch, filenameKernal );
+			break;
 		case 6:
 			if ( subHasKernal == -1 )
 				KernelFC3Run( kernel.m_InputPin, &kernel ); else
