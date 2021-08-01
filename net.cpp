@@ -1318,7 +1318,7 @@ void CSidekickNet::updateSktpScreenContent(){
 				#ifndef WITHOUT_STDLIB
 				//workaround: tolower is only available with stdlib!
 				//enforce lowercase for extension because we compare it a lot
-				for(int i = 0; extension[i]; i++){
+				for(int i = 0; i < 3; i++){
 				  extension[i] = tolower(extension[i]);
 				}
 				#endif
@@ -1337,9 +1337,9 @@ void CSidekickNet::updateSktpScreenContent(){
 #endif
 					else if ( strcmp(extension,"crt") == 0)
 #ifndef IS264
-						savePath.Append( (const char *) "CART264/" );
-#else
 						savePath.Append( (const char *) "CRT/" );
+#else
+						savePath.Append( (const char *) "CART264/" );
 #endif
 					else if ( strcmp(extension,"d64") == 0)
 #ifndef IS264
