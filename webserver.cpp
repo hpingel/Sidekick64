@@ -32,7 +32,7 @@
 #define MAX_CONTENT_SIZE	40000
 
 extern u32 prgSizeLaunch;
-extern unsigned char prgDataLaunch[ 1025*1024 ] AAA;
+extern unsigned char prgDataLaunch[ 1027*1024 ] AAA;
 
 // our content
 static const char s_Index[] =

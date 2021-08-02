@@ -91,7 +91,7 @@ u32 prgSizeLaunch AAA;
 //increasing size of prgDataLaunch so that we
 //can either store a prg or a crt in it
 //unsigned char prgDataLaunch[ 65536 ] AAA;
-unsigned char prgDataLaunch[ 1025*1024 ] AAA;
+unsigned char prgDataLaunch[ 1027*1024 ] AAA;
 
 // CBM80 to launch the menu
 static unsigned char cart_pool[ 16384 + 128 ] AAA;

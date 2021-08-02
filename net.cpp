@@ -95,7 +95,7 @@ static const char CSDB_HOST[] = "csdb.dk";
 
 //temporary hack
 extern u32 prgSizeLaunch;
-extern unsigned char prgDataLaunch[ 1025*1024 ] AAA;
+extern unsigned char prgDataLaunch[ 1027*1024 ] AAA;
 #ifdef WITH_RENDER
   extern unsigned char logo_bg_raw[32000];
 #endif
@@ -156,10 +156,6 @@ CSidekickNet::CSidekickNet(
 		m_isC128( false ),
 		m_isBBSSocketConnected(false),
 		m_isBBSSocketFirstReceive(true),
-		m_CSDBDownloadPath( (char * ) ""),
-		m_CSDBDownloadExtension( (char * ) ""),
-		m_CSDBDownloadFilename( (char * ) ""),
-		m_CSDBDownloadSavePath( (char *)"" ),
 		m_bSaveCSDBDownload2SD( false ),
 		m_PiModel( m_pMachineInfo->Get()->GetMachineModel () ),
 		//m_SidekickKernelUpdatePath(0),
@@ -176,6 +172,7 @@ CSidekickNet::CSidekickNet(
 		m_sysMonHeapFree(0),
 		m_sysMonCPUTemp(0),
 		m_loglevel(2),
+		m_CSDBDownloadSavePath((char *) ""), 
 		m_currentKernelRunning((char *) "-"),
 		m_oldSecondsLeft(0),
 		m_modemCommand( (char * ) ""),
@@ -198,6 +195,11 @@ CSidekickNet::CSidekickNet(
 	m_modemInputBuffer[0] = '\0';
 	m_modemOutputBuffer[0] = '\0';
 	m_socketHost[0] = '\0';
+	
+	m_CSDBDownloadPath[0] = '\0';
+	m_CSDBDownloadExtension[0] = '\0';
+	m_CSDBDownloadFilename[0] = '\0';
+	
 }
 
 void CSidekickNet::setErrorMsgC64( char * msg, boolean sticky = true ){ 
@@ -687,7 +689,7 @@ void CSidekickNet::queueSktpRefresh( unsigned timeout )
 }
 
 char * CSidekickNet::getCSDBDownloadFilename(){
-	return m_CSDBDownloadFilename;
+	return (char *) m_CSDBDownloadFilename;
 }
 
 u8 CSidekickNet::getCSDBDownloadLaunchType(){
@@ -705,11 +707,13 @@ u8 CSidekickNet::getCSDBDownloadLaunchType(){
 		//as an dynamically created EF crt!
 		type = 99;
 		extern int createD2EF( unsigned char *diskimage, int imageSize, unsigned char *cart, int build, int mode, int autostart );
-		unsigned char *cart = new unsigned char[ 1024 * 1025 ];
+		unsigned char *cart = new unsigned char[ 1024 * 1027 ];
 		u32 crtSize = createD2EF( prgDataLaunch, prgSizeLaunch, cart, 2, 0, true );
 		memcpy( &prgDataLaunch[0], cart, crtSize );
 		prgSizeLaunch = crtSize;
-		m_CSDBDownloadFilename = (char *)"SD:C64/temp.crt"; //this is only an irrelevant dummy name ending wih crt
+		//this is only an irrelevant dummy name ending wih crt that will be used to try to load a tga file
+		memcpy(m_CSDBDownloadFilename, "SD:C64/temp.crt", 15); 
+		m_CSDBDownloadFilename[15] = '\0';
 #else
 		type = 0; //unused, we only save the file (on Sidekick 264)
 #endif
@@ -926,8 +930,11 @@ void CSidekickNet::saveDownload2SD()
 
 void CSidekickNet::prepareLaunchOfUpload( char * ext ){
 	m_isDownloadReadyForLaunch = true;
-	m_CSDBDownloadExtension = ext;
-	m_CSDBDownloadFilename = (char *)"http_upload";
+	memcpy(m_CSDBDownloadExtension,ext,3);
+	m_CSDBDownloadExtension[3]='\0';
+	memcpy(m_CSDBDownloadFilename,"http_upload",11);
+	m_CSDBDownloadFilename[11]='\0';
+	
   //TODO:
 	//m_CSDBDownloadSavePath
 	//if already in launcher kernel (l), leave it
@@ -944,9 +951,11 @@ void CSidekickNet::cleanupDownloadData()
 	  clearErrorMsg(); //on c64screen, kernel menu
 	  redrawSktpScreen();
   #endif
-	m_CSDBDownloadSavePath = "";
-	m_CSDBDownloadPath = (char*)"";
-	m_CSDBDownloadFilename = (char*)""; // this is used from kernel_menu to display name on screen
+	m_CSDBDownloadPath[0] = '\0';
+	m_CSDBDownloadExtension[0] = '\0';
+	// this is used from kernel_menu to display name on screen or to load a tga image
+	m_CSDBDownloadFilename[0] = '\0';
+	m_CSDBDownloadSavePath = (char *)"";
 	m_bSaveCSDBDownload2SD = false;
 	m_isDownloadReadyForLaunch = false;
 	requireCacheWellnessTreatment();
@@ -1112,7 +1121,7 @@ boolean CSidekickNet::UpdateTime(void)
 void CSidekickNet::getCSDBBinaryContent( ){
 	assert (m_isActive);
 	unsigned iFileLength = 0;
-	unsigned char prgDataLaunchTemp[ 1025*1024 ]; // TODO do we need this?
+	unsigned char prgDataLaunchTemp[ 1027*1024 ]; // TODO do we need this?
 	if ( HTTPGet ( m_CSDBDownloadHost, (char *) m_CSDBDownloadPath, (char *) prgDataLaunchTemp, iFileLength)){
 		if (m_loglevel > 3)
 			logger->Write( "getCSDBBinaryContent", LogNotice, "Got stuff via HTTPS, now doing memcpy");
@@ -1266,9 +1275,6 @@ void CSidekickNet::updateSktpScreenContent(){
 				u8 tmpUrlLength = pResponseBuffer[1];
 				u8 tmpFilenameLength = pResponseBuffer[2];
 				m_bSaveCSDBDownload2SD = ((int)pResponseBuffer[3] == 1);
-				char CSDBDownloadPath[256];
-				char CSDBFilename[256];
-				char extension[3];
 				char hostName[256];
 				u8 pathStart;
 				u8 pathStartSuffix = 0;
@@ -1307,58 +1313,54 @@ void CSidekickNet::updateSktpScreenContent(){
 					m_CSDBDownloadHost = m_CSDB;
 				}
 
-				memcpy( CSDBDownloadPath, &pResponseBuffer[ pathStart ], tmpUrlLength - pathStart + 4);
-				CSDBDownloadPath[tmpUrlLength - pathStart + 4] = '\0';
-//				logger->Write( "updateSktpScreenContent", LogNotice, "download path: >%s<", CSDBDownloadPath);
-				memcpy( CSDBFilename, &pResponseBuffer[ 4 + tmpUrlLength  ], tmpFilenameLength );
-				CSDBFilename[tmpFilenameLength] = '\0';
-//				logger->Write( "updateSktpScreenContent", LogNotice, "filename: >%s<", CSDBFilename);
-				memcpy( extension, &pResponseBuffer[ m_sktpResponseLength -3 ], 3);
-				extension[3] = '\0';
+				memcpy( m_CSDBDownloadPath, &pResponseBuffer[ pathStart ], tmpUrlLength - pathStart + 4);
+				m_CSDBDownloadPath[tmpUrlLength - pathStart + 4] = '\0';
+//				logger->Write( "updateSktpScreenContent", LogNotice, "download path: >%s<", m_CSDBDownloadPath);
+				memcpy( m_CSDBDownloadFilename, &pResponseBuffer[ 4 + tmpUrlLength  ], tmpFilenameLength );
+				m_CSDBDownloadFilename[tmpFilenameLength] = '\0';
+//				logger->Write( "updateSktpScreenContent", LogNotice, "filename: >%s<", m_CSDBDownloadFilename);
+				memcpy( m_CSDBDownloadExtension, &pResponseBuffer[ m_sktpResponseLength -3 ], 3);
+				m_CSDBDownloadExtension[3] = '\0';
 				#ifndef WITHOUT_STDLIB
 				//workaround: tolower is only available with stdlib!
 				//enforce lowercase for extension because we compare it a lot
 				for(int i = 0; i < 3; i++){
-				  extension[i] = tolower(extension[i]);
+				  m_CSDBDownloadExtension[i] = tolower(m_CSDBDownloadExtension[i]);
 				}
 				#endif
-
 //				logger->Write( "updateSktpScreenContent", LogNotice, "extension: >%s<", extension);
 
 				CString savePath;
 				if (m_bSaveCSDBDownload2SD)
 				{
 					savePath = "SD:";
-					if ( strcmp(extension,"prg") == 0)
+					if ( strcmp(m_CSDBDownloadExtension,"prg") == 0)
 #ifndef IS264
 						savePath.Append( (const char *) "PRG/" );
 #else
 						savePath.Append( (const char *) "PRG264/" );
 #endif
-					else if ( strcmp(extension,"crt") == 0)
+					else if ( strcmp(m_CSDBDownloadExtension,"crt") == 0)
 #ifndef IS264
 						savePath.Append( (const char *) "CRT/" );
 #else
 						savePath.Append( (const char *) "CART264/" );
 #endif
-					else if ( strcmp(extension,"d64") == 0)
+					else if ( strcmp(m_CSDBDownloadExtension,"d64") == 0)
 #ifndef IS264
 						savePath.Append( (const char *) "D64/" );
 #else
 						savePath.Append( (const char *) "D264/" );
 #endif
-					else if ( strcmp(extension,"sid") == 0)
+					else if ( strcmp(m_CSDBDownloadExtension,"sid") == 0)
 						savePath.Append( (const char *) "SID/" );
-					savePath.Append(CSDBFilename);
+					savePath.Append(m_CSDBDownloadFilename);
 				}
 				m_sktpResponseLength = 1;
 				m_sktpScreenContent = (unsigned char * ) pResponseBuffer;
 				m_sktpScreenPosition = 1;
 				m_isCSDBDownloadQueued = true;
 				m_queueDelay = 0;
-				m_CSDBDownloadPath = CSDBDownloadPath;
-				m_CSDBDownloadExtension = extension;
-				m_CSDBDownloadFilename = CSDBFilename;
 				m_CSDBDownloadSavePath = savePath;
 				//m_sktpResponseType = 1; //just to clear the screen
 			}

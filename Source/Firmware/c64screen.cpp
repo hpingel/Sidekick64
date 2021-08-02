@@ -88,7 +88,14 @@ extern CSidekickNet * pSidekickNet;
 #endif
 
 extern u32 prgSizeLaunch;
-extern unsigned char prgDataLaunch[ 65536 ];
+//extern unsigned char prgDataLaunch[ 65536 ];
+//increasing size of prgDataLaunch so that we
+//can either store a prg or a crt in it
+//unsigned char prgDataLaunch[ 65536 ] AAA;
+//example: easy flash maniac mansion mercury crt
+//has a size of 1.050.688 Bytes
+extern unsigned char prgDataLaunch[ 1027*1024 ] AAA;
+
 
 static const char DRIVE[] = "SD:";
 static const char SETTINGS_FILE[] = "SD:C64/special.cfg";
@@ -1260,7 +1267,7 @@ void handleC64( int k, u32 *launchKernel, char *FILENAME, char *filenameKernal, 
 			typeInName = 0;
 			extern int createD2EF( unsigned char *diskimage, int imageSize, unsigned char *cart, int build, int mode, int autostart );
 
-			unsigned char *cart = new unsigned char[ 1024 * 1025 ];
+			unsigned char *cart = new unsigned char[ 1024 * 1027 ];
 			unsigned char *diskimage = new unsigned char[ 1024 * 1024 ];
 			u32 diSize = 0, crtSize = 0;
 
@@ -1649,9 +1656,10 @@ void handleC64( int k, u32 *launchKernel, char *FILENAME, char *filenameKernal, 
 
 						if ( readFile( logger, DRIVE, path, sidData, &sidSize ) )
 						{
+							logger->Write( "exec", LogNotice, "bytes: '%d'", sidSize );
 						}
-
-						logger->Write( "exec", LogNotice, "bytes: '%d'", sidSize );
+						else
+							logger->Write( "exec", LogError, "could not load sid '%s'", path );
 
 						Psid64 *psid64 = new Psid64();
 

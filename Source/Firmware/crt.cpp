@@ -714,12 +714,12 @@ void writeChanges2CRTFile( CLogger *logger, const char *DRIVE, const char *FILEN
 	if ( result != FR_OK )
 		logger->Write( "RaspiFlash", LogPanic, "Cannot open file: %s", FILENAME );
 
-	if ( filesize > 1025 * 1024 )
-		filesize = 1025 * 1024;
+	if ( filesize > 1027 * 1024 )
+		filesize = 1027 * 1024;
 
 	// read data in one big chunk
 	u32 nBytesRead;
-	u8 rawCRT[ 1025 * 1024 ];
+	u8 rawCRT[ 1027 * 1024 ];
 	result = f_read( &file, rawCRT, filesize, &nBytesRead );
 
 	if ( result != FR_OK )

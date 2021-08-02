@@ -238,9 +238,9 @@ private:
 	char * m_networkActionStatusMsg;
 	unsigned char * m_sktpScreenContent;
 	char * m_sktpSessionID;
-	char * m_CSDBDownloadPath;
-	char * m_CSDBDownloadExtension;
-	char * m_CSDBDownloadFilename;
+	char m_CSDBDownloadPath[256];
+	char m_CSDBDownloadExtension[4];
+	char m_CSDBDownloadFilename[256];
 	remoteHTTPTarget m_CSDBDownloadHost;
 	CString m_CSDBDownloadSavePath;
 	boolean m_bSaveCSDBDownload2SD;

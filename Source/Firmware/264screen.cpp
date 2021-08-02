@@ -71,7 +71,12 @@ extern CSidekickNet * pSidekickNet;
 
 // todo 
 extern u32 prgSizeLaunch;
-extern unsigned char prgDataLaunch[ 65536 ];
+//extern unsigned char prgDataLaunch[ 65536 ];
+//increasing size of prgDataLaunch so that we
+//can either store a prg or a crt in it
+//unsigned char prgDataLaunch[ 65536 ] AAA;
+extern unsigned char prgDataLaunch[ 1027*1024 ] AAA;
+
 
 static const char DRIVE[] = "SD:";
 static const char SETTINGS_FILE[] = "SD:C16/special.cfg";
