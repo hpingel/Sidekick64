@@ -757,6 +757,12 @@ u8 CSidekickNet::getCSDBDownloadLaunchType(){
 		if (m_loglevel > 2)
 			logger->Write ("CSidekickNet::getCSDBDownloadLaunchType", LogNotice, "SID detected: >%s<",m_CSDBDownloadExtension);
 	}
+	else if ( strcmp( m_CSDBDownloadExtension, "bin" ) == 0 && m_isC128)
+	{
+		type = 95; //C128 U36 ROM in memory
+		if (m_loglevel > 2)
+			logger->Write ("CSidekickNet::getCSDBDownloadLaunchType", LogNotice, "BIN detected: >%s<",m_CSDBDownloadExtension);
+	}
 	else //prg
 	{
 		type = 40;

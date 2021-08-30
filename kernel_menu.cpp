@@ -1055,7 +1055,7 @@ int main( void )
 	extern void KernelSIDRun( CGPIOPinFIQ m_InputPin, CKernelMenu *kernelMenu, const char *FILENAME, bool hasData = false, u8 *prgDataExt = NULL, u32 prgSizeExt = 0, u32 c128PRG = 0, u32 playingPSID = 0 );
 	extern void KernelSIDRun8( CGPIOPinFIQ m_InputPin, CKernelMenu *kernelMenu, const char *FILENAME, bool hasData = false, u8 *prgDataExt = NULL, u32 prgSizeExt = 0, u32 c128PRG = 0 );
 	extern void KernelRKLRun( CGPIOPinFIQ	m_InputPin, CKernelMenu *kernelMenu, const char *FILENAME_KERNAL, const char *FILENAME, const char *FILENAME_RAM, u32 sizeRAM, bool hasData = false, u8 *prgDataExt = NULL, u32 prgSizeExt = 0, u32 c128PRG = 0 );
-	extern void KernelCartRun128( CGPIOPinFIQ	m_InputPin, CKernelMenu *kernelMenu, const char *FILENAME, const char *menuItemStr );
+	extern void KernelCartRun128( CGPIOPinFIQ	m_InputPin, CKernelMenu *kernelMenu, const char *FILENAME, const char *menuItemStr, bool hasData = false, u8 *crtDataExt = NULL, u32 crtSizeExt = 0 );
 
 
 	extern u32 octaSIDMode;
@@ -1218,7 +1218,8 @@ int main( void )
 				KernelSIDRun( kernel.m_InputPin, &kernel, NULL );
 			break;
 		case 9:
-			KernelCartRun128( kernel.m_InputPin, &kernel, FILENAME, menuItemStr );
+		case 95:
+			KernelCartRun128( kernel.m_InputPin, &kernel, FILENAME, menuItemStr, (launchKernel == 95), prgDataLaunch, prgSizeLaunch );
 			break;
 		case 10:
 			//logger->Write( "RaspiMenu", LogNotice, "filename georam: %s", FILENAME );
