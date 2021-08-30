@@ -85,13 +85,21 @@ static const char CSDB_HOST[] = "csdb.dk";
 #define SK_MODEM_SWIFTLINK	1
 #define SK_MODEM_USERPORT_USB 2
 
-
-
 #ifdef WITH_WLAN
 #define DRIVE		"SD:"
 #define FIRMWARE_PATH	DRIVE "/wlan/"		// wlan firmware files must be provided here
 #define CONFIG_FILE	FIRMWARE_PATH "/wpa_supplicant.conf"
 #endif
+
+//static 
+const u8 WEBUPLOADPRG[] =
+{
+//Caution: Whenever upstream webUploadMode.prg changes we have to manually call converttool!
+//./webcontent/converttool -b webUploadMode.prg > webUploadMode.h
+//This has to be put into the workflow
+
+#include "C64Side/webUploadMode.h"
+};
 
 //temporary hack
 extern u32 prgSizeLaunch;
@@ -1526,6 +1534,17 @@ void CSidekickNet::setC128Mode()
 {
 	m_isC128 = true;
 }
+
+void CSidekickNet::enterWebUploadMode(){
+	
+	//if not in menu kernel (l), leave it
+	if ( strcmp( m_currentKernelRunning, "m" ) == 0){
+		prgSizeLaunch = sizeof WEBUPLOADPRG;
+		memcpy( prgDataLaunch, WEBUPLOADPRG, prgSizeLaunch);
+		m_isDownloadReadyForLaunch = true;
+	}
+}
+
 
 void CSidekickNet::setModemEmuBaudrate( unsigned rate )
 {
