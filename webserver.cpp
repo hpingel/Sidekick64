@@ -134,6 +134,7 @@ CHTTPDaemon *CWebServer::CreateWorker (CNetSubSystem *pNetSubSystem, CSocket *pS
 				
 				pMsg = "Now rebooting into new kernel...";
 			}
+/*			
 			else if ( strstr (pPartHeader, "filename=\"rpimenu.prg") != 0  && nPartLength > 0 )
 			{
 				#ifndef IS264
@@ -148,10 +149,11 @@ CHTTPDaemon *CWebServer::CreateWorker (CNetSubSystem *pNetSubSystem, CSocket *pS
 				
 				pMsg = "Now uploading new rpimenu.prg to folder C64 and rebooting.";
 			}
+*/			
 			else if (nPartLength > 0)
 			{
 				char * type = "";
-				if ( strstr (pPartHeader, ".PRG\"") || strstr (pPartHeader, ".prg\""))
+				if ( strstr (pPartHeader, ".prg\"") || strstr (pPartHeader, ".PRG\""))
 				 	type = "prg";
 				if ( strstr (pPartHeader, ".d64\"") || strstr (pPartHeader, ".D64\""))
 					type = "d64";
@@ -159,13 +161,15 @@ CHTTPDaemon *CWebServer::CreateWorker (CNetSubSystem *pNetSubSystem, CSocket *pS
 					type = "crt";
 				if ( strstr (pPartHeader, ".sid\"") || strstr (pPartHeader, ".SID\""))
 					type = "sid";
+				if ( strstr (pPartHeader, ".bin\"") || strstr (pPartHeader, ".BIN\""))
+					type = "bin";
 					
 				if (strcmp(type,"") != 0)
 				{
 					prgSizeLaunch = nPartLength;
 					memcpy( prgDataLaunch, pPartData, nPartLength);
 					m_SidekickNet->prepareLaunchOfUpload( type );
-					pMsg = "Now launching PRG/SID/D64/CRT...";
+					pMsg = "Now launching payload...";
 				}
 				else
 				{

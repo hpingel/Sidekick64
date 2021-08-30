@@ -46,7 +46,7 @@ static u32 releaseDMA = 0;
 #ifdef COMPILE_MENU
 void KernelCart128FIQHandler( void *pParam );
 
-void KernelCartRun128( CGPIOPinFIQ	m_InputPin, CKernelMenu *kernelMenu, const char *FILENAME, const char *menuItemStr )
+void KernelCartRun128( CGPIOPinFIQ m_InputPin, CKernelMenu *kernelMenu, const char *FILENAME, const char *menuItemStr, bool hasData = false, u8 *crtDataExt = NULL, u32 crtSizeExt = 0 )
 #else
 void CKernelCart128::Run( void )
 #endif
@@ -160,6 +160,15 @@ void CKernelCart128::Run( void )
 		tftSendFramebuffer16BitImm( tftFrameBuffer );
 	} 
 
+	if (!hasData){
+		u32 size;
+		memset( externalROM, 0, 32768 );
+		readFile( logger, DRIVE, FILENAME, externalROM, &size );
+	}
+	else{
+		memcpy( externalROM, crtDataExt, crtSizeExt );
+	}
+
 	// set GAME and EXROM high = inactive (+ set NMI, DMA and latch outputs)
 	u32 set = bNMI | bDMA | bEXROM | bGAME, clr = 0;
 	SETCLR_GPIO( set, clr )
@@ -259,4 +268,3 @@ void CKernelCart128::FIQHandler( void *pParam )
 
 	OUTPUT_LATCH_AND_FINISH_BUS_HANDLING
 }
-
