@@ -39,9 +39,15 @@ static const char s_Index[] =
 #include "webcontent/index.h"
 ;
 
+static const char s_Upload[] =
+#include "webcontent/upload.h"
+;
+
+/*
 static const char s_Tuning[] =
 #include "webcontent/tuning.h"
 ;
+*/
 
 static const u8 s_Style[] =
 #include "webcontent/style.h"
@@ -92,8 +98,19 @@ CHTTPDaemon *CWebServer::CreateWorker (CNetSubSystem *pNetSubSystem, CSocket *pS
 	const u8 *pContent = 0;
 	unsigned nLength = 0;
 
-	if (   strcmp (pPath, "/") == 0
+	if ( strcmp (pPath, "/") == 0
 	    || strcmp (pPath, "/index.html") == 0)
+	{
+		const char *pMsg = 0;		
+		pMsg = "Welcome!";
+		String.Format (s_Index, pMsg, CIRCLE_VERSION_STRING,
+						 CMachineInfo::Get ()->GetMachineName ());
+
+		pContent = (const u8 *) (const char *) String;
+		nLength = String.GetLength ();
+		*ppContentType = "text/html; charset=UTF-8";		
+	}
+	else if ( strcmp (pPath, "/upload.html") == 0)
 	{
 		const char *pMsg = 0;
 
@@ -181,11 +198,12 @@ CHTTPDaemon *CWebServer::CreateWorker (CNetSubSystem *pNetSubSystem, CSocket *pS
 		}
 		else
 		{
-			pMsg = "Send a PRG, SID, CRT or D64 file to Sidekick64 for instant launch. Or upload a Sidekick kernel image update (includes reboot).";
+			pMsg = "Send a PRG, SID, CRT, D64 or BIN file to Sidekick64 for instant launch. Or upload a Sidekick kernel image update (includes reboot).";
+			m_SidekickNet->enterWebUploadMode();
 		}
 
 		assert (pMsg != 0);
-		String.Format (s_Index, pMsg, CIRCLE_VERSION_STRING,
+		String.Format (s_Upload, pMsg, CIRCLE_VERSION_STRING,
 			       CMachineInfo::Get ()->GetMachineName ());
 
 		pContent = (const u8 *) (const char *) String;

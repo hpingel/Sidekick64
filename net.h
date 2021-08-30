@@ -154,6 +154,7 @@ public:
 	boolean isMenuScreenUpdateNeeded();
 	void setCurrentKernel( char *);
 	void setC128Mode();
+	void enterWebUploadMode();
 	#ifdef WITH_USB_SERIAL
 	boolean isUsbUserportModemConnected();
 	#endif
