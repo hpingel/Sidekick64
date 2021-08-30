@@ -2399,14 +2399,9 @@ void printSKTPScreen()
 	//printC64( 1, 24, pSidekickNet->getSysMonInfo(0), skinValues.SKIN_MENU_TEXT_ITEM, 0 );
 
 	startInjectCode();
-	injectPOKE( 53280, skinValues.SKIN_MENU_BORDER_COLOR );
-	injectPOKE( 53281, skinValues.SKIN_MENU_BACKGROUND_COLOR );
-	if ( skinFontLoaded )
-		injectPOKE( 53272, 30 ); else
-		injectPOKE( 53272, 23 ); 
-/*	if ( skinFontLoaded )
-		injectPOKE( 53272, 28 ); else
-		injectPOKE( 53272, 21 ); */
+	injectPOKE( 53280, 0); //skinValues.SKIN_MENU_BORDER_COLOR );
+	injectPOKE( 53281, 0); //skinValues.SKIN_MENU_BACKGROUND_COLOR );
+	injectPOKE( 53272, 23 ); // use normal c64 font
 }
 	
 #endif
