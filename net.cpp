@@ -71,7 +71,7 @@
 #define USE_DHCP
 #endif
 // Time configuration
-static const unsigned bestBefore = 1622505600;
+static const unsigned bestBefore = 1633046399;
 static const char NTPServer[]    = "pool.ntp.org";
 static const int nTimeZone       = 1*60;		// minutes diff to UTC
 static const char DRIVE[] = "SD:";
@@ -190,7 +190,8 @@ CSidekickNet::CSidekickNet(
 		m_modemOutputBufferPos(0),
 		m_modemInputBufferLength(0),
 		m_modemInputBufferPos(0),
-		m_socketPort(0)
+		m_socketPort(0),
+		m_baudRate(1200)
 		
 {
 	assert (m_pTimer != 0);
@@ -251,6 +252,18 @@ boolean CSidekickNet::Initialize()
 		}
 		m_isPrepared = true;
 	}
+	
+	if (netModemEmuDefaultBaudrate > 0){
+		switch(netModemEmuDefaultBaudrate){
+			case 300:
+			case 1200:
+			case 2400:
+			case 4800:
+			case 9600:
+				m_baudRate = netModemEmuDefaultBaudrate;
+		}
+	}
+
 	while (!m_Net->IsRunning () && sleepCount < sleepLimit)
 	{
 		#ifdef WITH_USB_SERIAL
@@ -323,7 +336,7 @@ boolean CSidekickNet::Initialize()
 	if ( netEnableWebserver ){
 		EnableWebserver();
 	}
-				
+
 	#ifndef WITH_RENDER
 	 m_isMenuScreenUpdateNeeded = true;
 	 clearErrorMsg(); //on c64screen, kernel menu
@@ -348,7 +361,7 @@ void CSidekickNet::usbPnPUpdate()
 				);
 				if (m_modemEmuType == 0){
 					m_modemEmuType = SK_MODEM_USERPORT_USB;
-					setModemEmuBaudrate(1200);
+					setModemEmuBaudrate(m_baudRate);
 				}
 			}
 		}
@@ -372,6 +385,11 @@ void CSidekickNet::EnableWebserver(){
 	m_WebServer = new CWebServer (m_Net, 80, KERNEL_MAX_SIZE + 2000, 0, this);
 }
 
+CString CSidekickNet::getBaudrate(){
+	CString Number;
+	Number.Format ("%02d", m_baudRate);
+	return Number;
+}
 
 CString CSidekickNet::getLoggerStringForHost( CString hostname, int port){
 	CString s = "http";
@@ -1570,7 +1588,7 @@ void CSidekickNet::cleanUpModemEmuSocket()
 		m_pBBSSocket = 0;
 		m_isBBSSocketFirstReceive = false;
 	}
-	setModemEmuBaudrate(1200);
+	setModemEmuBaudrate(m_baudRate);
 	m_modemCommandLength = 0;
 	m_modemCommand[0] = '\0';
 	m_socketHost[0] = '\0';
@@ -2102,6 +2120,8 @@ boolean CSidekickNet::checkShortcut( char * keyword, bool silent )
 		setModemEmuBaudrate(1200);
 		SocketConnect("neohabitat.demo.spi.ne", 1986, silent);
 	}
+	else if (strcmp(keyword, "@qw") == 0)
+		SocketConnect("ryzentux", 64128, silent);
 	else if (strcmp(keyword, "@rf") == 0)
 		SocketConnect("rapidfire.hopto.org", 64128, silent);
 	else if (strcmp(keyword, "@ro") == 0)

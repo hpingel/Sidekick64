@@ -2193,7 +2193,8 @@ void printNetworkScreen()
 	CString strHostName   = "Hostname:           ";
 	CString strConnection = "Connection state:   ";
 	CString strWebserver  = "Webserver state:    ";
-	CString strUPModemEmu = "Modem emulation (M):";
+	CString strModemEmu   = "Modem emulation (M):";
+	CString strModemBaudR = "Default baud rate:  ";
 	CString strHelper;
 	
 	if (strcmp(netSidekickHostname,"") != 0)
@@ -2214,27 +2215,30 @@ void printNetworkScreen()
 		strConnection.Append( "Active" );
 		#ifdef WITH_USB_SERIAL
 		if ( pSidekickNet->isUsbUserportModemConnected() && pSidekickNet->getModemEmuType() == 2)
-			strUPModemEmu.Append( "Userport" );
+			strModemEmu.Append( "Userport" );
 	  else 
 		#endif
 		if ( pSidekickNet->getModemEmuType() == 1 )
-			strUPModemEmu.Append( "Swiftlink" );
+			strModemEmu.Append( "Swiftlink" );
 		else
-			strUPModemEmu.Append( "None" );
+			strModemEmu.Append( "None" );
 	}
 	else
 	{
 		strConnection.Append( "Inactive" );
-		strUPModemEmu.Append( "Inactive" );
+		strModemEmu.Append( "Inactive" );
 	}
+	
+	strModemBaudR.Append( pSidekickNet->getBaudrate() );
 	
 	u32 y1 = 2;
 
 	printC64( x+1, y1+2, "Network settings", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
-	printC64( x+1, y1+ 9, strConnection,   skinValues.SKIN_MENU_TEXT_SYSINFO, 0 );
-	printC64( x+1, y1+10, strWebserver,   skinValues.SKIN_MENU_TEXT_SYSINFO, 0 );
-	printC64( x+1, y1+11, strHostName,   skinValues.SKIN_MENU_TEXT_SYSINFO, 0 );
-	printC64( x+1, y1+12, strUPModemEmu,   skinValues.SKIN_MENU_TEXT_SYSINFO, 0 );
+	printC64( x+1, y1+ 9, strConnection,     skinValues.SKIN_MENU_TEXT_SYSINFO, 0 );
+	printC64( x+1, y1+10, strWebserver,      skinValues.SKIN_MENU_TEXT_SYSINFO, 0 );
+	printC64( x+1, y1+11, strHostName,       skinValues.SKIN_MENU_TEXT_SYSINFO, 0 );
+	printC64( x+1, y1+12, strModemEmu,       skinValues.SKIN_MENU_TEXT_SYSINFO, 0 );
+	printC64( x+1, y1+13, strModemBaudR,     skinValues.SKIN_MENU_TEXT_SYSINFO, 0 );
 	
 	if (strcmp(netSktpHostName,"") != 0){
 		unsigned port = netSktpHostPort;
@@ -2242,8 +2246,8 @@ void printNetworkScreen()
 		strHelper = pSidekickNet->getLoggerStringForHost(netSktpHostName, port);
 		char * tmpHost;
 		sprintf( tmpHost, strHelper, "" );
-		printC64( x+1, y1+13, "SKTP Host:",   skinValues.SKIN_MENU_TEXT_SYSINFO, 0 );
-		printC64( x+1, y1+14, tmpHost,   skinValues.SKIN_MENU_TEXT_SYSINFO, 0 );
+		printC64( x+1, y1+14, "SKTP Host:",   skinValues.SKIN_MENU_TEXT_SYSINFO, 0 );
+		printC64( x+1, y1+15, tmpHost,   skinValues.SKIN_MENU_TEXT_SYSINFO, 0 );
 	}
 
 	u32 y2=17;
