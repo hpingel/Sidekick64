@@ -1153,6 +1153,7 @@ void printNetworkScreen()
 	CString strConnection = "Connection state: ";
 	CString strWebserver  = "Webserver state:  ";
 	CString strUPModemEmu = "Userport modem emu: ";
+	CString strModemBaudR = "Default baud rate:  ";
 	CString strHelper;
 	
 	if (strcmp(netSidekickHostname,"") != 0)
@@ -1185,6 +1186,8 @@ void printNetworkScreen()
 		strConnection.Append( "Inactive" );
 		strUPModemEmu.Append( "Inactive" );
 	}
+
+	strModemBaudR.Append( pSidekickNet->getBaudrate() );
 	
 	u32 y1 = 2;
 
@@ -1193,6 +1196,8 @@ void printNetworkScreen()
 	printC64( x+1, y1+10, strWebserver,   skinValues.SKIN_MENU_TEXT_SYSINFO, 0 );
 	printC64( x+1, y1+11, strHostName,   skinValues.SKIN_MENU_TEXT_SYSINFO, 0 );
 	printC64( x+1, y1+12, strUPModemEmu,   skinValues.SKIN_MENU_TEXT_SYSINFO, 0 );
+	printC64( x+1, y1+13, strModemBaudR,     skinValues.SKIN_MENU_TEXT_SYSINFO, 0 );
+
 	
 	if (strcmp(netSktpHostName,"") != 0){
 		unsigned port = netSktpHostPort;
@@ -1200,8 +1205,8 @@ void printNetworkScreen()
 		strHelper = pSidekickNet->getLoggerStringForHost(netSktpHostName, port);
 		char * tmpHost;
 		sprintf( tmpHost, strHelper, "" );
-		printC64( x+1, y1+13, "SKTP Host:",   skinValues.SKIN_MENU_TEXT_SYSINFO, 0 );
-		printC64( x+1, y1+14, tmpHost,   skinValues.SKIN_MENU_TEXT_SYSINFO, 0 );
+		printC64( x+1, y1+14, "SKTP Host:",   skinValues.SKIN_MENU_TEXT_SYSINFO, 0 );
+		printC64( x+1, y1+15, tmpHost,   skinValues.SKIN_MENU_TEXT_SYSINFO, 0 );
 	}
 
 	u32 y2=17;

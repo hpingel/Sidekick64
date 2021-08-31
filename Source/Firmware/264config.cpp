@@ -48,6 +48,7 @@ int screenType, screenRotation;
 	u32  netSktpHostPort = 0;
 	char netSktpHostUser[ 64 ];
 	char netSktpHostPassword[ 64 ];
+	u32  netModemEmuDefaultBaudrate = 0;	
 	boolean netConnectOnBoot = false;
 	boolean netEnableWebserver = false;
 #endif
@@ -262,7 +263,16 @@ int readConfig( CLogger *logger, char *DRIVE, char *FILENAME )
 					logger->Write( "RaspiMenu", LogNotice, " sktp pw >%s<", netSktpHostPassword );
 				#endif
 				}
-
+				
+				if ( strcmp( ptr, "NET_MODEM_DEFAULT_BAUDRATE" ) == 0 )
+				{
+					ptr = strtok_r( NULL, "\"", &rest );
+					netModemEmuDefaultBaudrate = atoi( ptr );
+				#ifdef DEBUG_OUT
+					logger->Write( "RaspiMenu", LogNotice, " modem emu default baudrate >%i<", netModemEmuDefaultBaudrate );
+				#endif
+				}
+				
 				if ( strcmp( ptr, "NET_CONNECT_ON_BOOT" ) == 0 )
 				{
 					ptr = strtok_r( NULL, "\"", &rest );

@@ -163,9 +163,10 @@ extern union T_SKIN_VALUES	skinValues;
 #ifdef WITH_NET
 	extern char netSidekickHostname[ 256 ];
 	extern char netSktpHostName[ 256 ];
-	extern u32 netSktpHostPort;
+	extern u32  netSktpHostPort;
 	extern char netSktpHostUser[ 64 ];
 	extern char netSktpHostPassword[ 64 ];
+	extern u32  netModemEmuDefaultBaudrate;
 	extern boolean netConnectOnBoot;
 	extern boolean netEnableWebserver;
 #endif

@@ -134,9 +134,9 @@ extern int screenType;
 	extern u32 netSktpHostPort;
 	extern char netSktpHostUser[ 64 ];
 	extern char netSktpHostPassword[ 64 ];
+	extern u32  netModemEmuDefaultBaudrate;	
 	extern boolean netConnectOnBoot;
 	extern boolean netEnableWebserver;
-	
 #endif
 
 

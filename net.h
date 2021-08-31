@@ -149,6 +149,7 @@ public:
 	void requireCacheWellnessTreatment();
 	void getNetRAM( u8 *, u32 *);
 	void prepareLaunchOfUpload( char * );
+	CString getBaudrate();
 	CString getLoggerStringForHost( CString hostname, int port);
 	boolean isSKTPScreenActive();
 	boolean isMenuScreenUpdateNeeded();
@@ -278,6 +279,7 @@ private:
 	unsigned m_modemInputBufferPos;
 	char m_socketHost[256];
 	unsigned m_socketPort;
+	unsigned m_baudRate;
 		
 	remoteHTTPTarget m_SKTPServer;
 	remoteHTTPTarget m_CSDB;
