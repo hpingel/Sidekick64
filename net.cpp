@@ -192,7 +192,6 @@ CSidekickNet::CSidekickNet(
 		m_modemInputBufferPos(0),
 		m_socketPort(0),
 		m_baudRate(1200)
-		
 {
 	assert (m_pTimer != 0);
 	assert (& m_pScheduler != 0);
@@ -264,7 +263,7 @@ boolean CSidekickNet::Initialize()
 		}
 	}
 
-	while (!m_Net->IsRunning () && sleepCount < sleepLimit)
+	while (!m_Net->IsRunning() && sleepCount < sleepLimit)
 	{
 		#ifdef WITH_USB_SERIAL
 		usbPnPUpdate();
@@ -383,6 +382,10 @@ void CSidekickNet::EnableWebserver(){
 	if (m_loglevel > 1)
 		logger->Write ("CSidekickNet::Initialize", LogNotice, "Starting webserver.");
 	m_WebServer = new CWebServer (m_Net, 80, KERNEL_MAX_SIZE + 2000, 0, this);
+}
+
+boolean CSidekickNet::isWebserverRunning(){
+	return (netEnableWebserver && m_WebServer != 0);
 }
 
 CString CSidekickNet::getBaudrate(){
@@ -657,10 +660,28 @@ boolean CSidekickNet::Prepare()
 	return true;
 }
 
-boolean CSidekickNet::IsRunning ()
+boolean CSidekickNet::IsRunning()
 {
 	 return m_isActive; 
 }
+
+boolean CSidekickNet::IsStillRunning()
+{
+	boolean currentState = m_Net->IsRunning();
+	if ( !currentState)
+	{
+		 if (m_isActive)
+			 logger->Write( "CSidekickNet::IsRunning", LogNotice, 
+				 "Error: Network became inactive!"
+			 );
+		 m_isActive = false;
+	} 
+	else
+	 	m_isActive = true;
+
+	return m_isActive; 
+ }
+
 
 boolean CSidekickNet::IsConnecting ()
 {
@@ -807,7 +828,13 @@ boolean CSidekickNet::isUsbUserportModemConnected(){
 
 void CSidekickNet::handleQueuedNetworkAction()
 {
-	if ( m_isActive && (!isAnyNetworkActionQueued() || !usesWLAN()) )
+	//boolean isRunning = IsStillRunning();
+	boolean isRunning = IsRunning();
+	//logger->Write( "handleQueuedNetworkAction", LogNotice, "Yield");
+	if ( isRunning && (netEnableWebserver || m_useWLAN))
+		m_pScheduler->Yield (); // this is needed for webserver and wlan keep-alive
+	
+	if ( isRunning && (!isAnyNetworkActionQueued() || !usesWLAN()) )
 	{
 		
 		if ( m_WebServer == 0 && netEnableWebserver ){
@@ -819,11 +846,11 @@ void CSidekickNet::handleQueuedNetworkAction()
 		//every couple of seconds + seconds needed for request
 		//log cpu temp + uptime + free memory
 		//in wlan case do keep-alive request
-		if ( (m_pTimer->GetUptime() - m_timestampOfLastWLANKeepAlive) > 10) //(netEnableWebserver ? 7:5))
+/*		if ( (m_pTimer->GetUptime() - m_timestampOfLastWLANKeepAlive) > 10) //(netEnableWebserver ? 7:5))
 		{
 			
 			#ifdef WITH_WLAN //we apparently don't need wlan keep-alive at all if we just always do the yield!!!
-			//if (!netEnableWebserver)
+			if (!netEnableWebserver)
 			{
 				//Circle42 offers experimental WLAN, but it seems to
 				//disconnect very quickly if there is no traffic.
@@ -846,13 +873,14 @@ void CSidekickNet::handleQueuedNetworkAction()
 					UpdateTime();
 			}
 			#endif
-			m_timestampOfLastWLANKeepAlive = m_pTimer->GetUptime();
+			//m_timestampOfLastWLANKeepAlive = m_pTimer->GetUptime();
 			if (m_loglevel > 3)
 				logger->Write ("CSidekickNet", LogNotice, getSysMonInfo(1));
 		}
+		*/
 	}
-	else if (m_isActive && isAnyNetworkActionQueued() && usesWLAN())
-		m_timestampOfLastWLANKeepAlive = m_pTimer->GetUptime();
+	//else if (isRunning && isAnyNetworkActionQueued() && usesWLAN())
+	//	m_timestampOfLastWLANKeepAlive = m_pTimer->GetUptime();
 	
 	if (m_queueDelay > 0 )
 	{
@@ -862,7 +890,7 @@ void CSidekickNet::handleQueuedNetworkAction()
 		return;
 	}
 
-	if ( m_isNetworkInitQueued && !m_isActive )
+	if ( m_isNetworkInitQueued && !isRunning )
 	{
 		assert (!m_isActive);
 		if (Initialize())
@@ -873,12 +901,10 @@ void CSidekickNet::handleQueuedNetworkAction()
 		m_isNetworkInitQueued = false;
 		return;
 	}
-	else if (m_isActive)
+	else if (isRunning)
 	{
-		//logger->Write( "handleQueuedNetworkAction", LogNotice, "Yield");
-		if ( netEnableWebserver || m_useWLAN)
-			m_pScheduler->Yield (); // this is needed for webserver and wlan keep-alive
 
+/*
 		if (m_isFrameQueued)
 		{
 			#ifdef WITH_RENDER
@@ -886,7 +912,9 @@ void CSidekickNet::handleQueuedNetworkAction()
 			#endif
 			m_isFrameQueued = false;
 		}
-		else if (m_isCSDBDownloadQueued)
+		else
+*/		
+		if (m_isCSDBDownloadQueued)
 		{
 			if (m_loglevel > 2){
 				logger->Write( "handleQueuedNetworkAction", LogNotice, "m_CSDBDownloadPath: %s", m_CSDBDownloadPath);
@@ -914,6 +942,9 @@ void CSidekickNet::handleQueuedNetworkAction()
 			m_isSktpKeypressQueued = false;
 		}
 	}
+	if (isRunning && usesWLAN())
+		m_Net->Process();
+
 }
 
 boolean CSidekickNet::checkForSaveableDownload(){
@@ -1555,6 +1586,8 @@ void CSidekickNet::setC128Mode()
 
 void CSidekickNet::enterWebUploadMode(){
 	
+	m_modemEmuType = 0; //stop any active modem emu
+
 	//if not in menu kernel (l), leave it
 	if ( strcmp( m_currentKernelRunning, "m" ) == 0){
 		prgSizeLaunch = sizeof WEBUPLOADPRG;
@@ -1983,12 +2016,13 @@ void CSidekickNet::handleModemEmulation( bool silent = false)
 				//if ( !silent)
 					logger->Write ("CSidekickNet", LogNotice, "Terminal: sent %i chars to modem", fromFrontend);
 				m_pBBSSocket->Send (inputChar, fromFrontend, MSG_DONTWAIT);
-				m_isBBSSocketFirstReceive = true;
+				if ( m_modemEmuType == SK_MODEM_SWIFTLINK)
+					m_isBBSSocketFirstReceive = true;
 			}
 		}
 		
 		//if ( m_modemEmuType == SK_MODEM_SWIFTLINK)
-		//	m_isBBSSocketFirstReceive = true;
+		//m_isBBSSocketFirstReceive = true;
 				
 		//logger->Write ("CSidekickNet", LogNotice, "Terminal: now checking if we can receive something");
 		

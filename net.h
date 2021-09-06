@@ -167,16 +167,26 @@ public:
 	bool isModemSocketConnected();
 	bool areCharsInInputBuffer();
 	bool areCharsInOutputBuffer();
+	boolean isWebserverRunning();
+
 
 private:
 
-	typedef struct  {
+	typedef struct {
 		CString hostName;
 		int port;
 		CIPAddress ipAddress;
 		CString logPrefix;
 		bool valid;
 	} remoteHTTPTarget;
+	
+	typedef enum {
+	  F_PRG = 0,
+	  F_CRT,
+	  F_SID,
+	  F_D64
+	} FileType;
+	
 	
 	boolean Prepare ();
 	void EnableWebserver();
@@ -193,6 +203,7 @@ private:
 	void SocketConnectIP( CIPAddress, unsigned );
 	boolean checkShortcut( char *, bool);
 	void setModemEmuBaudrate( unsigned );
+	boolean IsStillRunning ( void );
 
 	CUSBHCIDevice     * m_USBHCI;
 	CMachineInfo      * m_pMachineInfo; //used for c64screen to display raspi model name
