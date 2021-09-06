@@ -99,8 +99,10 @@ CHTTPDaemon *CWebServer::CreateWorker (CNetSubSystem *pNetSubSystem, CSocket *pS
 	unsigned nLength = 0;
 
 	if ( strcmp (pPath, "/") == 0
-	    || strcmp (pPath, "/index.html") == 0)
+	    || strcmp (pPath, "/index.html") == 0
+			|| strcmp (pPath, "/upload.html") == 0)
 	{
+/*		
 		const char *pMsg = 0;		
 		pMsg = "Welcome!";
 		String.Format (s_Index, pMsg, CIRCLE_VERSION_STRING,
@@ -111,7 +113,7 @@ CHTTPDaemon *CWebServer::CreateWorker (CNetSubSystem *pNetSubSystem, CSocket *pS
 		*ppContentType = "text/html; charset=UTF-8";		
 	}
 	else if ( strcmp (pPath, "/upload.html") == 0)
-	{
+	{*/
 		const char *pMsg = 0;
 
 		const char *pPartHeader;
@@ -129,7 +131,7 @@ CHTTPDaemon *CWebServer::CreateWorker (CNetSubSystem *pNetSubSystem, CSocket *pS
 				
 				m_SidekickNet->requireCacheWellnessTreatment();
 
-#ifndef IS264				
+#ifndef IS264
 				#if RASPPI >= 4
   				const char * filename = m_SidekickNet->usesWLAN() ? "SD:rpi4_kernel_sk64_wlan.img" : "SD:rpi4_kernel_sk64_net.img";
 				#else
