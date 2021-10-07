@@ -2,48 +2,49 @@
 ## Introduction
 The main goal of this fork of Sidekick64 is to find out if it is possible to use the network capabilities of a Raspberry Pi in parallel with the emulation modes of Sidekick64 without meddling too much with any timings needed for reliably emulating C64 carts. Further goals were for me to learn how to use the Circle bare metal framework and to learn how Sidekick64 does its magic by trying to understand its source code.
 
-Once network features were squeezed into the "clockwork" of Sidekick64 without disturbing it too much, I have started to add some network features to make use of the newly gained network capabilities.
+Once network features were squeezed into the "clockwork" of Sidekick64 without disturbing it too much, I started to add some network features to make use of the newly gained network capabilities.
 ## Summary: Network features in a nutshell
 Currently the following network related features are offered by the experimental Sidekick64 network kernel:
 * Join your network, obtain IP address and stuff via DHCP (mandatory)
 * Both cable based LAN (RPI 3B+ only) and WLAN are possible but require their own kernel images. There is one kernel image for WLAN and one image for cable based ethernet.
 * WLAN-Kernel: Store WLAN SSID and passphrase in configuration file on SD card
 * System date and time will be set via NTP (UTC)
-* A network connection can be established by the user via keypress from the Sidekick menu when needed or can be configured to be automatically done during each boot of Sidekick64.
+* A network connection can be established by the user via keypress at the Sidekick menu when needed or can be configured to be automatically done at Sidekick64 boot.
 * Web interface
  	- A web interface can be activated for Sidekick64 that offers an upload form to other devices on the local network. This allows a Sidekick64 kernel update without removing the SD card or it allows to upload and launch PRGs, SIDs, CRTs, D64, BIN or the like remotely from a different machine.
- 	- The web interface can be reached via the IP address or by hostname "sidekick64" or a custom hostname
  	- The web interface can be reached via the IP address or by hostname (defaults to "sidekick64" if no custom hostname was configured)
 * Modem emulation
 	- Only compatible with terminal software in PRG format (CCGMS, etc.)
 	- Userport modem emulation is possible via a little hardware extension
 	- (highly experimental) Swiftlink emulation
 * Experimental SKTP browser
-	- Load screen content of C64 via HTTP or HTTPS via a simple binary protocol from a web application called "SKTP server". 
+	- Load screen content to C64 via HTTP or HTTPS via a simple binary protocol from a web application called "SKTP server". 
 	- Trigger download and launch of remote binary files like PRG, D64, SID, CRT, etc. 
-	- Example apps: Access CSDb web service and browse in and download stuff from CSDb.  Access to RSS-Feeds.
+	- Example apps:
+        - Browse and download stuff from CSDb via webservice provided by CSDb.
+        - Access to RSS-Feeds.
 * Changes to the Sidekick64 menu
 	- Added network menu page entry to main menu (open with key @, also allow access to with subpages "SKTP browser" and System information
 	- Added SKTP browser: .... Control screen content and user key presses remotely via "SKTP server" (HTTP server with web application). Ability to download, launch and save files fetched via HTTP(S): PRG, SID, CRT, D64
-	- Added system information page: Allows to see the current CPU temperature, basic network connection information and also meta info like date and time and information about the Sidekick64 kernel running
+	- Added system information page: Allows to see the current RPi CPU temperature, basic network connection information and also meta info like date and time and information about the Sidekick64 kernel running
 * Outlook: Sidekick264 network support is also implemented in a highly experimental state. Due to the many variants that have to be tested Sidekick264 network has not been tested a lot.
 
 ## Joining a network
 ### Basics
-Sidekick64 can connect to a local area network as long as a DHCP server is present on the network that provides Sidekick64 with an IP address and DNS server. In case of WLAN the SSID and passphrase are stored in an unencrypted text file on the SD card. The default hostname of a Sidekick64 is "sidekick64" - this can be changed - see section configuration parameters for details. On a successful connect, the date and time will be set automatically via NTP (at the moment this information is not readable for C64 applications but it is accessible in the Sidekick64 menu). The time zone will still most likely be incorrect so that the time is displayed a couple of hours of your local time. (A configurable offset needs to be implemented at some point and daylight saving times are to be considered then too.)
+Sidekick64 can connect to a local area network as long as a DHCP server is present on the network that provides Sidekick64 with an IP address and DNS server. In case of WLAN the SSID and passphrase are stored in an unencrypted text file on the SD card. The default hostname of a Sidekick64 is "sidekick64" - this can be changed - see section [Configuration parameters](#configuration-parameters) for details. On a successful connect, the date and time will be set automatically via NTP (at the moment this information is not readable for C64 applications but it is accessible in the Sidekick64 menu). The time zone will still most likely be incorrect so that the time is displayed a couple of hours of your local time. (A configurable offset needs to be implemented at some point and daylight saving times are to be considered then too.)
 
 ### Network on demand
-The Sidekick64 kernel with network features doesn't force the user to always activate the network. Establishing a network connection on Sidekick64 means that the user has to wait for a couple of seconds until all the steps necessary - including turning on the USB stack - are finished. Besides the waiting time, an active network will currently lead to a higher CPU temperature and energy consumption of the Raspberry Pi (discussed in detail in the hardware section above).
+The Sidekick64 kernel with network features doesn't force the user to always activate the network. Establishing a network connection on Sidekick64 means that the user has to wait for a couple of seconds until all the steps necessary - including turning on the USB stack - are finished. Besides the waiting time, an active network will currently lead to a higher CPU temperature and energy consumption of the Raspberry Pi (discussed in detail in the [hardware section](#usb-stack-power-consumption-and-cpu-temperature) below).
 
-Additionally, a user might not need network connectivity with Sidekick64 on a daily basis. Because of this it seems to make sense to make the network connection optional and offer a way to activate the network connection interactively and on demand through the Sidekick64 menu. This means that network only has to be turned on when it is really needed and wanted.
+Additionally, a user might not need network connectivity with Sidekick64 on a daily basis. Because of this it seemed to make sense to make the network connection optional and offer a way to activate the network connection on demand at the Sidekick64 menu. This means that network only has to be turned on when it is really needed and wanted.
 
 ### Network on boot
-On the other hand it also seemed to make sense to offer a configuration option to always directly establish a network connection during boot time of Sidekick64 if desired. Therefore, a setting can be added to enforce network on boot - see section configuration parameters for details. Enabling this will mean that the Sidekick64 will need several seconds longer to boot until it shows its normal menu screen on the C64.
+On the other hand it also seemed to make sense to offer a configuration option to always directly establish a network connection during boot time of Sidekick64 if desired. Therefore, a setting can be added to enforce network on boot - see section [Configuration parameters](#configuration-parameters) for details. Enabling this will mean that the Sidekick64 will need several seconds longer to boot until it shows its normal menu screen on the C64.
 
 ## Web interface and web server
 One way to transfer files from a PC, tablet or smartphone to Sidekick64 is to use the web interface that is provided by the built-in webserver. The web interface allows to upload Sidekick64 kernel images (overwrites the current Sidekick kernel on SD card and reboots), PRG files, SID files, CRT files, D64 files or BIN files (C128 custom roms). The file types targeted at the C64/C128 platform will be launched directly via Sidekick64 after the upload is finished.
 
-The webserver can be launched manually from the Sidekick64 menu's network page by pressing "w" on the keyboard or it may also become active straight after a network connection is established by adding a configuration parameter - see section configuration parameters for details. Together with network on boot this might be helpful for developers who want to test their own cross-developed C64 software sending it from a PC over to Sidekick64 to be executed on the real machine.
+The webserver can be launched manually from the Sidekick64 menu's network page by pressing "w" on the keyboard or it may also become active straight after a network connection is established by adding a configuration parameter - see section [Configuration parameters](#configuration-parameters) for details. In combination with network on boot this might be helpful for developers who want to test their own cross-developed C64 software sending it from a PC over to Sidekick64 to be executed on the real machine.
 
 The web interface is currently only available unencrypted via HTTP (on port 80) and doesn't come with authentication or password protection.
 
@@ -55,7 +56,7 @@ In theory it is possible to have the Sidekick64 cartridge lying on a table witho
 ## Modem emulation
 Two types of modems may be emulated as long as Sidekick is not busy with emulating something very demanding like an EasyFlash or a Freezer cartridge. As long as Sidekick is in launcher mode or in the BASIC prompt mode, modem emulation is possible with PRGs loaded via Sidekick or from a floppy disk. Terminal software used has to be in PRG format which is not a problem as CCGMS2021 and other tools all are available as PRGs.
 
-Besides implementing two modem types also a basic command line interface had to be implemented to set the baud rate and connect to a BBS via hostname and port. The default baudrate can also be changed by setting the configuration parameter `NET_MODEM_DEFAULT_BAUDRATE` to a desired value. Check section configuration parameters for furter details.
+Besides implementing two modem types also a basic command line interface had to be implemented to set the baud rate and connect to a BBS via hostname and port. The default baudrate can also be changed by setting the configuration parameter `NET_MODEM_DEFAULT_BAUDRATE` to a desired value. Check section [Configuration parameters](#configuration-parameters) for furter details.
 
 When it comes to the type of modem being emulated, there is a choice:
 ### Userport modem
@@ -73,13 +74,13 @@ This enables us to do the following:
 * Applications / features available through Sidekick64 don't have to run on Sidekick64 but can be running in a hosted or cloud environment. This means for example that changes and updates required to such an application will not force the Sidekick64 kernel to be updated.
 * In theory it allows interactive multi user applications like simple games or chat apps.
 * It allows interaction with most services on the World Wide Web
-In addition to screen updates SKTP allows to request Sidekick64 to download a payload from a web adress (via HTTP or HTTPS) and store and/or execute it on the C64. This means, files like PRG, SID, CRT, etc. may be downloaded from the internet and directly launched on the C64. This is tightly coupled to the Sidekick64 menu code as the possibility to launch is essential.
+* In addition to screen updates SKTP allows to request Sidekick64 to download a payload from a web adress (via HTTP or HTTPS), store and/or execute it on the C64. This means, files like PRG, SID, CRT, etc. may be downloaded from the internet and directly launched on the C64. This is tightly coupled to the Sidekick64 menu code as the possibility to launch is essential.
 
 Currently two example applications exist that make use of SKTP:
 ### CSDb Launcher
 Allows to browse latest releases and a couple of selected top lists to easily access attractive releases from the world of the C64 demo scene.
 ### Forum64 RSS Viewer
-Allows to launch a dynamically generated PRG (available in different flavours for C64, C128@80columns, C16/Plus/4) that displays the latest posts that are listed in the RSS feed of Forum64.
+Allows to launch a dynamically generated PRG (available in different flavours for C64, C128@80columns, C16/Plus/4) that displays the latest posts from the RSS feed of Forum64.
 ## Network configuration via SD card
 You may change some network default settings by editing configuration files on the SD card via an SD card reader plugged into your Desktop/Notebook/PC/MAC/Pi/etc.
 
@@ -128,15 +129,15 @@ While the CPU temperature of a running Sidekick64 would normally be below 55° C
 With default settings, a Raspberry Pi will automatically start to throttle its CPU once the 60° C are reached to prevent overheating (although the CPU would be capable of running with more than 80°C without damage). If you observe a CPU temperature of 59°C on the system info screen of the network menu then your Sidekick64 emulation may appear to become unstable very soon. Nothing can break, nothing can be damaged, as the Raspberry is still running fine and just behaving as it should behave. Only the emulation appears unstable. 
 If you detect that the Raspberry's CPU temperature is likely to reach the 60° C there are two directions in which you can go to solve the problem: Either improve the air circulation around the CPU to stop it from reaching 60°C or increase the default throttling temperature limit to something higher - like for example 62°C - and hope that the Raspberry's CPU will not reach the new limit.
 How quickly your Sidekick's Raspberry CPU is heating up may depend on different factors:
-*    Inside of a case: Does the case allow for some airflow?
+*    Inside a case: Does the case allow for some airflow?
 *    Raspberry Pi Model: The Raspberry Pi 3B+ is getting hotter than an 3A+. A model 3A+ will probably stay at around 57-58°C and not reach the 60° unless it is inside of a case.
 *    PCB form factor: A Sidekick64 PCB v0.3 (outdated) offers more airflow to the Pi so that a 3B+ will stay beneath 60°C.
 
-The most simple solution is to improve the airflow by using a little tiny active fan for 1€ that gets powered by the 3.3V pin on the Sidekick PCB. This is a custom hack that can even be done if the Sidekick is inside a case. Just let the fan blow air into the gap between Sidekick PCB and the Raspberry Pi from the side. (Add photos to illustrate)
+The most simple solution is to improve the airflow by using a little tiny active fan for 1€ that gets powered by the 3.3V pin on the Sidekick PCB. This is a custom hack that can even be done if the Sidekick is inside a case. Just let the fan blow air into the gap between Sidekick PCB and the Raspberry Pi from the side. (TODO: Add photos to illustrate)
 
 ### Changes to the Sidekick64 menu
 #### New submenu "Network"
-The network menu allows to check if a connection is established, to start a connection and afterwards to launch the web server or select the modem emulation type. It also gives access to another submenu called "System information" where details like the IP address, CPU temperature and system time can be found.
+The network menu allows to check if a connection is established, to start a connection and afterwards to launch the web server or select the modem emulation type. It also provides another submenu called "System information" where details like the IP address, CPU temperature and system time can be found.
 #### Enforced screen refreshes
 Sidekick64 ships with a C64 assembler program that is responsible for fetching the menu screen content of Sidekick64 and displaying it via VIC2 on the C64 video output. This program called rpimenu.prg had to be modified for the network kernel to perform a C64 screen content redraw not only when a user presses a key on the keyboard but also when something important happens on the Raspberry Pi's side when the Sidekick64 cartridge will trigger a non-maskable interrupt (NMI) to tell the C64 program that new screen content needs to be fetched and displayed. This enforced refresh is necessary for screens that need to be redrawn regularly like the system info screen displaying the current date and time and CPU temperature of the Pi.
 
@@ -164,7 +165,7 @@ During the runtime of Sidekick64 the SD card is normally only mounted for a shor
 
 ## Known problems
 ### Raspberry Pi 3B+ needs a cooling airflow
-This is explained in detail in the section "USB stack, power consumption and CPU temperature". A Raspberry Pi 3A+ is less affected unless it is inside of an enclosure without any airflow.
+This is explained in detail in the section [USB stack, power consumption and CPU temperature](#usb-stack-power-consumption-and-cpu-temperature). A Raspberry Pi 3A+ is less affected unless it is inside of an enclosure without any airflow.
 
 ### Recommended setting for jumper "A13-BTN"
 Until the following is resolved by a software change it is recommended to leave the jumper A13-BTN open or set to BTN.
@@ -188,10 +189,10 @@ To wrap it up, WLAN is less convenient to use than ethernet via cable. In exchan
 ### CRT files in root folder
 While there is no problem with storing CRT files (cartridge images) in their destined locations on the SD card it is not recommended to put any CRT files into the root folder of the SD card as  mbedtls will likely look for certificate files in the root folder when HTTPS is being used.
 ### Git branch will regularly be rebased and history will be rewritten
-This git repository is regularly being rebased on top of Frentic's latest Sidekick64 releases to make it as easy as possible to be merged into Frenetic's main git repository in case it would become stable enough for Frenetic to decide to integrate it with the mainline code. Regular rebases are necessary in this fork and will rewrite git history of this repo so it might be cumbersome to try to pull from this branch over time.
+This git repository is regularly being rebased on top of Frenetic's latest Sidekick64 releases to make it as easy as possible to be merged into Frenetic's main git repository in case it would become stable enough for Frenetic to decide to integrate it with the mainline code. Regular rebases are necessary in this fork and will rewrite git history of this repo so it might be cumbersome to try to pull from this branch over time.
 # Credits
 I would like to thank 
 * Frenetic for releasing exciting open source retro projects like Sidekick64 and for his help on pointing me to the areas in his source code where I could safely try to add some network stuff. 
 * Rene Stange for creating, sharing and documenting Circle with attention to detail and Stephan Mühlstrasser for creating and continuously updating circle-stdlib with the latest upstream components. 
 * My network testers for their valuable feedback! (TODO: Add nickname list)
-* I would also like to thank the CSDb admins for offering the CSDb web service and last not least the very active C64 demo scene for still releasing exciting demos, music and other stuff.
+* I would also like to thank the CSDb admins for offering the CSDb web service and last but not least the very active C64 demo scene for still releasing exciting demos, music and other stuff.
