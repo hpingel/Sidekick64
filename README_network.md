@@ -9,10 +9,10 @@ Currently the following network related features are offered by the experimental
 * Both cable based LAN (RPI 3B+ only) and WLAN are possible but require their own kernel images. There is one kernel image for WLAN and one image for cable based ethernet.
 * WLAN-Kernel: Store WLAN SSID and passphrase in configuration file on SD card
 * System date and time will be set via NTP (UTC)
-* A network connection can be established by the user via keypress at the Sidekick menu when needed or can be configured to be automatically done at Sidekick64 boot.
+* A network connection can be established by the user via keypress at the Sidekick menu when needed or can be configured to be automatically done during each Sidekick64 boot.
 * Web interface
  	- A web interface can be activated for Sidekick64 that offers an upload form to other devices on the local network. This allows a Sidekick64 kernel update without removing the SD card or it allows to upload and launch PRGs, SIDs, CRTs, D64, BIN or the like remotely from a different machine.
- 	- The web interface can be reached via the IP address or by hostname (defaults to "sidekick64" if no custom hostname was configured)
+ 	- The web interface can be reached via the IP address or by hostname (default is "sidekick64" if no custom hostname was configured)
 * Modem emulation
 	- Only compatible with terminal software in PRG format (CCGMS, etc.)
 	- Userport modem emulation is possible via a little hardware extension
@@ -31,12 +31,12 @@ Currently the following network related features are offered by the experimental
 
 ## Joining a network
 ### Basics
-Sidekick64 can connect to a local area network as long as a DHCP server is present on the network that provides Sidekick64 with an IP address and DNS server. In case of WLAN the SSID and passphrase are stored in an unencrypted text file on the SD card. The default hostname of a Sidekick64 is "sidekick64" - this can be changed - see section [Configuration parameters](#configuration-parameters) for details. On a successful connect, the date and time will be set automatically via NTP (at the moment this information is not readable for C64 applications but it is accessible in the Sidekick64 menu). The time zone will still most likely be incorrect so that the time is displayed a couple of hours of your local time. (A configurable offset needs to be implemented at some point and daylight saving times are to be considered then too.)
+Sidekick64 can connect to a local area network as long as a DHCP server is present on the network that provides Sidekick64 with an IP address and DNS server. In case of WLAN the SSID and passphrase are stored in an unencrypted text file on the SD card. The default hostname of a Sidekick64 is "sidekick64" - this can be changed - see section [Configuration parameters](#configuration-parameters) for details. On a successful connect, the date and time will be set automatically via NTP (at the moment this information is not readable for C64 applications but it is accessible in the Sidekick64 menu). The time zone will most likely still be incorrect so that the time is displayed a couple of hours off your local time. (A configurable offset needs to be implemented at some point and daylight saving times are to be considered then too.)
 
 ### Network on demand
 The Sidekick64 kernel with network features doesn't force the user to always activate the network. Establishing a network connection on Sidekick64 means that the user has to wait for a couple of seconds until all the steps necessary - including turning on the USB stack - are finished. Besides the waiting time, an active network will currently lead to a higher CPU temperature and energy consumption of the Raspberry Pi (discussed in detail in the [hardware section](#usb-stack-power-consumption-and-cpu-temperature) below).
 
-Additionally, a user might not need network connectivity with Sidekick64 on a daily basis. Because of this it seemed to make sense to make the network connection optional and offer a way to activate the network connection on demand at the Sidekick64 menu. This means that network only has to be turned on when it is really needed and wanted.
+Additionally, a user might not need network connectivity with Sidekick64 on a daily basis. Because of this it seemed to make sense to make the network connection optional and offer a way to activate the network connection on demand via the Sidekick64 menu. This means that network only has to be turned on when it is really needed and wanted.
 
 ### Network on boot
 On the other hand it also seemed to make sense to offer a configuration option to always directly establish a network connection during boot time of Sidekick64 if desired. Therefore, a setting can be added to enforce network on boot - see section [Configuration parameters](#configuration-parameters) for details. Enabling this will mean that the Sidekick64 will need several seconds longer to boot until it shows its normal menu screen on the C64.
@@ -56,7 +56,7 @@ In theory it is possible to have the Sidekick64 cartridge lying on a table witho
 ## Modem emulation
 Two types of modems may be emulated as long as Sidekick is not busy with emulating something very demanding like an EasyFlash or a Freezer cartridge. As long as Sidekick is in launcher mode or in the BASIC prompt mode, modem emulation is possible with PRGs loaded via Sidekick or from a floppy disk. Terminal software used has to be in PRG format which is not a problem as CCGMS2021 and other tools all are available as PRGs.
 
-Besides implementing two modem types also a basic command line interface had to be implemented to set the baud rate and connect to a BBS via hostname and port. The default baudrate can also be changed by setting the configuration parameter `NET_MODEM_DEFAULT_BAUDRATE` to a desired value. Check section [Configuration parameters](#configuration-parameters) for furter details.
+Besides implementing two modem types a basic command line interface also had to be implemented to set the baud rate and connect to a BBS via hostname and port. The default baud rate can also be changed by setting the configuration parameter `NET_MODEM_DEFAULT_BAUDRATE` to a desired value. Check section [Configuration parameters](#configuration-parameters) for further details.
 
 When it comes to the type of modem being emulated, there is a choice:
 ### Userport modem
@@ -137,7 +137,7 @@ The most simple solution is to improve the airflow by using a little tiny active
 
 ### Changes to the Sidekick64 menu
 #### New submenu "Network"
-The network menu allows to check if a connection is established, to start a connection and afterwards to launch the web server or select the modem emulation type. It also provides another submenu called "System information" where details like the IP address, CPU temperature and system time can be found.
+The network menu allows to check if a connection is established, to start a connection and afterwards to launch the web server or select the modem emulation type. It also provides another submenu called "System information" containing details like the IP address, CPU temperature and system time.
 #### Enforced screen refreshes
 Sidekick64 ships with a C64 assembler program that is responsible for fetching the menu screen content of Sidekick64 and displaying it via VIC2 on the C64 video output. This program called rpimenu.prg had to be modified for the network kernel to perform a C64 screen content redraw not only when a user presses a key on the keyboard but also when something important happens on the Raspberry Pi's side when the Sidekick64 cartridge will trigger a non-maskable interrupt (NMI) to tell the C64 program that new screen content needs to be fetched and displayed. This enforced refresh is necessary for screens that need to be redrawn regularly like the system info screen displaying the current date and time and CPU temperature of the Pi.
 
@@ -189,7 +189,7 @@ To wrap it up, WLAN is less convenient to use than ethernet via cable. In exchan
 ### CRT files in root folder
 While there is no problem with storing CRT files (cartridge images) in their destined locations on the SD card it is not recommended to put any CRT files into the root folder of the SD card as  mbedtls will likely look for certificate files in the root folder when HTTPS is being used.
 ### Git branch will regularly be rebased and history will be rewritten
-This git repository is regularly being rebased on top of Frenetic's latest Sidekick64 releases to make it as easy as possible to be merged into Frenetic's main git repository in case it would become stable enough for Frenetic to decide to integrate it with the mainline code. Regular rebases are necessary in this fork and will rewrite git history of this repo so it might be cumbersome to try to pull from this branch over time.
+This git repository is rebased frequently on top of Frenetic's latest Sidekick64 releases to make it as easy as possible to be merged into Frenetic's main git repository should it become stable enough for Frenetic to decide to integrate it with the mainline code. Regular rebases are necessary in this fork and will rewrite git history of this repository so it might be irritatin to try to pull from this branch from time to time as local and remote history will not match.
 # Credits
 I would like to thank 
 * Frenetic for releasing exciting open source retro projects like Sidekick64 and for his help on pointing me to the areas in his source code where I could safely try to add some network stuff. 
