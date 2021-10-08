@@ -52,6 +52,9 @@ extern void setErrorMsg( char * msg );
 extern void setErrorMsg2( char * msg, boolean );
 extern void renderErrorMsg();
 extern void clearErrorMsg();
+#ifdef WITH_NET
+extern boolean isAutomaticScreenRefreshNeeded();
+#endif
 
 
 #endif

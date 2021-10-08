@@ -36,6 +36,14 @@
 
 // we will read these files
 static const char DRIVE[] = "SD:";
+
+#ifdef WITH_NET
+
+unsigned delayHandleNetworkValue = 1500000;
+
+CSidekickNet *pSidekickNet = 0;//used for c64screen to display net config params
+
+#endif
 static const char FILENAME_PRG[] = "SD:C16/rpimenu16.prg";		// .PRG to start
 static const char FILENAME_CBM80[] = "SD:C16/launch16.cbm80";	// launch code (CBM80 8k cart)
 static const char FILENAME_CONFIG[] = "SD:C16/sidekick264.cfg";		
@@ -46,10 +54,6 @@ static const char FILENAME_SPLASH_RGB[] = "SD:SPLASH/sk264_main.tga";
 static const char FILENAME_TFT_FONT[] = "SD:SPLASH/PXLfont88665b-RF2.3-C64sys.bin";		
 
 char FILENAME_LOGO_RGBA[128] = "SD:SPLASH/sk264_logo_blend.tga";
-
-#ifdef WITH_NET
-CSidekickNet *pSidekickNet;//used for c64screen to display net config params
-#endif
 
 static u32	disableCart     = 0;
 static u32	resetCounter    = 0;
@@ -227,27 +231,14 @@ void activateCart()
 		memcpy( cartL1, cartCBM80, 8192 );
 	}
 
-<<<<<<< HEAD:Source/Firmware/kernel_menu264.cpp
 	latchSetClearImm( 0, LATCH_RESET | LATCH_ENABLE_KERNAL );
 //	DELAY( 1 << 20 );
 
-#ifdef WITH_NET
-if (pSidekickNet != 0)
-	pSidekickNet->setCurrentKernel( (char*)"m" );	
-#endif
-
-=======
-	latchSetClearImm( LED_ACTIVATE_CART1_HIGH, LED_ACTIVATE_CART1_LOW | LATCH_RESET | LATCH_ENABLE_KERNAL );
-	SETCLR_GPIO( bNMI, bCTRL257 );
-
-	DELAY( 1 << 20 );
-	
 	#ifdef WITH_NET
 	if (pSidekickNet != 0)
 		pSidekickNet->setCurrentKernel( (char*)"m" );	
-	#endif
-	
->>>>>>> 797d6ec... 264: handle network also when no keypress is coming in from rpimenu:kernel_menu264.cpp
+		#endif
+
 	if ( screenType == 0 )
 	{
 		oledSetContrast( 255 );
@@ -464,6 +455,15 @@ __attribute__( ( always_inline ) ) inline void warmCache( void *fiqh, bool scree
 	FORCE_READ_LINEARa( (void*)fiqh, 2048*2, 65536 );
 }
 
+void CKernelMenu::enableFIQInterrupt( void )
+{
+	DisableIRQs();
+	m_InputPin.ConnectInterrupt( m_InputPin.FIQHandler, this );
+	m_InputPin.EnableInterrupt( GPIOInterruptOnRisingEdge );
+
+	
+}
+
 void CKernelMenu::DisableFIQInterrupt( void )
 {
 	m_InputPin.DisableInterrupt();
@@ -474,39 +474,52 @@ void CKernelMenu::DisableFIQInterrupt( void )
 #ifdef WITH_NET
 boolean CKernelMenu::handleNetwork( boolean doRender)
 {
-	m_InputPin.DisableInterrupt();
-	m_InputPin.DisconnectInterrupt();
-	EnableIRQs();
+	DisableFIQInterrupt();
+	if (doRender)
+		handleC64( lastChar, &launchKernel, FILENAME, filenameKernal);
 	updateSystemMonitor();
 	m_SidekickNet.handleQueuedNetworkAction();
-	
-	if ( m_SidekickNet.isDownloadReadyForLaunch()){
-		logger->Write( "RaspiMenu", LogNotice, "Download is ready for launch" );
-		u32 launchKernelTmp = m_SidekickNet.getCSDBDownloadLaunchType();
-		if (launchKernelTmp > 0)
-		{
-			launchKernel = launchKernelTmp;
-			strcpy(FILENAME, m_SidekickNet.getCSDBDownloadFilename());
-			//strcpy(menuItemStr, m_SidekickNet.getCSDBDownloadFilename());
-			lastChar = 0xfffffff;
+	if (m_SidekickNet.IsRunning()){
+		if ( m_SidekickNet.isDownloadReadyForLaunch()){
+			logger->Write( "RaspiMenu", LogNotice, "Download is ready for launch" );
+			u32 launchKernelTmp = m_SidekickNet.getCSDBDownloadLaunchType();
+			if (launchKernelTmp > 0)
+			{
+				launchKernel = launchKernelTmp;
+				strcpy(FILENAME, m_SidekickNet.getCSDBDownloadFilename());
+				//strcpy(menuItemStr, m_SidekickNet.getCSDBDownloadFilename());
+				lastChar = 0xfffffff;
+			}
+			m_SidekickNet.cleanupDownloadData(); //this also removes the status message
 		}
-		m_SidekickNet.cleanupDownloadData(); //this also removes the status message
+		
+		//if there is an unsaved download we save it to sd card
+		//after the status message was rendered by checkForFinishedDownload
+		m_SidekickNet.checkForSaveableDownload();
+		
+		//when HTTP download is finished but we haven't saved it yet
+		//a status message is being put onto the screen for the user
+		m_SidekickNet.checkForFinishedDownload();
+		
+		if (m_SidekickNet.isMenuScreenUpdateNeeded())
+			doRender = true;
 	}
+	else
+  	doRender = true;
 	
-	//if there is an unsaved download we save it to sd card
-	//after the status message was rendered by checkForFinishedDownload
-	m_SidekickNet.checkForSaveableDownload();
-	
-	//when HTTP download is finished but we haven't saved it yet
-	//a status message is being put onto the screen for the user
-	m_SidekickNet.checkForFinishedDownload();
-	
+	if ( doRender ){
+		renderC64(); //puts the active menu page into the raspi memory
+		warmCache( (void*)this->FIQHandler );
+		//doCacheWellnessTreatment();
+	}
 	m_timeStampOfLastNetworkEvent = 0;
 	
-	DisableIRQs();
-	m_InputPin.ConnectInterrupt( m_InputPin.FIQHandler, this );
-	m_InputPin.EnableInterrupt( GPIOInterruptOnRisingEdge );
+	if (m_SidekickNet.isWebserverRunning() && m_SidekickNet.usesWLAN())
+		delayHandleNetworkValue = 850000; // 900000 works, 850000 maybe, also check F7 browser
+	if ( m_SidekickNet.isSKTPScreenActive() )
+		delayHandleNetworkValue = 1100000;
 	
+	enableFIQInterrupt();
 	return doRender;
 }
 #endif
@@ -547,14 +560,19 @@ void CKernelMenu::Run( void )
 	if ( hdmiSoundDevice )
 		hdmiSoundDevice->Start();
 
+	#ifdef WITH_NET
+	m_timeStampOfLastNetworkEvent = 0;
+	m_SidekickNet.setCurrentKernel( (char*)"m" );
+	unsigned keepNMILow = 0;
+	unsigned lastAutoRefresh = 0;
+	unsigned autoRefreshTimeLookup = 0;
+	#endif
 	if ( !disableCart )
 	{
 		latchSetClearImm( 0, LATCH_RESET | LATCH_ENABLE_KERNAL );
 
 		// setup FIQ
-		DisableIRQs();
-		m_InputPin.ConnectInterrupt( m_InputPin.FIQHandler, this );
-		m_InputPin.EnableInterrupt( GPIOInterruptOnRisingEdge );
+		enableFIQInterrupt();
 
 		launchKernel = 0;
 
@@ -572,23 +590,38 @@ void CKernelMenu::Run( void )
 	{
 		asm volatile ("wfi");
 
-	#if 1
 		if ( doActivateCart )
 			activateCart();
 	
 		if ( launchKernel )
 		{
-			m_InputPin.DisableInterrupt();
-			m_InputPin.DisconnectInterrupt();
-			EnableIRQs();
+			DisableFIQInterrupt();
 			return;
 		}
 
+		#ifdef WITH_NET
+		if ( keepNMILow > 0 ){
+				keepNMILow --;
+				if ( keepNMILow == 0 )
+					SET_GPIO( bNMI );
+		};
+		#endif
+
 		if ( updateMenu == 1 )
 		{
+			#ifdef WITH_NET
+			handleNetwork( true );
+			lastAutoRefresh = 0;
+			#else
+			//handleC64 - processes the key the user has pressed to determine how 
+			//the screen has to change (e.g. jump from page a to page b)
 			handleC64( lastChar, &launchKernel, FILENAME, filenameKernal );
+			lastChar = 0xfffffff;
+			refresh++;
 			renderC64();
-
+			warmCache( (void*)this->FIQHandler );
+			c64screen[0]=lastChar&255;
+			#endif
 			/*char tt[64];
 			static int lastPrintChar = 0;
 			if ( lastChar != 0 )
@@ -600,8 +633,10 @@ void CKernelMenu::Run( void )
 			lastChar = 0xfffffff;
 			doneWithHandling = 1;
 			updateMenu = 0;
-
-
+			#ifdef WITH_NET
+			autoRefreshTimeLookup = 0; //prevent broken screen in system information screen on continuuos keypress
+			#endif
+			
 			if ( launchKernel == 5 ) 
 			// either: launch CRT, no need to call an external RPi-kernel
 			// or: NeoRAM - Autostart
@@ -613,9 +648,7 @@ void CKernelMenu::Run( void )
 					DELAY( 1 << 17 );
 					CLR_GPIO( bNMI );
 					pullIRQ = 64;
-					m_InputPin.DisableInterrupt();
-					m_InputPin.DisconnectInterrupt();
-					EnableIRQs();
+					DisableFIQInterrupt();
 					return;
 				} else
 				{
@@ -652,16 +685,88 @@ void CKernelMenu::Run( void )
 			}
 		}
 		#ifdef WITH_NET
-		else if ( ( m_SidekickNet.IsConnecting() || m_SidekickNet.IsRunning()) &&  ++m_timeStampOfLastNetworkEvent > 1500000)
+		else
 		{
-			if ( handleNetwork( false)) //this makes the webserver respond quickly even when there is no keypress user action
+			boolean timedRefresh = false;
+			if ( isAutomaticScreenRefreshNeeded() )
 			{
+				boolean toggle = !m_SidekickNet.IsRunning() && ++autoRefreshTimeLookup > 1500000;
+				if ( toggle ){
+					autoRefreshTimeLookup = 0;
+					DisableFIQInterrupt();
+				}
+				unsigned uptime = m_Timer.GetUptime();
+				if ( lastAutoRefresh == 0){
+					lastAutoRefresh = uptime;
+				}
+				else if ( uptime - lastAutoRefresh > 0 )
+				{
+					timedRefresh = true;
+					lastAutoRefresh = uptime;
+					if( !toggle )
+						DisableFIQInterrupt();
+					doneWithHandling = 0;
+					updateMenu = 1;
+					//logger->Write( "SidekickMenu", LogNotice, "timed refresh happening" );
+					renderC64(); //puts the active menu page into the raspi memory
+					doCacheWellnessTreatment();
+					//CACHE_PRELOAD_DATA_CACHE( c64screen, 1024, CACHE_PRELOADL2STRM );
+					//CACHE_PRELOAD_DATA_CACHE( c64color, 1024, CACHE_PRELOADL2STRM );
+					// trigger IRQ on C16/+4 which tells the menu code that the new screen is ready
+					DELAY( 1 << 17 );
+					enableFIQInterrupt();
+					CLR_GPIO( bNMI );
+					doneWithHandling = 1;
+					updateMenu = 0;
+					keepNMILow = 1; //this means the duration of NMI going down is a little longer
+					
+				}
+				else if ( toggle ){
+					doCacheWellnessTreatment();
+					enableFIQInterrupt();
+				}
+			}
+			else
+			{
+				lastAutoRefresh = 0;
+//				if ( m_SidekickNet.isSKTPScreenActive() )
+//					m_SidekickNet.queueSktpRefresh( 16 );
+			}
+		
+			if ( !timedRefresh )
+			{
+				if ( m_SidekickNet.isMenuScreenUpdateNeeded() )
+				{
+					DisableFIQInterrupt();
+					doneWithHandling = 0;
+					updateMenu = 1;
+					//logger->Write( "SidekickMenu", LogNotice, "MenuScreenUpdateNeeded => NMI" );
+					//render should be after disable fiq because then the stuff like 
+					//system clock, uptime and CPU temp are being updated
+					renderC64(); //puts the active menu page into the raspi memory
+					doCacheWellnessTreatment();
+					enableFIQInterrupt();
+					CLR_GPIO( bNMI );
+ 
+					doneWithHandling = 1;
+					updateMenu = 0;
+					keepNMILow = 1; //this means the duration of NMI going down is a little longer
+					//delayHandleNetworkValue = 1500000;
+					//m_timeStampOfLastNetworkEvent = 0;
+				}
+		
+				else if ( ( m_SidekickNet.IsConnecting() || m_SidekickNet.IsRunning()) &&  ++m_timeStampOfLastNetworkEvent > delayHandleNetworkValue)
+				{
+					if ( handleNetwork( false)) //this makes the webserver respond quickly even when there is no keypress user action
+					{
+						CLR_GPIO( bNMI );
+						keepNMILow = 1; //this means the duration of NMI going down is a little longer
+					}
+				}
 			}
 		}
 		#endif
-
-		
-	#endif
+	
 	}
 	
 	DisableFIQInterrupt();
