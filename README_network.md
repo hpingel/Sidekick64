@@ -21,9 +21,9 @@ Currently the following network related features are offered by the experimental
 	- Load screen content to C64 via HTTP or HTTPS via a simple binary protocol from a web application called "SKTP server". 
 	- Trigger download and launch of remote binary files like PRG, D64, SID, CRT, etc. 
 	- Example apps:
-       		- Browse and download stuff from CSDb via webservice provided by CSDb.
-   		- Access to RSS-Feeds.
-   		- Join a simple text chat to chat with other SKTP users.
+		- Browse and download stuff from CSDb via webservice provided by CSDb.
+		- Access to RSS-Feeds.
+		- Join a simple text chat to chat with other SKTP users.
 * Changes to the Sidekick64 menu
 	- Added network menu page entry to main menu (open with key @, also allow access to with subpages "SKTP browser" and System information
 	- Added SKTP browser: .... Control screen content and user key presses remotely via "SKTP server" (HTTP server with web application). Ability to download, launch and save files fetched via HTTP(S): PRG, SID, CRT, D64
@@ -77,7 +77,7 @@ This enables us to do the following:
 * It allows interaction with most services on the World Wide Web
 * In addition to screen updates SKTP allows to request Sidekick64 to download a payload from a web adress (via HTTP or HTTPS), store and/or execute it on the C64. This means, files like PRG, SID, CRT, etc. may be downloaded from the internet and directly launched on the C64. This is tightly coupled to the Sidekick64 menu code as the possibility to launch is essential.
 
-Currently two example applications exist that make use of SKTP:
+Currently three example applications exist that make use of SKTP:
 ### CSDb Launcher
 Allows to browse latest releases and a couple of selected top lists to easily access attractive releases from the world of the C64 demo scene.
 ### Forum64 RSS Viewer
@@ -95,7 +95,7 @@ There might be problems with the Raspberry Pi firmware files which exist in olde
 
 The vanilla kernel is called `kernel_sk64.img` and is always in the root folder of the SD card. Network kernels have different file names (`kernel_sk64_net.img`, `kernel_sk64_wlan.img`) and should also be stored in the root folder.
 
-Within the file `sidekick64.txt` in the root folder of the SD card you can clarify which kernel image should be booted when Sidekick64 is powered up. The vanilla kernel is booted by the line `kernel=kernel_sk64.img`. You can add lines below this line like `kernel=kernel_sk64_net.img` to boot the cable based network kernel instead. You may also disable lines with a prefix (`#`). But there should always be one line that is set to active. Otherwise Sidekick64 will fail to boot.
+Within the file `sidekick64.txt` in the root folder of the SD card you can clarify which kernel image should be booted when Sidekick64 is powered up. The vanilla kernel is booted by the line `kernel=kernel_sk64.img`. You can add lines below this line like `kernel=kernel_sk64_net.img` to boot the cable based network kernel instead. You may also disable lines by prefixing it with `#`. But there should always be one line that is set to active. Otherwise Sidekick64 will fail to boot.
 
 ### WLAN, SSID and passphrase
 
