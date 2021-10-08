@@ -129,7 +129,8 @@ public:
 
 private:
 	static void FIQHandler( void *pParam );
-	void DisableFIQInterrupt( void );
+	void enableFIQInterrupt();
+	void DisableFIQInterrupt();
 #ifdef WITH_NET
 	boolean handleNetwork( boolean);
 #endif

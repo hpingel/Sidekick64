@@ -1317,8 +1317,8 @@ void printSKTPScreen()
 	//printC64( 1, 24, pSidekickNet->getSysMonInfo(0), skinValues.SKIN_MENU_TEXT_ITEM, 0 );
 
 	c64screen[ 1000 ] = ((0x6800 >> 8) & 0xFC);
-	c64screen[ 1001 ] = skinValues.SKIN_MENU_BACKGROUND_COLOR;
-	c64screen[ 1002 ] = skinValues.SKIN_MENU_BORDER_COLOR;
+	c64screen[ 1001 ] = 0;
+	c64screen[ 1002 ] = 0;
 
 }
 	
@@ -1509,3 +1509,10 @@ void renderErrorMsg()
 	
 	menuScreen = previousMenuScreen;
 }
+
+
+#ifdef WITH_NET
+boolean isAutomaticScreenRefreshNeeded(){
+	return (menuScreen == MENU_SYSTEMINFO );
+}
+#endif
