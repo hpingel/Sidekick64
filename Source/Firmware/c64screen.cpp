@@ -1093,6 +1093,7 @@ void handleC64( int k, u32 *launchKernel, char *FILENAME, char *filenameKernal, 
 			}
 			cursorPos = scrollPos = 0;
 		}
+		
 		// virtual key press
 		if ( k == 92 && typeInName == 0 )
 		{
@@ -1801,10 +1802,11 @@ void handleC64( int k, u32 *launchKernel, char *FILENAME, char *filenameKernal, 
 		{
 			//virtual key press
 			//joystick button press
-			if ( k == 92 )
+			/*
+			if ( k == 92 && joyIdx != -1 )
 			{
 				k = VK_RETURN;
-			}
+			}*/
 			//the user has actually manually pressed a key on the Commodore keyboard
 			pSidekickNet->queueSktpKeypress(k);
 		}
