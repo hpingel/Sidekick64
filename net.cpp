@@ -224,6 +224,18 @@ void CSidekickNet::setSidekickKernelUpdatePath( unsigned type)
 };*/
 
 boolean CSidekickNet::ConnectOnBoot (){
+	
+	if (netModemEmuDefaultBaudrate > 0){
+		switch(netModemEmuDefaultBaudrate){
+			case 300:
+			case 1200:
+			case 2400:
+			case 4800:
+			case 9600:
+				m_baudRate = netModemEmuDefaultBaudrate;
+		}
+	}
+			
 	return netConnectOnBoot;
 }
 
@@ -252,17 +264,6 @@ boolean CSidekickNet::Initialize()
 		m_isPrepared = true;
 	}
 	
-	if (netModemEmuDefaultBaudrate > 0){
-		switch(netModemEmuDefaultBaudrate){
-			case 300:
-			case 1200:
-			case 2400:
-			case 4800:
-			case 9600:
-				m_baudRate = netModemEmuDefaultBaudrate;
-		}
-	}
-
 	while (!m_Net->IsRunning() && sleepCount < sleepLimit)
 	{
 		#ifdef WITH_USB_SERIAL
