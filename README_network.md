@@ -2,7 +2,7 @@
 ## Introduction
 The main goal of this fork of Sidekick64 is to find out if it is possible to use the network capabilities of a Raspberry Pi in parallel with the emulation modes of Sidekick64 without meddling too much with any timings needed for reliably emulating C64 carts. Further goals were for me to learn how to use the Circle bare metal framework and to learn how Sidekick64 does its magic by trying to understand its source code.
 
-Once network features were squeezed into the "clockwork" of Sidekick64 without disturbing it too much, I started to add some network features to make use of the newly gained network capabilities.
+Once network features were squeezed into the "clockwork" of Sidekick64 without disturbing it too much, I started to add some network demos and tried to implement modem emulation to make use of the newly gained network capabilities. Without the excellent network examples of the Circle bare metal framework this would have been much harder to achieve.
 ## Summary: Network features in a nutshell
 Currently the following network related features are offered by the experimental Sidekick64 network kernel:
 * Join your network, obtain IP address and stuff via DHCP (mandatory)
@@ -21,8 +21,9 @@ Currently the following network related features are offered by the experimental
 	- Load screen content to C64 via HTTP or HTTPS via a simple binary protocol from a web application called "SKTP server". 
 	- Trigger download and launch of remote binary files like PRG, D64, SID, CRT, etc. 
 	- Example apps:
-        - Browse and download stuff from CSDb via webservice provided by CSDb.
-        - Access to RSS-Feeds.
+       		- Browse and download stuff from CSDb via webservice provided by CSDb.
+   		- Access to RSS-Feeds.
+   		- Join a simple text chat to chat with other SKTP users.
 * Changes to the Sidekick64 menu
 	- Added network menu page entry to main menu (open with key @, also allow access to with subpages "SKTP browser" and System information
 	- Added SKTP browser: .... Control screen content and user key presses remotely via "SKTP server" (HTTP server with web application). Ability to download, launch and save files fetched via HTTP(S): PRG, SID, CRT, D64
@@ -81,6 +82,8 @@ Currently two example applications exist that make use of SKTP:
 Allows to browse latest releases and a couple of selected top lists to easily access attractive releases from the world of the C64 demo scene.
 ### Forum64 RSS Viewer
 Allows to launch a dynamically generated PRG (available in different flavours for C64, C128@80columns, C16/Plus/4) that displays the latest posts from the RSS feed of Forum64.
+### Simple text chat
+To test and demonstrate multiuser capabilities a simple text chat is available.
 ## Network configuration via SD card
 You may change some network default settings by editing configuration files on the SD card via an SD card reader plugged into your Desktop/Notebook/PC/MAC/Pi/etc.
 
@@ -189,7 +192,7 @@ To wrap it up, WLAN is less convenient to use than ethernet via cable. In exchan
 ### CRT files in root folder
 While there is no problem with storing CRT files (cartridge images) in their destined locations on the SD card it is not recommended to put any CRT files into the root folder of the SD card as  mbedtls will likely look for certificate files in the root folder when HTTPS is being used.
 ### Git branch will regularly be rebased and history will be rewritten
-This git repository is rebased frequently on top of Frenetic's latest Sidekick64 releases to make it as easy as possible to be merged into Frenetic's main git repository should it become stable enough for Frenetic to decide to integrate it with the mainline code. Regular rebases are necessary in this fork and will rewrite git history of this repository so it might be irritatin to try to pull from this branch from time to time as local and remote history will not match.
+This git repository is rebased frequently on top of Frenetic's latest Sidekick64 releases to make it as easy as possible to be merged into Frenetic's main git repository should it become stable enough for Frenetic to decide to integrate it with the mainline code. Regular rebases are necessary in this fork and will rewrite git history of this repository so it might be irritating to try to pull from this branch from time to time as local and remote history will not match.
 # Credits
 I would like to thank 
 * Frenetic for releasing exciting open source retro projects like Sidekick64 and for his help on pointing me to the areas in his source code where I could safely try to add some network stuff. 
