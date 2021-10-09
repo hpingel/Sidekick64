@@ -1245,11 +1245,13 @@ boolean CSidekickNet::isSktpSessionActive(){
 
 boolean CSidekickNet::launchSktpSession(){
 	char * pResponseBuffer = new char[33];	// +1 for 0-termination
-//  use hostname as username for testing purposes
-//	CString urlSuffix = "/sktp.php?session=new&username=";
-//	urlSuffix.Append(netSidekickHostname);
-//	if (HTTPGet ( m_SKTPServer, urlSuffix, pResponseBuffer, m_sktpResponseLength))
-	CString urlSuffix = "/sktp.php?session=new&type=";
+	CString urlSuffix = "/sktp.php?session=new";
+	if (strcmp(netSktpHostUser,"") != 0)
+	{
+		urlSuffix.Append("&username=");
+		urlSuffix.Append(netSktpHostUser);
+	}
+	urlSuffix.Append("&type=");
 	#ifndef IS264
 	if (m_isC128)
 		urlSuffix.Append("128");
@@ -1258,8 +1260,8 @@ boolean CSidekickNet::launchSktpSession(){
 	#else
 		urlSuffix.Append("264");
 	#endif
+
 	if (HTTPGet ( m_SKTPServer, urlSuffix, pResponseBuffer, m_sktpResponseLength))
-//	if (HTTPGet ( m_SKTPServer, "/sktp.php?session=new", pResponseBuffer, m_sktpResponseLength))	
 	{
 		if ( m_sktpResponseLength > 25 && m_sktpResponseLength < 34){
 			m_sktpSessionID = pResponseBuffer;
