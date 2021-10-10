@@ -71,7 +71,7 @@
 #define USE_DHCP
 #endif
 // Time configuration
-static const unsigned bestBefore = 1633046399;
+static const unsigned bestBefore = 1638364276;
 static const char NTPServer[]    = "pool.ntp.org";
 static const int nTimeZone       = 1*60;		// minutes diff to UTC
 static const char DRIVE[] = "SD:";
@@ -207,7 +207,6 @@ CSidekickNet::CSidekickNet(
 	m_CSDBDownloadPath[0] = '\0';
 	m_CSDBDownloadExtension[0] = '\0';
 	m_CSDBDownloadFilename[0] = '\0';
-	
 }
 
 void CSidekickNet::setErrorMsgC64( char * msg, boolean sticky = true ){ 
@@ -668,18 +667,12 @@ boolean CSidekickNet::IsRunning()
 
 boolean CSidekickNet::IsStillRunning()
 {
-	boolean currentState = m_Net->IsRunning();
-	if ( !currentState)
+	if (m_isActive && !m_Net->IsRunning())
 	{
-		 if (m_isActive)
-			 logger->Write( "CSidekickNet::IsRunning", LogNotice, 
-				 "Error: Network became inactive!"
-			 );
-		 m_isActive = false;
+		logger->Write( "CSidekickNet::IsRunning", LogNotice, 
+		 "Error: Network became inactive!"
+		);
 	} 
-	else
-	 	m_isActive = true;
-
 	return m_isActive; 
  }
 
@@ -829,15 +822,14 @@ boolean CSidekickNet::isUsbUserportModemConnected(){
 
 void CSidekickNet::handleQueuedNetworkAction()
 {
-	//boolean isRunning = IsStillRunning();
-	boolean isRunning = IsRunning();
+	boolean isRunning = IsStillRunning();
+	//boolean isRunning = IsRunning();
 	//logger->Write( "handleQueuedNetworkAction", LogNotice, "Yield");
 	if ( isRunning && (netEnableWebserver || m_useWLAN))
 		m_pScheduler->Yield (); // this is needed for webserver and wlan keep-alive
 	
 	if ( isRunning && (!isAnyNetworkActionQueued() || !usesWLAN()) )
 	{
-		
 		if ( m_WebServer == 0 && netEnableWebserver ){
 			EnableWebserver();
 		}
@@ -845,13 +837,30 @@ void CSidekickNet::handleQueuedNetworkAction()
 		handleModemEmulation( false );
 		
 		//every couple of seconds + seconds needed for request
-		//log cpu temp + uptime + free memory
-		//in wlan case do keep-alive request
-/*		if ( (m_pTimer->GetUptime() - m_timestampOfLastWLANKeepAlive) > 10) //(netEnableWebserver ? 7:5))
-		{
-			
+		//log cpu temp + uptime + free memory (getSysMonInfo)
+		//in wlan case do keep-alive measures
+		//if ( (m_pTimer->GetUptime() - m_timestampOfLastWLANKeepAlive) > 10) //(netEnableWebserver ? 7:5))
+		//{
 			#ifdef WITH_WLAN //we apparently don't need wlan keep-alive at all if we just always do the yield!!!
-			if (!netEnableWebserver)
+			for (unsigned z=0; z < 100; z++)
+			{
+				//in case there is something incoming from the webserver while we are in the loop -> break!
+				if (m_isDownloadReadyForLaunch)
+				{
+					//Caution: Having this log entry here seems to be very important for timing!!!! :)
+					logger->Write ("CSidekickNet", LogNotice, "Early-exit multi-yield...");
+					break;
+				}
+				m_pScheduler->Yield ();
+			}
+			
+			//only do cache stuff when in menu kernel
+			//doing this in launcher kernel ruins the running prg
+			//maybe we can check here ich sktp browser is active too?
+			if ( strcmp( m_currentKernelRunning, "m" ) == 0)
+				requireCacheWellnessTreatment();
+/*			
+//			if (!netEnableWebserver)
 			{
 				//Circle42 offers experimental WLAN, but it seems to
 				//disconnect very quickly if there is no traffic.
@@ -861,7 +870,6 @@ void CSidekickNet::handleQueuedNetworkAction()
 				
 				//further tests have to be done if the keep-alive and the webserver
 				//run together smoothly
-				
 				if (m_loglevel > 1)
 					logger->Write ("CSidekickNet", LogNotice, "Triggering WLAN keep-alive request...");
 				if (m_SKTPServer.port != 0)
@@ -873,12 +881,13 @@ void CSidekickNet::handleQueuedNetworkAction()
 				else
 					UpdateTime();
 			}
+*/			
 			#endif
 			//m_timestampOfLastWLANKeepAlive = m_pTimer->GetUptime();
 			if (m_loglevel > 3)
 				logger->Write ("CSidekickNet", LogNotice, getSysMonInfo(1));
-		}
-		*/
+		//}
+
 	}
 	//else if (isRunning && isAnyNetworkActionQueued() && usesWLAN())
 	//	m_timestampOfLastWLANKeepAlive = m_pTimer->GetUptime();
@@ -943,9 +952,6 @@ void CSidekickNet::handleQueuedNetworkAction()
 			m_isSktpKeypressQueued = false;
 		}
 	}
-	if (isRunning && usesWLAN())
-		m_Net->Process();
-
 }
 
 boolean CSidekickNet::checkForSaveableDownload(){
