@@ -245,18 +245,20 @@ void CKernelLaunch::Run( void )
 	
 	unsigned keepNMILow = 0;
 	//bool isDoubleDirect = false;
-	unsigned swiftLinkNmiDelay = 10;
+  unsigned swiftLinkNmiDelay = 10;
+	//TODO: for WLAN, test swiftLinkNmiDelay = 20000 * 2400 / 4800;
+
 	//bool oldConnectState = false;
 	bool firstEntry = false;
 	swiftLinknetDelayDMA = swiftLinknetDelayDMADefault;
 
 
 	pSidekickNet->setCurrentKernel( (char*)"l" );
-	//unsigned netDelay = _playingPSID ? 900000000: 300; //TODO: improve this
-	unsigned netDelay = 3500000; //TODO: improve this
-	unsigned followUpDelay = (pSidekickNet->getModemEmuType() == 1) ? 300000 : 300; //3000000
+	unsigned netDelay = _playingPSID ? 90000000: 3500000; //TODO: improve this
+	unsigned followUpDelay = (pSidekickNet->getModemEmuType() == 1) ? 300000 : 300; //(_playingPSID ? 300: 300);
 
-	if ( pSidekickNet->usesWLAN() ) followUpDelay = 10 * followUpDelay;
+
+	if ( pSidekickNet->usesWLAN() ) followUpDelay = 10 * followUpDelay; //TODO
 	#endif
 
 	// setup FIQ
@@ -344,14 +346,15 @@ void CKernelLaunch::Run( void )
 		{
 			//bool swiftLinkDirectNetAccess = false;
 			
-			if (disableCart && netDelay > 0 &&
-				(
+			if (disableCart && netDelay > 0 )
+			{
+				if(
+					(_playingPSID && transferStarted) ||
 					(pSidekickNet->getModemEmuType() == 1 && !swiftLinkEnabled) ||
 					pSidekickNet->getModemEmuType() != 1
-				)
-			)
-			{
-				netDelay--;
+				){
+					netDelay--;
+				}
 			}
 /*			
 			swiftLinkDirectNetAccess = 
@@ -363,7 +366,7 @@ void CKernelLaunch::Run( void )
 				(!pSidekickNet->areCharsInInputBuffer() || pSidekickNet->areCharsInOutputBuffer());
 */				
 
-			if ( swiftLinkEnabled && pSidekickNet->isModemSocketConnected() && swiftLinkResponse == 0 && swiftLinknetDelayDMA > 0)
+			if ( swiftLinkEnabled && !pSidekickNet->usesWLAN() && pSidekickNet->isModemSocketConnected() && swiftLinkResponse == 0 && swiftLinknetDelayDMA > 0)
 				swiftLinknetDelayDMA--;
 
 			if (swiftLinkReleaseDMA) //swiftLinkDirectNetAccess || 
@@ -376,7 +379,7 @@ void CKernelLaunch::Run( void )
 			{
 
 				
-				netDelay = _playingPSID ? 3000: followUpDelay;
+				netDelay = followUpDelay;
 				m_InputPin.DisableInterrupt();
 				m_InputPin.DisconnectInterrupt();
 				/*
@@ -388,7 +391,10 @@ void CKernelLaunch::Run( void )
 				
 				if (!firstEntry)
 				{
-					logger->Write( "sk", LogNotice, "firstEntry");
+					if (_playingPSID)
+						logger->Write( "sk", LogNotice, "firstEntry playing PSID");
+					else
+						logger->Write( "sk", LogNotice, "firstEntry");
 					firstEntry = true;
 				}
 				

@@ -563,6 +563,12 @@ boolean CKernelMenu::handleNetwork( boolean doRender)
 		//doCacheWellnessTreatment();
 	}
 	m_timeStampOfLastNetworkEvent = 0;
+	
+	if (m_SidekickNet.isWebserverRunning() && m_SidekickNet.usesWLAN())
+		delayHandleNetworkValue = 850000; // 900000 works, 850000 maybe, also check F7 browser
+	if ( m_SidekickNet.isSKTPScreenActive() )
+		delayHandleNetworkValue = 1200000;
+	
 	enableFIQInterrupt();
 	return doRender;
 }
@@ -730,6 +736,9 @@ void CKernelMenu::Run( void )
 			lastChar = 0xfffffff;
 			doneWithHandling = 1;
 			updateMenu = 0;
+			#ifdef WITH_NET
+			autoRefreshTimeLookup = 0; //prevent broken screen in system information screen on continuous keypress
+			#endif
 		}
 		#ifdef WITH_NET
 		else
@@ -762,6 +771,7 @@ void CKernelMenu::Run( void )
 					doneWithHandling = 1;
 					updateMenu = 0;
 					keepNMILow = 1; //this means the duration of NMI going down is a little longer
+					
 				}
 				else if ( toggle ){
 					doCacheWellnessTreatment();
@@ -793,7 +803,7 @@ void CKernelMenu::Run( void )
 					updateMenu = 0;
 					keepNMILow = 1; //this means the duration of NMI going down is a little longer
 				}
-				if ( ( m_SidekickNet.IsConnecting() || m_SidekickNet.IsRunning()) &&  ++m_timeStampOfLastNetworkEvent > delayHandleNetworkValue)
+				else if ( ( m_SidekickNet.IsConnecting() || m_SidekickNet.IsRunning()) &&  ++m_timeStampOfLastNetworkEvent > delayHandleNetworkValue)
 				{
 					if ( handleNetwork( false)) //this makes the webserver respond quickly even when there is no keypress user action
 					{
@@ -801,8 +811,6 @@ void CKernelMenu::Run( void )
 						keepNMILow = 1; //this means the duration of NMI going down is a little longer
 					}
 				}
-				if (m_SidekickNet.isWebserverRunning() && m_SidekickNet.usesWLAN())
-					delayHandleNetworkValue = 1000000;
 			}
 		}
 		#endif
