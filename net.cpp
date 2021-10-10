@@ -857,7 +857,7 @@ void CSidekickNet::handleQueuedNetworkAction()
 			//only do cache stuff when in menu kernel
 			//doing this in launcher kernel ruins the running prg
 			//maybe we can check here ich sktp browser is active too?
-			if ( strcmp( m_currentKernelRunning, "m" ) == 0)
+			if ( !isSKTPScreenActive() && strcmp( m_currentKernelRunning, "m" ) == 0 && ( strcmp( m_CSDBDownloadExtension, "d64" ) != 0))
 				requireCacheWellnessTreatment();
 /*			
 //			if (!netEnableWebserver)
