@@ -254,8 +254,8 @@ void CKernelLaunch::Run( void )
 
 
 	pSidekickNet->setCurrentKernel( (char*)"l" );
-	unsigned netDelay = _playingPSID ? 90000000: 3500000; //TODO: improve this
-	unsigned followUpDelay = (pSidekickNet->getModemEmuType() == 1) ? 300000 : 300; //(_playingPSID ? 300: 300);
+	unsigned netDelay = _playingPSID ? 180000000: 3500000; //TODO: improve this
+	unsigned followUpDelay = (pSidekickNet->getModemEmuType() == 1) ? 300000 : 300; //(_playingPSID ? 3000: 300);
 
 
 	if ( pSidekickNet->usesWLAN() ) followUpDelay = 10 * followUpDelay; //TODO
