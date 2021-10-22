@@ -71,7 +71,6 @@
 #define USE_DHCP
 #endif
 // Time configuration
-static const unsigned bestBefore = 1638364276;
 static const char NTPServer[]    = "pool.ntp.org";
 static const int nTimeZone       = 1*60;		// minutes diff to UTC
 static const char DRIVE[] = "SD:";
@@ -914,16 +913,6 @@ void CSidekickNet::handleQueuedNetworkAction()
 	else if (isRunning)
 	{
 
-/*
-		if (m_isFrameQueued)
-		{
-			#ifdef WITH_RENDER
-			updateFrame();
-			#endif
-			m_isFrameQueued = false;
-		}
-		else
-*/		
 		if (m_isCSDBDownloadQueued)
 		{
 			if (m_loglevel > 2){
@@ -1170,14 +1159,6 @@ boolean CSidekickNet::UpdateTime(void)
 	{
 		if (m_loglevel > 2)
 			logger->Write ("CSidekickNet::UpdateTime", LogNotice, "System time updated");
-			
-		if ( m_pTimer->GetTime() > bestBefore ){
-			logger->Write( "handleQueuedNetworkAction", LogError, "This time-limited network test kernel has reached its end of life!");
-			//                    "012345678901234567890123456789012345XXXX"
-			setErrorMsgC64((char*)"   Kernel is outdated - please update!  ");
-			m_isRebootRequested = true;
-		}
-			
 		return true;
 	}
 	else
@@ -1256,8 +1237,13 @@ boolean CSidekickNet::launchSktpSession(){
 	{
 		urlSuffix.Append("&username=");
 		urlSuffix.Append(netSktpHostUser);
+		if (strcmp(netSktpHostPassword,"") != 0)
+		{
+			urlSuffix.Append("&password=");
+			urlSuffix.Append(netSktpHostPassword);
+		}
 	}
-	urlSuffix.Append("&type=");
+	urlSuffix.Append("&sktpv=1&type=");
 	#ifndef IS264
 	if (m_isC128)
 		urlSuffix.Append("128");
