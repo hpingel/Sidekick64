@@ -449,6 +449,9 @@ boolean CKernelMenu::Initialize( void )
 	} 
 
 	#ifdef WITH_NET
+		if (m_SidekickNet.usesWLAN())  
+			delayHandleNetworkValue = 1200000;
+	
 		if ( m_SidekickNet.ConnectOnBoot() ){
 			boolean bNetOK = bOK ? m_SidekickNet.Initialize() : false;
 			if (bNetOK){
@@ -512,21 +515,13 @@ boolean CKernelMenu::handleNetwork( boolean doRender)
 {
 	//handleC64 - processes the key the user has pressed to determine how 
 	//the screen has to change (e.g. jump from page a to page b)
-//	
-//	#ifndef WITH_WLAN
-//		handleC64( lastChar, &launchKernel, FILENAME, filenameKernal, menuItemStr, &startForC128 );
-//		DisableFIQInterrupt();
-//	#else
-//	#ifdef WITH_WLAN
-		DisableFIQInterrupt();
-		if (doRender)
-			handleC64( lastChar, &launchKernel, FILENAME, filenameKernal, menuItemStr, &startForC128 );
-//	#endif
+	DisableFIQInterrupt();
+	if (doRender)
+		handleC64( lastChar, &launchKernel, FILENAME, filenameKernal, menuItemStr, &startForC128 );
 
 	updateSystemMonitor();
 	if ( updateMenu == 1 && doRender && modeC128 )
 		m_SidekickNet.setC128Mode();
-
 	//the order of the following function calls is done like this on purpose
 	m_SidekickNet.handleQueuedNetworkAction();
 	if (m_SidekickNet.IsRunning()){
@@ -564,9 +559,11 @@ boolean CKernelMenu::handleNetwork( boolean doRender)
 	}
 	m_timeStampOfLastNetworkEvent = 0;
 	
-	if (m_SidekickNet.isWebserverRunning() && m_SidekickNet.usesWLAN())
-		delayHandleNetworkValue = 850000; // 900000 works, 850000 maybe, also check F7 browser
-	if ( m_SidekickNet.isSKTPScreenActive() )
+	if (m_SidekickNet.usesWLAN()) // && !modeC128)
+		delayHandleNetworkValue = m_SidekickNet.isWebserverRunning() ? 850000 : 900000; //, 850000 maybe, also check F7 browser
+	//else if (m_SidekickNet.usesWLAN() && modeC128)
+	//	delayHandleNetworkValue = 1200000;
+	if ( m_SidekickNet.isSKTPScreenActive())
 		delayHandleNetworkValue = 1200000;
 	
 	enableFIQInterrupt();
@@ -803,7 +800,7 @@ void CKernelMenu::Run( void )
 					updateMenu = 0;
 					keepNMILow = 1; //this means the duration of NMI going down is a little longer
 				}
-				else if ( ( m_SidekickNet.IsConnecting() || m_SidekickNet.IsRunning()) &&  ++m_timeStampOfLastNetworkEvent > delayHandleNetworkValue)
+				if ( ( m_SidekickNet.IsConnecting() || m_SidekickNet.IsRunning()) &&  ++m_timeStampOfLastNetworkEvent > delayHandleNetworkValue)
 				{
 					if ( handleNetwork( false)) //this makes the webserver respond quickly even when there is no keypress user action
 					{
