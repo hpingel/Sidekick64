@@ -2394,10 +2394,22 @@ void printSKTPScreen()
 			char * content;
 			while (!pSidekickNet->IsSktpScreenContentEndReached())
 			{
-				content = (char *) pSidekickNet->GetSktpScreenContentChunk( pos, color, inverse);
-				y = pos / 40;
-				x = pos % 40;
-				printC64( x, y+yOffset, content, color, inverse ? 0x80 : 0, 1);
+				u8 type = pSidekickNet->GetSktpScreenContentChunkType();
+				if ( type < 2)
+				{
+					content = (char *) pSidekickNet->GetSktpScreenContentChunk( pos, color, inverse);
+					y = pos / 40;
+					x = pos % 40;
+					printC64( x, y+yOffset, content, color, inverse ? 0x80 : 0, 1);
+				}
+				else if (type == 3)
+				{
+					pSidekickNet->enableSktpRefreshTimeout();
+				}
+				else{
+					//pSidekickNet->ProcessSktpScreenContentChunkMetaType();
+					
+				}
 			}
 			pSidekickNet->ResetSktpScreenContentChunks();
 		}

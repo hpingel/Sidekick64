@@ -170,6 +170,7 @@ CSidekickNet::CSidekickNet(
 		m_timestampOfLastWLANKeepAlive(0),
 		m_timeoutCounterStart(0),
 		m_skipSktpRefresh(0),
+		m_sktpRefreshTimeout(0),
 		m_sktpScreenPosition(0),
 		m_sktpResponseLength(0),
 		m_sktpResponseType(0),
@@ -714,17 +715,27 @@ void CSidekickNet::queueSktpKeypress( int key )
 	//logger->Write ("CSidekickNet::queueSktpKeypress", LogNotice, "Queuing keypress");
 }
 
-void CSidekickNet::queueSktpRefresh( unsigned timeout )
+void CSidekickNet::setSktpRefreshTimeout( unsigned timeout )
+{
+	//logger->Write ("CSidekickNet::setSktpRefreshTimeout", LogNotice, "%i", timeout);
+	m_sktpRefreshTimeout = timeout;
+	m_skipSktpRefresh = 0;
+	queuedSktpRefreshAllowed();
+}
+
+void CSidekickNet::queuedSktpRefreshAllowed()
 {
 	//refesh when user didn't press a key
 	//this has to be quick for multiplayer games (value 4)
 	//and can be slow for csdb browsing (value 16)
 	m_skipSktpRefresh++;
-	if ( timeout == 0 || (m_skipSktpRefresh > timeout && !isAnyNetworkActionQueued()))
+	if ( m_sktpRefreshTimeout == 0 || (m_skipSktpRefresh > m_sktpRefreshTimeout && !isAnyNetworkActionQueued()))
 	{
 		m_skipSktpRefresh = 0;
-		queueSktpKeypress( 92 );
-		//m_isMenuScreenUpdateNeeded = true;
+		m_sktpRefreshTimeout = 0;
+		//logger->Write ("CSidekickNet::queuedSktpRefreshAllowed", LogNotice, "keypress triggered");
+		queueSktpKeypress( 0 ); //key zero
+		m_isMenuScreenUpdateNeeded = true;
 	}
 }
 
@@ -914,6 +925,9 @@ void CSidekickNet::handleQueuedNetworkAction()
 	}
 	else if (isRunning)
 	{
+
+		if (m_skipSktpRefresh > 0)
+			queuedSktpRefreshAllowed();
 
 		if (m_isCSDBDownloadQueued)
 		{
@@ -1424,14 +1438,6 @@ void CSidekickNet::updateSktpScreenContent(){
 				m_CSDBDownloadSavePath = savePath;
 				//m_sktpResponseType = 1; //just to clear the screen
 			}
-			/*
-			if ( m_sktpResponseType == 3) // background and border color change
-			{
-			}
-			if ( m_sktpResponseType == 4) // background and border color change
-			{
-			}
-			*/
 			else
 			{
 				m_sktpScreenContent = (unsigned char * ) pResponseBuffer;
@@ -1461,11 +1467,26 @@ boolean CSidekickNet::IsSktpScreenToBeCleared()
 
 boolean CSidekickNet::IsSktpScreenUnchanged()
 {
-	return m_sktpResponseType == 2;
+	return m_sktpResponseType == 2; //2 is the http download
 }
 
-void CSidekickNet::ResetSktpScreenContentChunks(){
+void CSidekickNet::ResetSktpScreenContentChunks()
+{
 	m_sktpScreenPosition = 1;
+}
+
+
+u8 CSidekickNet::GetSktpScreenContentChunkType()
+{
+	if ( m_sktpScreenPosition >= m_sktpResponseLength )
+		return 255; //end reached
+	return m_sktpScreenContent[ m_sktpScreenPosition ];
+}
+
+void CSidekickNet::enableSktpRefreshTimeout(){
+	//logger->Write( "enableSktpRefreshTimeout", LogNotice, "enabled");
+	setSktpRefreshTimeout( m_sktpScreenContent[ ++m_sktpScreenPosition ] );
+	m_sktpScreenPosition++;
 }
 
 unsigned char * CSidekickNet::GetSktpScreenContentChunk( u16 & startPos, u8 &color, boolean &inverse )
@@ -1478,6 +1499,7 @@ unsigned char * CSidekickNet::GetSktpScreenContentChunk( u16 & startPos, u8 &col
 		return (unsigned char *) '\0';
 	}
 	u8 type      = m_sktpScreenContent[ m_sktpScreenPosition ];
+	
 	u8 scrLength = m_sktpScreenContent[ m_sktpScreenPosition + 1]; // max255
 	u8 byteLength= 0;
 	u8 startPosL = m_sktpScreenContent[ m_sktpScreenPosition + 2 ];//screen pos x/y
@@ -1948,12 +1970,26 @@ void CSidekickNet::handleModemEmulation( bool silent = false)
 				}
 				else if ( m_modemCommand[start] == 'i')
 				{
-					if ( m_modemEmuType == SK_MODEM_USERPORT_USB )
-						a = writeCharsToFrontend((unsigned char *)"sidekick64 userport modem emulation\rhave fun!\r", 46);
-					else
-						a = writeCharsToFrontend((unsigned char *)"sidekick64 swiftlink modem emulation\rhave fun!\r", 47);
-						//a = writeCharsToFrontend((unsigned char *)"\x40\x60 \x9f \x7dc\x05 1w\x1c 2w\x1e 3g\x1f 4b\x95 5b\x96 6r\x97 7g\x98 8g\x99 9g\x9a ab\x9c bp\x9e cy\x05-" ,13*4+4 );
-						
+					//if ( start + 1 <= stop)
+					//{
+						 if( m_modemCommand[start+1] == '7')
+						 {
+							 unsigned char * tmp = (unsigned char *) m_pTimer->GetTimeString();
+							 a = writeCharsToFrontend(tmp, 17);
+						 }
+						 //else if( m_modemCommand[start+1] == '8')
+						 //{
+						//	 a = writeCharsToFrontend((unsigned char *)"spooky\r", 7);
+							 //firmware build date
+						// }
+					//}
+					else{
+						if ( m_modemEmuType == SK_MODEM_USERPORT_USB )
+							a = writeCharsToFrontend((unsigned char *)"sidekick64 userport modem emulation\rhave fun!\r", 46);
+						else
+							a = writeCharsToFrontend((unsigned char *)"sidekick64 swiftlink modem emulation\rhave fun!\r", 47);
+							//a = writeCharsToFrontend((unsigned char *)"\x40\x60 \x9f \x7dc\x05 1w\x1c 2w\x1e 3g\x1f 4b\x95 5b\x96 6r\x97 7g\x98 8g\x99 9g\x9a ab\x9c bp\x9e cy\x05-" ,13*4+4 );
+					}
 						
 						/*
 								 colors
