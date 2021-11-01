@@ -840,13 +840,15 @@ void CSidekickNet::handleQueuedNetworkAction()
 		//in wlan case do keep-alive measures
 		//if ( (m_pTimer->GetUptime() - m_timestampOfLastWLANKeepAlive) > 10) //(netEnableWebserver ? 7:5))
 		//{
-			#ifdef WITH_WLAN //we apparently don't need wlan keep-alive at all if we just always do the yield!!!
-			for (unsigned z=0; z < 100; z++)
+		#ifdef WITH_WLAN //we apparently don't need wlan keep-alive at all if we just always do the yield!!!
+			for (unsigned z=0; z < (m_isC128 ? 100 : 100); z++)
 			{
 				//in case there is something incoming from the webserver while we are in the loop -> break!
 				if (m_isDownloadReadyForLaunch)
 				{
 					//Caution: Having this log entry here seems to be very important for timing!!!! :)
+					//also try to sleep here m_pScheduler->MsSleep(100);
+
 					logger->Write ("CSidekickNet", LogNotice, "Early-exit multi-yield...");
 					break;
 				}
@@ -856,7 +858,7 @@ void CSidekickNet::handleQueuedNetworkAction()
 			//only do cache stuff when in menu kernel
 			//doing this in launcher kernel ruins the running prg
 			//maybe we can check here ich sktp browser is active too?
-			if ( !isSKTPScreenActive() && strcmp( m_currentKernelRunning, "m" ) == 0 && ( strcmp( m_CSDBDownloadExtension, "d64" ) != 0))
+			if ( !m_isC128 && !isSKTPScreenActive() && strcmp( m_currentKernelRunning, "m" ) == 0 && ( strcmp( m_CSDBDownloadExtension, "d64" ) != 0))
 				requireCacheWellnessTreatment();
 /*			
 //			if (!netEnableWebserver)
@@ -881,7 +883,7 @@ void CSidekickNet::handleQueuedNetworkAction()
 					UpdateTime();
 			}
 */			
-			#endif
+		#endif
 			//m_timestampOfLastWLANKeepAlive = m_pTimer->GetUptime();
 			if (m_loglevel > 3)
 				logger->Write ("CSidekickNet", LogNotice, getSysMonInfo(1));
