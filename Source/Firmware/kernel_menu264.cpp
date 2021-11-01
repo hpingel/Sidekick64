@@ -617,7 +617,6 @@ void CKernelMenu::Run( void )
 			//the screen has to change (e.g. jump from page a to page b)
 			handleC64( lastChar, &launchKernel, FILENAME, filenameKernal );
 			lastChar = 0xfffffff;
-			refresh++;
 			renderC64();
 			warmCache( (void*)this->FIQHandler );
 			c64screen[0]=lastChar&255;
