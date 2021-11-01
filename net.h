@@ -106,7 +106,8 @@ public:
 	void queueNetworkInit();
 	void queueFrameRequest();
 	void queueSktpKeypress( int );
-	void queueSktpRefresh( unsigned timeout);
+	void setSktpRefreshTimeout( unsigned timeout);
+	void queuedSktpRefreshAllowed();
 	void handleQueuedNetworkAction();
 	void getCSDBBinaryContent();
 	u8 getCSDBDownloadLaunchType();
@@ -123,6 +124,8 @@ public:
 	boolean IsSktpScreenUnchanged();
 	char * getNetworkActionStatusMessage();
   unsigned char * getSktpScreenContent(){ return m_sktpScreenContent; };
+	u8 GetSktpScreenContentChunkType();
+	void enableSktpRefreshTimeout();
 	unsigned char * GetSktpScreenContentChunk( u16 & startPos, u8 &color, boolean & inverse );
 	CString getTimeString();
 	CString getUptime();
@@ -263,6 +266,7 @@ private:
 	unsigned m_timestampOfLastWLANKeepAlive;
 	unsigned m_timeoutCounterStart;
 	unsigned m_skipSktpRefresh;
+	unsigned m_sktpRefreshTimeout;
 	unsigned m_sktpScreenPosition;
 	unsigned m_sktpResponseLength;
 	unsigned m_sktpResponseType;
