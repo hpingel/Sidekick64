@@ -780,7 +780,7 @@ void handleC64( int k, u32 *launchKernel, char *FILENAME, char *filenameKernal )
 			handleC64( 0xffffffff, launchKernel, FILENAME, filenameKernal );
 			return;
 		}
-		if ( k == 'x' || k == 'X')
+		if ( k == 42 ) // star
 		{
 			if (pSidekickNet->IsRunning() && strcmp(netSktpHostName,"") != 0)
 			{
@@ -823,6 +823,7 @@ void handleC64( int k, u32 *launchKernel, char *FILENAME, char *filenameKernal )
 		}
 		*/
 		//get rid of this after implementing a proper error msg dialog
+		/*
 		else if ( k == 'd' || k == 'D')
 		{
 				if ( errorMsg != NULL ) errorMsg = NULL;
@@ -833,7 +834,7 @@ void handleC64( int k, u32 *launchKernel, char *FILENAME, char *filenameKernal )
 					return;
 				}
 			
-		}
+		}*/
 	} else
 	if ( menuScreen == MENU_SKTP )
 	{
@@ -850,7 +851,7 @@ void handleC64( int k, u32 *launchKernel, char *FILENAME, char *filenameKernal )
 		{
 			//only needed temporarily for testing purposes
 			pSidekickNet->resetSktpSession();
-		}*/
+		}
 		else if ( k == 'd' || k == 'D')
 		{
 				//http errors might be displayed on top of sktp screen
@@ -863,7 +864,7 @@ void handleC64( int k, u32 *launchKernel, char *FILENAME, char *filenameKernal )
 			//automatically if the user doesn't press a key on the Commodore keyboard
 			pSidekickNet->queueSktpRefresh( 8 ); 
 			
-		}
+		}*/
 		else
 		{
 			//the user has actually manually pressed a key on the Commodore keyboard
@@ -1309,7 +1310,7 @@ void printSKTPScreen()
 				content = (char *) pSidekickNet->GetSktpScreenContentChunk( pos, color, inverse);
 				y = pos / 40;
 				x = pos % 40;
-				printC64( x, y+yOffset, content, color + 96, inverse ? 0x80 : 0, 4);//4 is undefined
+				printC64( x, y+yOffset, content, color, inverse ? 0x80 : 0, 1); //color +96
 			}
 			pSidekickNet->ResetSktpScreenContentChunks();
 		}
