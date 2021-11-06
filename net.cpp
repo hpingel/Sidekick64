@@ -1507,14 +1507,14 @@ unsigned char * CSidekickNet::GetSktpScreenContentChunk( u16 & startPos, u8 &col
 	color        = m_sktpScreenContent[ m_sktpScreenPosition + 4 ]&15;//0-15, here we have some bits
 	inverse    = m_sktpScreenContent[ m_sktpScreenPosition + 4 ]>>7;//test bit 8
 	
-	if ( type == 0)
+	if ( type == 0 || type == 2)
 	 	byteLength = scrLength;
 	if ( type == 1) //repeat one character for scrLength times
 	 	byteLength = 1;
 	
 	startPos = startPosM * 255 + startPosL;//screen pos x/y
 	//logger->Write( "GetSktpScreenContentChunk", LogNotice, "Chunk parsed: length=%u, startPos=%u, color=%u ",length, startPos, color);
-	if ( type == 0)
+	if ( type == 0 || type == 2)
 		memcpy( m_sktpScreenContentChunk, &m_sktpScreenContent[ m_sktpScreenPosition + 5], byteLength);
 	if ( type == 1) //repeat single char
 	{
@@ -1974,8 +1974,11 @@ void CSidekickNet::handleModemEmulation( bool silent = false)
 					//{
 						 if( m_modemCommand[start+1] == '7')
 						 {
-							 unsigned char * tmp = (unsigned char *) m_pTimer->GetTimeString();
-							 a = writeCharsToFrontend(tmp, 17);
+							const char * tmp = (const char *) getTimeString();
+							unsigned long nLength = strlen (tmp);
+							logger->Write ("CSidekickNet", LogNotice, "%i, %s", nLength, tmp);
+							
+							a = writeCharsToFrontend( (unsigned char *) tmp, nLength);
 						 }
 						 //else if( m_modemCommand[start+1] == '8')
 						 //{
