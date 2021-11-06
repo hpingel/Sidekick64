@@ -448,12 +448,12 @@ boolean CSidekickNet::unmountSDDrive()
 
 boolean CSidekickNet::RaspiHasOnlyWLAN()
 {
-	return (m_PiModel == MachineModel3APlus );
+	return (m_PiModel == MachineModel3APlus || m_PiModel == MachineModelZero2W);
 }
 
 void CSidekickNet::checkForSupportedPiModel()
 {
-	if ( m_PiModel != MachineModel3APlus && m_PiModel != MachineModel3BPlus)
+	if ( m_PiModel != MachineModel3APlus && m_PiModel != MachineModel3BPlus && m_PiModel != MachineModelZero2W)
 	{
 		if (m_loglevel > 1)
 			logger->Write( "CSidekickNet::Initialize", LogWarning, 
@@ -464,7 +464,7 @@ void CSidekickNet::checkForSupportedPiModel()
 	{
 		if (m_loglevel > 1)
 			logger->Write( "CSidekickNet::Initialize", LogNotice, 
-				"Your Raspberry Pi model (3A+) doesn't have an ethernet socket. This kernel is built for cable based network. Use WLAN kernel instead."
+				"Your Raspberry Pi model (3A+ or Zero 2 W) doesn't have an ethernet socket. This kernel is built for cable based network. Use WLAN kernel instead."
 			);
 	}
 }
