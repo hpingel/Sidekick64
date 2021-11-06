@@ -843,8 +843,8 @@ boolean CSidekickNet::isUsbUserportModemConnected(){
 
 void CSidekickNet::handleQueuedNetworkAction()
 {
-	boolean isRunning = IsStillRunning();
-	//boolean isRunning = IsRunning();
+	//boolean isRunning = IsStillRunning();
+	boolean isRunning = IsRunning();
 	//logger->Write( "handleQueuedNetworkAction", LogNotice, "Yield");
 	if ( isRunning && (netEnableWebserver || m_useWLAN))
 		m_pScheduler->Yield (); // this is needed for webserver and wlan keep-alive
@@ -863,7 +863,7 @@ void CSidekickNet::handleQueuedNetworkAction()
 		//if ( (m_pTimer->GetUptime() - m_timestampOfLastWLANKeepAlive) > 10) //(netEnableWebserver ? 7:5))
 		//{
 		#ifdef WITH_WLAN //we apparently don't need wlan keep-alive at all if we just always do the yield!!!
-			for (unsigned z=0; z < (m_isC128 ? 100 : 100); z++)
+			for (unsigned z=0; z < 100; z++)
 			{
 				//in case there is something incoming from the webserver while we are in the loop -> break!
 				if (m_isDownloadReadyForLaunch)
@@ -880,7 +880,7 @@ void CSidekickNet::handleQueuedNetworkAction()
 			//only do cache stuff when in menu kernel
 			//doing this in launcher kernel ruins the running prg
 			//maybe we can check here ich sktp browser is active too?
-			if ( !m_isC128 && !isSKTPScreenActive() && strcmp( m_currentKernelRunning, "m" ) == 0 && ( strcmp( m_CSDBDownloadExtension, "d64" ) != 0))
+			if ( !RaspiHasOnlyWLAN() && !m_isC128 && !isSKTPScreenActive() && strcmp( m_currentKernelRunning, "m" ) == 0 && ( strcmp( m_CSDBDownloadExtension, "d64" ) != 0))
 				requireCacheWellnessTreatment();
 /*			
 //			if (!netEnableWebserver)
