@@ -718,6 +718,8 @@ void CKernelMenu::Run( void )
 
 			startForC128 = 0;
 			#ifdef WITH_NET
+			//disable queued screenrefreshs
+			if (m_SidekickNet.isSKTPRefreshWaiting()) m_SidekickNet.setSktpRefreshTimeout(0);
 			handleNetwork( true );
 			lastAutoRefresh = 0;
 			#else
@@ -762,13 +764,13 @@ void CKernelMenu::Run( void )
 					updateMenu = 1;
 					//logger->Write( "SidekickMenu", LogNotice, "timed refresh happening" );
 					renderC64(); //puts the active menu page into the raspi memory
-					doCacheWellnessTreatment();
+					warmCache( pFIQ );
+					DELAY(1<<18);
 					enableFIQInterrupt();
 					CLR_GPIO( bNMI );
 					doneWithHandling = 1;
 					updateMenu = 0;
 					keepNMILow = 1; //this means the duration of NMI going down is a little longer
-					
 				}
 				else if ( toggle ){
 					doCacheWellnessTreatment();
@@ -786,6 +788,7 @@ void CKernelMenu::Run( void )
 			{
 				if ( m_SidekickNet.isMenuScreenUpdateNeeded() )
 				{
+					//we never end up in here for a sktp timed screen refresh
 					DisableFIQInterrupt();
 					doneWithHandling = 0;
 					updateMenu = 1;
@@ -793,15 +796,18 @@ void CKernelMenu::Run( void )
 					//render should be after disable fiq because then the stuff like 
 					//system clock, uptime and CPU temp are being updated
 					renderC64(); //puts the active menu page into the raspi memory
-					doCacheWellnessTreatment();
+					warmCache( pFIQ );
+					DELAY(1<<18);
+					//doCacheWellnessTreatment();
 					enableFIQInterrupt();
 					CLR_GPIO( bNMI );
 					doneWithHandling = 1;
 					updateMenu = 0;
 					keepNMILow = 1; //this means the duration of NMI going down is a little longer
 				}
-				if ( ( m_SidekickNet.IsConnecting() || m_SidekickNet.IsRunning()) &&  ++m_timeStampOfLastNetworkEvent > delayHandleNetworkValue)
-				{
+				else if ( ( m_SidekickNet.IsConnecting() || m_SidekickNet.IsRunning()) && 
+					(++m_timeStampOfLastNetworkEvent > delayHandleNetworkValue || m_SidekickNet.isSKTPRefreshWaiting() && m_timeStampOfLastNetworkEvent > delayHandleNetworkValue/1.5 )
+				){
 					if ( handleNetwork( false)) //this makes the webserver respond quickly even when there is no keypress user action
 					{
 						CLR_GPIO( bNMI );
