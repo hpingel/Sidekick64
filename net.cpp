@@ -717,12 +717,18 @@ void CSidekickNet::queueSktpKeypress( int key )
 	//logger->Write ("CSidekickNet::queueSktpKeypress", LogNotice, "Queuing keypress");
 }
 
+bool CSidekickNet::isSKTPRefreshWaiting()
+{
+	return m_sktpRefreshTimeout > 0;
+}
+
 void CSidekickNet::setSktpRefreshTimeout( unsigned timeout )
 {
 	//logger->Write ("CSidekickNet::setSktpRefreshTimeout", LogNotice, "%i", timeout);
-	m_sktpRefreshTimeout = timeout;
+	m_sktpRefreshTimeout = timeout *2;
 	m_skipSktpRefresh = 0;
-	queuedSktpRefreshAllowed();
+	if ( timeout > 0)
+		queuedSktpRefreshAllowed();
 }
 
 void CSidekickNet::queuedSktpRefreshAllowed()
@@ -736,7 +742,10 @@ void CSidekickNet::queuedSktpRefreshAllowed()
 		m_skipSktpRefresh = 0;
 		m_sktpRefreshTimeout = 0;
 		//logger->Write ("CSidekickNet::queuedSktpRefreshAllowed", LogNotice, "keypress triggered");
-		queueSktpKeypress( 0 ); //key zero
+		//queueSktpKeypress( 0 ); //key zero
+		m_sktpKey = 0;
+		updateSktpScreenContent();
+		//m_isMenuScreenUpdateNeeded = true;
 		m_isMenuScreenUpdateNeeded = true;
 	}
 }
@@ -928,9 +937,6 @@ void CSidekickNet::handleQueuedNetworkAction()
 	else if (isRunning)
 	{
 
-		if (m_skipSktpRefresh > 0)
-			queuedSktpRefreshAllowed();
-
 		if (m_isCSDBDownloadQueued)
 		{
 			if (m_loglevel > 2){
@@ -958,6 +964,9 @@ void CSidekickNet::handleQueuedNetworkAction()
 			//m_isMenuScreenUpdateNeeded = true;
 			m_isSktpKeypressQueued = false;
 		}
+		else if (m_skipSktpRefresh > 0)
+			queuedSktpRefreshAllowed();
+
 	}
 }
 
