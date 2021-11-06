@@ -244,7 +244,7 @@ boolean CSidekickNet::usesWLAN (){
 
 boolean CSidekickNet::Initialize()
 {
-	const unsigned sleepLimit = 100 * (m_useWLAN ? 10:1);
+	const unsigned sleepLimit = 100 * (m_useWLAN ? 10:2);
 	unsigned sleepCount = 0;
 	
 	if (m_isActive)
@@ -268,6 +268,8 @@ boolean CSidekickNet::Initialize()
 		#ifdef WITH_USB_SERIAL
 		usbPnPUpdate();
 		#endif
+		m_pScheduler->Yield ();
+		m_pScheduler->Yield ();
 		m_pScheduler->Yield ();
 		m_pScheduler->MsSleep(100);
 		sleepCount ++;
