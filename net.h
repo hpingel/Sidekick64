@@ -106,6 +106,7 @@ public:
 	void queueNetworkInit();
 	void queueFrameRequest();
 	void queueSktpKeypress( int );
+	bool isSKTPRefreshWaiting();
 	void setSktpRefreshTimeout( unsigned timeout);
 	void queuedSktpRefreshAllowed();
 	void handleQueuedNetworkAction();
