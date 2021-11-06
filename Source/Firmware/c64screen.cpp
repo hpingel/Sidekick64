@@ -215,7 +215,9 @@ void printC64( u32 x, u32 y, const char *t, u8 color, u8 flag, u32 convert, u32 
 		u32 c = t[ i ], c2 = c;
 
 		// screen code conversion 
-		if ( convert == 1 )
+		if ( convert == 4 ){//nothing
+		}
+		else if ( convert == 1 )
 		{
 			c2 = PETSCII2ScreenCode( c );
 		} else
@@ -2395,12 +2397,12 @@ void printSKTPScreen()
 			while (!pSidekickNet->IsSktpScreenContentEndReached())
 			{
 				u8 type = pSidekickNet->GetSktpScreenContentChunkType();
-				if ( type < 2)
+				if ( type < 3)
 				{
 					content = (char *) pSidekickNet->GetSktpScreenContentChunk( pos, color, inverse);
 					y = pos / 40;
 					x = pos % 40;
-					printC64( x, y+yOffset, content, color, inverse ? 0x80 : 0, 1);
+					printC64( x, y+yOffset, content, color, inverse ? 0x80 : 0, (type == 2) ? 4:1);
 				}
 				else if (type == 3)
 				{
