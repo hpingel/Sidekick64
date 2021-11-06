@@ -127,7 +127,8 @@ public:
 		,m_SidekickNet( &m_Interrupt, &m_Timer, &m_Scheduler, &m_EMMC, &m_DeviceNameService, this )
 #endif
 	{
-		//m_Logger = new CLogger( m_Options.GetLogLevel(), &m_Timer );
+		m_Logger = new CLogger( m_Options.GetLogLevel(), &m_Timer );
+		//m_Logger = new CLogger( 0, &m_Timer );
 	}
 
 	~CKernelMenu( void )
