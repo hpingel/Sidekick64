@@ -857,11 +857,6 @@ void CSidekickNet::handleQueuedNetworkAction()
 
 		handleModemEmulation( false );
 		
-		//every couple of seconds + seconds needed for request
-		//log cpu temp + uptime + free memory (getSysMonInfo)
-		//in wlan case do keep-alive measures
-		//if ( (m_pTimer->GetUptime() - m_timestampOfLastWLANKeepAlive) > 10) //(netEnableWebserver ? 7:5))
-		//{
 		#ifdef WITH_WLAN //we apparently don't need wlan keep-alive at all if we just always do the yield!!!
 			for (unsigned z=0; z < 100; z++)
 			{
@@ -882,38 +877,8 @@ void CSidekickNet::handleQueuedNetworkAction()
 			//maybe we can check here ich sktp browser is active too?
 			if ( !RaspiHasOnlyWLAN() && !m_isC128 && !isSKTPScreenActive() && strcmp( m_currentKernelRunning, "m" ) == 0 && ( strcmp( m_CSDBDownloadExtension, "d64" ) != 0))
 				requireCacheWellnessTreatment();
-/*			
-//			if (!netEnableWebserver)
-			{
-				//Circle42 offers experimental WLAN, but it seems to
-				//disconnect very quickly if there is no traffic.
-				//This can be very annoying.
-				//As a WLAN keep-alive, we auto queue a network event
-				//to avoid WLAN going into "zombie" disconnected mode
-				
-				//further tests have to be done if the keep-alive and the webserver
-				//run together smoothly
-				if (m_loglevel > 1)
-					logger->Write ("CSidekickNet", LogNotice, "Triggering WLAN keep-alive request...");
-				if (m_SKTPServer.port != 0)
-				{
-					char pResponseBuffer[4097]; //TODO: can we reuse something else existing here?
-					CString path = isSktpSessionActive() ? getSktpPath( 92 ) : "/givemea404response.html";
-					HTTPGet ( m_SKTPServer, path, pResponseBuffer, m_sktpResponseLength);
-				}
-				else
-					UpdateTime();
-			}
-*/			
 		#endif
-			//m_timestampOfLastWLANKeepAlive = m_pTimer->GetUptime();
-			if (m_loglevel > 3)
-				logger->Write ("CSidekickNet", LogNotice, getSysMonInfo(1));
-		//}
-
 	}
-	//else if (isRunning && isAnyNetworkActionQueued() && usesWLAN())
-	//	m_timestampOfLastWLANKeepAlive = m_pTimer->GetUptime();
 	
 	if (m_queueDelay > 0 )
 	{
