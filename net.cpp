@@ -76,8 +76,6 @@ static const int nTimeZone       = 1*60;		// minutes diff to UTC
 static const char DRIVE[] = "SD:";
 //nDocMaxSize reserved 2 MB as the maximum size of the kernel file
 static const unsigned nDocMaxSize = 2000*1024;
-static const char msgNoConnection[] = "Sorry, no network connection!";
-static const char msgNotFound[]     = "Message not found. :(";
 
 static const char CSDB_HOST[] = "csdb.dk";
 
@@ -176,6 +174,7 @@ CSidekickNet::CSidekickNet(
 		m_sktpResponseType(0),
 		m_sktpKey(0),
 		m_sktpSession(0),
+		m_sktpScreenErrorCode(0),
 		m_videoFrameCounter(1),
 		m_sysMonHeapFree(0),
 		m_sysMonCPUTemp(0),
@@ -1300,14 +1299,30 @@ boolean CSidekickNet::isMenuScreenUpdateNeeded(){
 	return tmp;
 }
 
+unsigned CSidekickNet::getSKTPErrorCode(){
+	return m_sktpScreenErrorCode;
+}
+
 void CSidekickNet::updateSktpScreenContent(){
-	if (!m_isActive || !m_isSktpScreenActive || m_SKTPServer.port == 0)
-	{
-		m_sktpScreenContent = (unsigned char *) msgNoConnection; //FIXME: there's a memory leak in here
-		return;
-	}
+	m_sktpScreenErrorCode = 0;
 	
 	if ( m_sktpSession < 1){
+		if (!m_isActive || !m_isSktpScreenActive)
+		{
+			m_sktpScreenErrorCode = 3;
+			return;
+		}
+		else if (!m_SKTPServer.valid)
+		{
+			m_sktpScreenErrorCode = 1;
+			return;
+		}
+		else if (m_SKTPServer.port == 0)
+		{
+			m_sktpScreenErrorCode = 4;
+			return;
+		}
+		
 		if (!launchSktpSession())
 			return;
 		m_sktpSession = 1;
@@ -1426,7 +1441,7 @@ void CSidekickNet::updateSktpScreenContent(){
 	}
 	else
 	{
-		m_sktpScreenContent = (unsigned char *) msgNotFound;
+		m_sktpScreenErrorCode = 2;
 	}
 	m_sktpKey = 0;
 }

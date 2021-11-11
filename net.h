@@ -156,6 +156,7 @@ public:
 	CString getBaudrate();
 	CString getLoggerStringForHost( CString hostname, int port);
 	boolean isSKTPScreenActive();
+	unsigned getSKTPErrorCode();
 	boolean isMenuScreenUpdateNeeded();
 	void setCurrentKernel( char *);
 	void setC128Mode();
@@ -273,6 +274,7 @@ private:
 	unsigned m_sktpResponseType;
 	unsigned m_sktpKey;
 	unsigned m_sktpSession;
+ 	unsigned m_sktpScreenErrorCode;
 	boolean  m_isSktpScreenActive;
 	boolean  m_isMenuScreenUpdateNeeded;
 	boolean  m_isC128;
