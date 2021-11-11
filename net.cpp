@@ -1102,7 +1102,7 @@ CString CSidekickNet::getRaspiModelName()
 
 CNetConfig * CSidekickNet::GetNetConfig(){
 	assert (m_isActive);
-	return m_Net->GetConfig ();
+	return m_Net->GetConfig();
 }
 
 CIPAddress CSidekickNet::getIPForHost( const char * host, bool & success )
@@ -1961,28 +1961,38 @@ void CSidekickNet::handleModemEmulation( bool silent = false)
 				}
 				else if ( m_modemCommand[start] == 'i')
 				{
-					//if ( start + 1 <= stop)
-					//{
-						 if( m_modemCommand[start+1] == '7')
-						 {
-							const char * tmp = (const char *) getTimeString();
-							unsigned long nLength = strlen (tmp);
-							logger->Write ("CSidekickNet", LogNotice, "%i, %s", nLength, tmp);
-							
-							a = writeCharsToFrontend( (unsigned char *) tmp, nLength);
-						 }
-						 //else if( m_modemCommand[start+1] == '8')
-						 //{
-						//	 a = writeCharsToFrontend((unsigned char *)"spooky\r", 7);
-							 //firmware build date
-						// }
-					//}
-					else{
+					if ( start + 2 == stop)
+					{
+						CString strHelper;
+						char * tmp;
+						
+						if( m_modemCommand[start+1] == '7')
+						{
+							//ati7 time and date
+							CString strHelper = getTimeString();
+							strHelper.Append("\r");
+							sprintf( tmp, strHelper, "" );
+							a = writeCharsToFrontend( (unsigned char *) tmp, strlen(tmp));
+						}
+						else if( m_modemCommand[start+1] == '2')
+						{
+							//ati2 ip address
+							GetNetConfig()->GetIPAddress ()->Format (&strHelper);
+							strHelper.Append("\r");
+							sprintf( tmp, strHelper, "" );
+							a = writeCharsToFrontend( (unsigned char *) tmp, strlen(tmp));
+						}
+					}
+					else if (start +1 == stop){
+						//ati
 						if ( m_modemEmuType == SK_MODEM_USERPORT_USB )
 							a = writeCharsToFrontend((unsigned char *)"sidekick64 userport modem emulation\rhave fun!\r", 46);
 						else
 							a = writeCharsToFrontend((unsigned char *)"sidekick64 swiftlink modem emulation\rhave fun!\r", 47);
 							//a = writeCharsToFrontend((unsigned char *)"\x40\x60 \x9f \x7dc\x05 1w\x1c 2w\x1e 3g\x1f 4b\x95 5b\x96 6r\x97 7g\x98 8g\x99 9g\x9a ab\x9c bp\x9e cy\x05-" ,13*4+4 );
+					}
+					else{
+						SendErrorResponse();
 					}
 						
 						/*
