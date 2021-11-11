@@ -2079,36 +2079,59 @@ void printSKTPScreen()
 	
 	if ( pSidekickNet->IsRunning() )
 	{
-		if ( pSidekickNet->IsSktpScreenToBeCleared() ) clearC64();
-
-		if ( !pSidekickNet->IsSktpScreenUnchanged() )
+		if ( pSidekickNet->getSKTPErrorCode() > 0)
 		{
-			u16 pos = 0;
-			u8 color = 0;
-			unsigned y = 0;
-			unsigned x = 0;
-			boolean inverse = false;
-			char * content;
-			while (!pSidekickNet->IsSktpScreenContentEndReached())
+			clearC64();
+			printC64( 1, 2, "Sorry, an SKTP error occured, press F7", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
+			if (pSidekickNet->getSKTPErrorCode() == 3)
+				printC64( 1, 3, "You should not even gotten here...", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
+			else if (pSidekickNet->getSKTPErrorCode() == 2)
+				printC64( 1, 3, "HTTP(s) request didn't work out", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
+			if (pSidekickNet->getSKTPErrorCode() == 1)
 			{
-				u8 type = pSidekickNet->GetSktpScreenContentChunkType();
-				if ( type < 3)
-				{
-					content = (char *) pSidekickNet->GetSktpScreenContentChunk( pos, color, inverse);
-					y = pos / 40;
-					x = pos % 40;
-					printC64( x, y+yOffset, content, color, inverse ? 0x80 : 0, (type == 2) ? 4:1);
-				}
-				else if (type == 3)
-				{
-					pSidekickNet->enableSktpRefreshTimeout();
-				}
-				else{
-					//pSidekickNet->ProcessSktpScreenContentChunkMetaType();
-					
-				}
+				printC64( 1, 3, "Could not resolve SKTP hostname", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
+				unsigned port = netSktpHostPort;
+				if (port == 0 ) port = 80;
+				CString strHelper = pSidekickNet->getLoggerStringForHost(netSktpHostName, port);
+				char * tmpHost;
+				sprintf( tmpHost, strHelper, "" );
+				printC64( 1, 4, tmpHost,   skinValues.SKIN_MENU_TEXT_HEADER, 0 );
 			}
-			pSidekickNet->ResetSktpScreenContentChunks();
+			
+		}
+		else
+		{
+			if ( pSidekickNet->IsSktpScreenToBeCleared() ) clearC64();
+
+			if ( !pSidekickNet->IsSktpScreenUnchanged() )
+			{
+				u16 pos = 0;
+				u8 color = 0;
+				unsigned y = 0;
+				unsigned x = 0;
+				boolean inverse = false;
+				char * content;
+				while (!pSidekickNet->IsSktpScreenContentEndReached())
+				{
+					u8 type = pSidekickNet->GetSktpScreenContentChunkType();
+					if ( type < 3)
+					{
+						content = (char *) pSidekickNet->GetSktpScreenContentChunk( pos, color, inverse);
+						y = pos / 40;
+						x = pos % 40;
+						printC64( x, y+yOffset, content, color, inverse ? 0x80 : 0, (type == 2) ? 4:1);
+					}
+					else if (type == 3)
+					{
+						pSidekickNet->enableSktpRefreshTimeout();
+					}
+					else{
+						//pSidekickNet->ProcessSktpScreenContentChunkMetaType();
+						
+					}
+				}
+				pSidekickNet->ResetSktpScreenContentChunks();
+			}
 		}
 	}
 	//printC64( 1, 24, pSidekickNet->getSysMonInfo(0), skinValues.SKIN_MENU_TEXT_ITEM, 0 );
