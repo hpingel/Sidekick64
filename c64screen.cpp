@@ -85,6 +85,11 @@ extern CLogger *logger;
 #ifdef WITH_NET
 extern CSidekickNet * pSidekickNet;
 #include "circle/version.h"
+
+u8 SKTPborderColor = 0; 
+u8 SKTPbgColor = 0; 
+boolean SKTPisLowerCharset = true;
+
 #endif
 
 extern u32 prgSizeLaunch;
@@ -2107,8 +2112,8 @@ void printSKTPScreen()
 			{
 				u16 pos = 0;
 				u8 color = 0;
-				unsigned y = 0;
-				unsigned x = 0;
+				u8 y = 0;
+				u8 x = 0;
 				boolean inverse = false;
 				char * content;
 				while (!pSidekickNet->IsSktpScreenContentEndReached())
@@ -2125,9 +2130,13 @@ void printSKTPScreen()
 					{
 						pSidekickNet->enableSktpRefreshTimeout();
 					}
+					else if (type == 4)
+					{
+						SKTPisLowerCharset = pSidekickNet->getSKTPBorderBGColorCharset( SKTPborderColor, SKTPbgColor);
+					}
 					else{
-						//pSidekickNet->ProcessSktpScreenContentChunkMetaType();
-						
+						break; //in case of unknown chunk types at the end of the content we break as we don't 
+						//how long they are
 					}
 				}
 				pSidekickNet->ResetSktpScreenContentChunks();
@@ -2137,9 +2146,9 @@ void printSKTPScreen()
 	//printC64( 1, 24, pSidekickNet->getSysMonInfo(0), skinValues.SKIN_MENU_TEXT_ITEM, 0 );
 
 	startInjectCode();
-	injectPOKE( 53280, 0); //skinValues.SKIN_MENU_BORDER_COLOR );
-	injectPOKE( 53281, 0); //skinValues.SKIN_MENU_BACKGROUND_COLOR );
-	injectPOKE( 53272, 23 ); // use normal c64 font
+	injectPOKE( 53280, SKTPborderColor); //skinValues.SKIN_MENU_BORDER_COLOR );
+	injectPOKE( 53281, SKTPbgColor); //skinValues.SKIN_MENU_BACKGROUND_COLOR );
+	injectPOKE( 53272, 21 + (SKTPisLowerCharset ? 2 : 0) ); // use normal c64 font
 }
 	
 #endif
