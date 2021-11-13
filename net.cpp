@@ -1474,6 +1474,13 @@ u8 CSidekickNet::GetSktpScreenContentChunkType()
 	return m_sktpScreenContent[ m_sktpScreenPosition ];
 }
 
+boolean CSidekickNet::getSKTPBorderBGColorCharset( u8 &borderColor, u8 &bgColor)
+{
+		borderColor = m_sktpScreenContent[ ++m_sktpScreenPosition ]&15;
+		bgColor = m_sktpScreenContent[ ++m_sktpScreenPosition ]&15;
+		return m_sktpScreenContent[ ++m_sktpScreenPosition ]&1;
+}
+
 void CSidekickNet::enableSktpRefreshTimeout(){
 	//logger->Write( "enableSktpRefreshTimeout", LogNotice, "enabled");
 	setSktpRefreshTimeout( m_sktpScreenContent[ ++m_sktpScreenPosition ] );
@@ -1489,33 +1496,44 @@ unsigned char * CSidekickNet::GetSktpScreenContentChunk( u16 & startPos, u8 &col
 		m_sktpScreenPosition = 1;
 		return (unsigned char *) '\0';
 	}
-	u8 type      = m_sktpScreenContent[ m_sktpScreenPosition ];
+	u8 type = m_sktpScreenContent[ m_sktpScreenPosition ];
+	u16 scrLength = 0;
 	
-	u8 scrLength = m_sktpScreenContent[ m_sktpScreenPosition + 1]; // max255
-	u8 byteLength= 0;
-	u8 startPosL = m_sktpScreenContent[ m_sktpScreenPosition + 2 ];//screen pos x/y
-	u8 startPosM = m_sktpScreenContent[ m_sktpScreenPosition + 3 ];//screen pos x/y
-	color        = m_sktpScreenContent[ m_sktpScreenPosition + 4 ]&15;//0-15, here we have some bits
-	inverse    = m_sktpScreenContent[ m_sktpScreenPosition + 4 ]>>7;//test bit 8
-	
-	if ( type == 0 || type == 2)
-	 	byteLength = scrLength;
-	if ( type == 1) //repeat one character for scrLength times
-	 	byteLength = 1;
-	
-	startPos = startPosM * 255 + startPosL;//screen pos x/y
-	//logger->Write( "GetSktpScreenContentChunk", LogNotice, "Chunk parsed: length=%u, startPos=%u, color=%u ",length, startPos, color);
-	if ( type == 0 || type == 2)
-		memcpy( m_sktpScreenContentChunk, &m_sktpScreenContent[ m_sktpScreenPosition + 5], byteLength);
-	if ( type == 1) //repeat single char
+	if (type < 4 )
 	{
-		char fillChar = m_sktpScreenContent[ m_sktpScreenPosition + 5 ];
-		for (unsigned i = 0; i < scrLength; i++)
-			m_sktpScreenContentChunk[i] = fillChar;
+		scrLength = m_sktpScreenContent[ m_sktpScreenPosition + 1]; // this is only the lsb
+		u8 byteLength= 0;
+		u8 startPosL = m_sktpScreenContent[ m_sktpScreenPosition + 2 ];//screen pos x/y
+		u8 startPosM = m_sktpScreenContent[ m_sktpScreenPosition + 3 ]&3;//screen pos x/y
+		scrLength   += ((m_sktpScreenContent[ m_sktpScreenPosition + 3 ]&16)+ 
+									 (m_sktpScreenContent[ m_sktpScreenPosition + 3 ]&32)) *16; //msb bits
+		color        = m_sktpScreenContent[ m_sktpScreenPosition + 4 ]&15;//0-15, here we have some bits
+		inverse    = m_sktpScreenContent[ m_sktpScreenPosition + 4 ]>>7;//test bit 8
+		
+		startPos = startPosM * 256 + startPosL;//screen pos x/y
+		byteLength = scrLength;
+		
+		//some plausibilty checks of the values
+		if (scrLength > 1000) scrLength = 1000;
+		if (startPos > 999) startPos = 999;
+		if (startPos + scrLength > 1001) scrLength = 1001 - startPos;
+		
+		if ( type == 0 || type == 2)
+		{
+			memcpy( m_sktpScreenContentChunk, &m_sktpScreenContent[ m_sktpScreenPosition + 5], byteLength);
+		}
+		else if ( type == 1) //repeat one single character for scrLength times
+		{
+			byteLength = 1;
+			char fillChar = m_sktpScreenContent[ m_sktpScreenPosition + 5 ];
+			for (unsigned i = 0; i < scrLength; i++)
+				m_sktpScreenContentChunk[i] = fillChar;
+		}
+
+		//logger->Write( "GetSktpScreenContentChunk", LogNotice, "Chunk parsed: length=%u, startPos=%u, color=%u ",scrLength, startPos, color);
+		m_sktpScreenPosition += 5+byteLength;//begin of next chunk
 	}
 	m_sktpScreenContentChunk[scrLength] = '\0';
-	m_sktpScreenPosition += 5+byteLength;//begin of next chunk
-	
   return m_sktpScreenContentChunk;
 }
 

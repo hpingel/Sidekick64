@@ -126,6 +126,7 @@ public:
 	char * getNetworkActionStatusMessage();
   unsigned char * getSktpScreenContent(){ return m_sktpScreenContent; };
 	u8 GetSktpScreenContentChunkType();
+	boolean getSKTPBorderBGColorCharset( u8 &borderColor, u8 &bgColor);
 	void enableSktpRefreshTimeout();
 	unsigned char * GetSktpScreenContentChunk( u16 & startPos, u8 &color, boolean & inverse );
 	CString getTimeString();
