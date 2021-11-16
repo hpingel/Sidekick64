@@ -2088,8 +2088,17 @@ void printSKTPScreen()
 		{
 			clearC64();
 			printC64( 1, 2, "Sorry, an SKTP error occured, press F7", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
-			if (pSidekickNet->getSKTPErrorCode() == 3)
-				printC64( 1, 3, "You should not even gotten here...", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
+			if (pSidekickNet->getSKTPErrorCode() == 6)
+			{
+				printC64( 1, 3, "This SKTP server requires are newer SKTP browser,", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
+				printC64( 1, 4, "please update your Sidekick kernel.", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
+			}
+			else if (pSidekickNet->getSKTPErrorCode() == 5)
+				printC64( 1, 3, "Could not get valid session id from SKTP server", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
+			else if (pSidekickNet->getSKTPErrorCode() == 3)
+				printC64( 1, 3, "You should not even get here...", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
+			else if (pSidekickNet->getSKTPErrorCode() == 4)
+				printC64( 1, 3, "Error: Port should not be zero", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
 			else if (pSidekickNet->getSKTPErrorCode() == 2)
 				printC64( 1, 3, "HTTP(s) request didn't work out", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
 			if (pSidekickNet->getSKTPErrorCode() == 1)
@@ -2114,27 +2123,28 @@ void printSKTPScreen()
 				u8 color = 0;
 				u8 y = 0;
 				u8 x = 0;
+				u8 repeat = 0;
 				boolean inverse = false;
 				char * content;
+				pSidekickNet->ResetSktpScreenContentChunks();
 				while (!pSidekickNet->IsSktpScreenContentEndReached())
 				{
 					u8 type = pSidekickNet->GetSktpScreenContentChunkType();
-					if ( type < 3)
+					if ( type == 0 || type == 1 || type == 2 || type == 5)
 					{
-						content = (char *) pSidekickNet->GetSktpScreenContentChunk( pos, color, inverse);
+						content = (char *) pSidekickNet->GetSktpScreenContentChunk( pos, color, inverse, repeat);
 						y = pos / 40;
 						x = pos % 40;
-						printC64( x, y+yOffset, content, color, inverse ? 0x80 : 0, (type == 2) ? 4:1);
+						if (type != 5) repeat = 1;
+						for (u8 z = 0; z < repeat; z++)
+							printC64( x, y+yOffset+z, content, color, inverse ? 0x80 : 0, (type == 2 || type == 5) ? 4:1);
 					}
 					else if (type == 3)
-					{
 						pSidekickNet->enableSktpRefreshTimeout();
-					}
 					else if (type == 4)
-					{
-						SKTPisLowerCharset = pSidekickNet->getSKTPBorderBGColorCharset( SKTPborderColor, SKTPbgColor);
-					}
+						SKTPisLowerCharset = (pSidekickNet->getSKTPBorderBGColorCharset( SKTPborderColor, SKTPbgColor) == 1);
 					else{
+						logger->Write( "printSKTPScreen", LogWarning, "sktp screen early exit");
 						break; //in case of unknown chunk types at the end of the content we break as we don't 
 						//how long they are
 					}

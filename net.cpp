@@ -1246,7 +1246,11 @@ boolean CSidekickNet::launchSktpSession(){
 
 	if (HTTPGet ( m_SKTPServer, urlSuffix, pResponseBuffer, m_sktpResponseLength))
 	{
-		if ( m_sktpResponseLength > 25 && m_sktpResponseLength < 34){
+		if ( m_sktpResponseLength == 1 )
+		{
+			m_sktpScreenErrorCode = 6;
+		}
+		else if ( m_sktpResponseLength > 25 && m_sktpResponseLength < 34){
 			m_sktpSessionID = pResponseBuffer;
 			m_sktpSessionID[m_sktpResponseLength] = '\0';
 			if (m_loglevel > 2)
@@ -1254,6 +1258,7 @@ boolean CSidekickNet::launchSktpSession(){
 		}
 	}
 	else{
+		m_sktpScreenErrorCode = 5;
 		if (m_loglevel > 1)
 			logger->Write( "launchSktpSession", LogError, "Could not get session id.");
 		m_sktpSessionID = (char*) "";
@@ -1476,9 +1481,11 @@ u8 CSidekickNet::GetSktpScreenContentChunkType()
 
 boolean CSidekickNet::getSKTPBorderBGColorCharset( u8 &borderColor, u8 &bgColor)
 {
-		borderColor = m_sktpScreenContent[ ++m_sktpScreenPosition ]&15;
-		bgColor = m_sktpScreenContent[ ++m_sktpScreenPosition ]&15;
-		return m_sktpScreenContent[ ++m_sktpScreenPosition ]&1;
+		borderColor = m_sktpScreenContent[ ++m_sktpScreenPosition ] -1;
+		bgColor = m_sktpScreenContent[ ++m_sktpScreenPosition ] -1;
+		boolean charLower = (m_sktpScreenContent[ ++m_sktpScreenPosition ] == 1);
+		m_sktpScreenPosition++;
+		return charLower;
 }
 
 void CSidekickNet::enableSktpRefreshTimeout(){
@@ -1487,29 +1494,31 @@ void CSidekickNet::enableSktpRefreshTimeout(){
 	m_sktpScreenPosition++;
 }
 
-unsigned char * CSidekickNet::GetSktpScreenContentChunk( u16 & startPos, u8 &color, boolean &inverse )
+unsigned char * CSidekickNet::GetSktpScreenContentChunk( u16 & startPos, u8 &color, boolean &inverse, u8 &repeat )
 {
+	repeat = 0;
+	startPos = 0;
+	color = 0;
+	inverse = false;
 	if ( m_sktpScreenPosition >= m_sktpResponseLength ){
 		//logger->Write( "GetSktpScreenContentChunk", LogNotice, "End reached.");
-		startPos = 0;
-		color = 0;
 		m_sktpScreenPosition = 1;
 		return (unsigned char *) '\0';
 	}
 	u8 type = m_sktpScreenContent[ m_sktpScreenPosition ];
 	u16 scrLength = 0;
 	
-	if (type < 4 )
+	if (type < 3 || type == 5)
 	{
 		scrLength = m_sktpScreenContent[ m_sktpScreenPosition + 1]; // this is only the lsb
 		u8 byteLength= 0;
 		u8 startPosL = m_sktpScreenContent[ m_sktpScreenPosition + 2 ];//screen pos x/y
 		u8 startPosM = m_sktpScreenContent[ m_sktpScreenPosition + 3 ]&3;//screen pos x/y
-		scrLength   += ((m_sktpScreenContent[ m_sktpScreenPosition + 3 ]&16)+ 
+		if (type < 3)
+			scrLength += ((m_sktpScreenContent[ m_sktpScreenPosition + 3 ]&16)+ 
 									 (m_sktpScreenContent[ m_sktpScreenPosition + 3 ]&32)) *16; //msb bits
 		color        = m_sktpScreenContent[ m_sktpScreenPosition + 4 ]&15;//0-15, here we have some bits
 		inverse    = m_sktpScreenContent[ m_sktpScreenPosition + 4 ]>>7;//test bit 8
-		
 		startPos = startPosM * 256 + startPosL;//screen pos x/y
 		byteLength = scrLength;
 		
@@ -1529,6 +1538,12 @@ unsigned char * CSidekickNet::GetSktpScreenContentChunk( u16 & startPos, u8 &col
 			for (unsigned i = 0; i < scrLength; i++)
 				m_sktpScreenContentChunk[i] = fillChar;
 		}
+		else if (type == 5)
+		{
+			repeat = m_sktpScreenContent[ m_sktpScreenPosition + 5 ];
+			memcpy( m_sktpScreenContentChunk, &m_sktpScreenContent[ m_sktpScreenPosition + 6], byteLength);
+			byteLength = byteLength + 1;
+		}	
 
 		//logger->Write( "GetSktpScreenContentChunk", LogNotice, "Chunk parsed: length=%u, startPos=%u, color=%u ",scrLength, startPos, color);
 		m_sktpScreenPosition += 5+byteLength;//begin of next chunk
