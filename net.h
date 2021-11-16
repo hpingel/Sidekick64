@@ -128,7 +128,7 @@ public:
 	u8 GetSktpScreenContentChunkType();
 	boolean getSKTPBorderBGColorCharset( u8 &borderColor, u8 &bgColor);
 	void enableSktpRefreshTimeout();
-	unsigned char * GetSktpScreenContentChunk( u16 & startPos, u8 &color, boolean & inverse );
+	unsigned char * GetSktpScreenContentChunk( u16 & startPos, u8 &color, boolean & inverse, u8 &repeat );
 	CString getTimeString();
 	CString getUptime();
 	CNetConfig * GetNetConfig();
