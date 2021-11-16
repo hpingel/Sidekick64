@@ -1339,13 +1339,14 @@ void printSKTPScreen()
 		{
 			u16 pos = 0;
 			u8 color = 0;
+			u8 repeat = 0;
 			unsigned y = 0;
 			unsigned x = 0;
 			boolean inverse = false;
 			char * content;
 			while (!pSidekickNet->IsSktpScreenContentEndReached())
 			{
-				content = (char *) pSidekickNet->GetSktpScreenContentChunk( pos, color, inverse);
+				content = (char *) pSidekickNet->GetSktpScreenContentChunk( pos, color, inverse, repeat);
 				y = pos / 40;
 				x = pos % 40;
 				printC64( x, y+yOffset, content, color, inverse ? 0x80 : 0, 1); //color +96
