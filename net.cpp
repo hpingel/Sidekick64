@@ -1508,7 +1508,7 @@ unsigned char * CSidekickNet::GetSktpScreenContentChunk( u16 & startPos, u8 &col
 	u8 type = m_sktpScreenContent[ m_sktpScreenPosition ];
 	u16 scrLength = 0;
 	
-	if (type < 3 || type == 5)
+	if (type < 3 || type >= 5)
 	{
 		scrLength = m_sktpScreenContent[ m_sktpScreenPosition + 1]; // this is only the lsb
 		u8 byteLength= 0;
@@ -1517,7 +1517,9 @@ unsigned char * CSidekickNet::GetSktpScreenContentChunk( u16 & startPos, u8 &col
 		if (type < 3)
 			scrLength += ((m_sktpScreenContent[ m_sktpScreenPosition + 3 ]&16)+ 
 									 (m_sktpScreenContent[ m_sktpScreenPosition + 3 ]&32)) *16; //msb bits
-		color        = m_sktpScreenContent[ m_sktpScreenPosition + 4 ]&15;//0-15, here we have some bits
+		color        = m_sktpScreenContent[ m_sktpScreenPosition + 4 ];// this is gap in case 6
+		if ( type != 6)
+			color = color&15;//0-15, here we have some bits, this is gap in case 6
 		inverse    = m_sktpScreenContent[ m_sktpScreenPosition + 4 ]>>7;//test bit 8
 		startPos = startPosM * 256 + startPosL;//screen pos x/y
 		byteLength = scrLength;
@@ -1538,7 +1540,7 @@ unsigned char * CSidekickNet::GetSktpScreenContentChunk( u16 & startPos, u8 &col
 			for (unsigned i = 0; i < scrLength; i++)
 				m_sktpScreenContentChunk[i] = fillChar;
 		}
-		else if (type == 5)
+		else if (type >= 5)
 		{
 			repeat = m_sktpScreenContent[ m_sktpScreenPosition + 5 ];
 			memcpy( m_sktpScreenContentChunk, &m_sktpScreenContent[ m_sktpScreenPosition + 6], byteLength);
