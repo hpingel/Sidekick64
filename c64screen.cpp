@@ -2130,14 +2130,23 @@ void printSKTPScreen()
 				while (!pSidekickNet->IsSktpScreenContentEndReached())
 				{
 					u8 type = pSidekickNet->GetSktpScreenContentChunkType();
-					if ( type == 0 || type == 1 || type == 2 || type == 5)
+					if ( type == 0 || type == 1 || type == 2 || type == 5 || type == 6)
 					{
 						content = (char *) pSidekickNet->GetSktpScreenContentChunk( pos, color, inverse, repeat);
 						y = pos / 40;
 						x = pos % 40;
-						if (type != 5) repeat = 1;
-						for (u8 z = 0; z < repeat; z++)
-							printC64( x, y+yOffset+z, content, color, inverse ? 0x80 : 0, (type == 2 || type == 5) ? 4:1);
+						if (type < 5) repeat = 1;
+						if (type < 6)
+						{
+							for (u8 z = 0; z < repeat; z++)
+								printC64( x, y+yOffset+z, content, color, inverse ? 0x80 : 0, (type == 2 || type == 5) ? 4:1);
+						}
+						else
+						{
+							for (u8 z = 0; z < repeat+1; z++)
+								for (u8 x = 0; x < strlen(content); x++)
+									c64color[ x + ((y+yOffset) * 40) + (z*(color + strlen(content))) ] = content[x];
+						}
 					}
 					else if (type == 3)
 						pSidekickNet->enableSktpRefreshTimeout();
