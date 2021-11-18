@@ -2143,15 +2143,25 @@ void printSKTPScreen()
 						}
 						else
 						{
+							u8 gap = color;
 							for (u8 z = 0; z < repeat+1; z++)
-								for (u8 x = 0; x < strlen(content); x++)
-									c64color[ x + ((y+yOffset) * 40) + (z*(color + strlen(content))) ] = content[x];
+								for (u16 c = 0; c < strlen(content); c++)
+								{
+									u8 co = content[c];
+									if ( co == 16 ) co = 0;
+									c64color[ x + ((y+yOffset) * 40) + c + (z*(gap + strlen(content))) ] = co;
+								}
 						}
 					}
 					else if (type == 3)
 						pSidekickNet->enableSktpRefreshTimeout();
 					else if (type == 4)
 						SKTPisLowerCharset = (pSidekickNet->getSKTPBorderBGColorCharset( SKTPborderColor, SKTPbgColor) == 1);
+					else if (type == 255)
+					{
+						logger->Write( "printSKTPScreen", LogWarning, "end of sktp response was reached");
+						break;
+					}
 					else{
 						logger->Write( "printSKTPScreen", LogWarning, "sktp screen early exit");
 						break; //in case of unknown chunk types at the end of the content we break as we don't 
