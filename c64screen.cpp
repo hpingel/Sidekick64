@@ -1960,7 +1960,10 @@ void printNetworkScreen()
 
 	if ( pSidekickNet->IsRunning() )
 	{
-		printC64( x+1, y1+4, "You are connected.",   skinValues.SKIN_MENU_TEXT_ITEM, 0 );
+		if (pSidekickNet->isWireless())
+			printC64( x+1, y1+4, "You are connected (via WLAN).",   skinValues.SKIN_MENU_TEXT_ITEM, 0 );
+		else
+			printC64( x+1, y1+4, "You are connected (via network cable).",   skinValues.SKIN_MENU_TEXT_ITEM, 0 );
 		if (strcmp(netSktpHostName,"") != 0)
 			printC64( x+1, y1+(++y2), "* - Launch SKTP browser", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
 		if (!netEnableWebserver)
@@ -2090,7 +2093,7 @@ void printSKTPScreen()
 			printC64( 1, 2, "Sorry, an SKTP error occured, press F7", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
 			if (pSidekickNet->getSKTPErrorCode() == 6)
 			{
-				printC64( 1, 3, "This SKTP server requires are newer SKTP browser,", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
+				printC64( 1, 3, "This SKTP server requires a newer SKTP browser,", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
 				printC64( 1, 4, "please update your Sidekick kernel.", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
 			}
 			else if (pSidekickNet->getSKTPErrorCode() == 5)
