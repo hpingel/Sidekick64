@@ -1234,7 +1234,7 @@ boolean CSidekickNet::launchSktpSession(){
 			urlSuffix.Append(netSktpHostPassword);
 		}
 	}
-	urlSuffix.Append("&sktpv=1&type=");
+	urlSuffix.Append("&sktpv=2&type=");
 	#ifndef IS264
 	if (m_isC128)
 		urlSuffix.Append("128");
