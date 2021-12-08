@@ -845,7 +845,7 @@ void CSidekickNet::handleQueuedNetworkAction()
 	//boolean isRunning = IsStillRunning();
 	boolean isRunning = IsRunning();
 	//logger->Write( "handleQueuedNetworkAction", LogNotice, "Yield");
-	if ( isRunning && (netEnableWebserver || m_useWLAN))
+	if ( isRunning )
 		m_pScheduler->Yield (); // this is needed for webserver and wlan keep-alive
 	
 	if ( isRunning && (!isAnyNetworkActionQueued() || !usesWLAN()) )
@@ -855,35 +855,45 @@ void CSidekickNet::handleQueuedNetworkAction()
 		}
 
 		handleModemEmulation( false );
-		
-		#ifdef WITH_WLAN //we apparently don't need wlan keep-alive at all if we just always do the yield!!!
-			for (unsigned z=0; z < 100; z++)
-			{
-				//in case there is something incoming from the webserver while we are in the loop -> break!
-				if (m_isDownloadReadyForLaunch)
-				{
-					//Caution: Having this log entry here seems to be very important for timing!!!! :)
-					//also try to sleep here m_pScheduler->MsSleep(100);
+	
+		unsigned repeats = 3; //lan, test time update in system information
+		if ( usesWLAN()){
+			repeats = 100;
+			if ( m_isBBSSocketConnected) repeats = 25;
+		} 
+//	else if ( m_isBBSSocketConnected) repeats = 50;
 
-					logger->Write ("CSidekickNet", LogNotice, "Early-exit multi-yield...");
-					break;
-				}
-				m_pScheduler->Yield ();
+		for (unsigned z=0; z < repeats; z++)
+		{
+			//in case there is something incoming from the webserver while we are in the loop -> break!
+			if (m_isDownloadReadyForLaunch)
+			{
+				//Caution: Having this log entry here seems to be very important for timing!!!! :)
+				//also try to sleep here m_pScheduler->MsSleep(100);
+
+				logger->Write ("CSidekickNet", LogNotice, "Early-exit multi-yield...");
+				break;
 			}
-			
-			//only do cache stuff when in menu kernel
-			//doing this in launcher kernel ruins the running prg
-			//maybe we can check here ich sktp browser is active too?
-			if ( !RaspiHasOnlyWLAN() && !m_isC128 && !isSKTPScreenActive() && strcmp( m_currentKernelRunning, "m" ) == 0 && ( strcmp( m_CSDBDownloadExtension, "d64" ) != 0))
-				requireCacheWellnessTreatment();
-		#endif
+			m_pScheduler->Yield ();
+		}
+		
+		//only do cache stuff when in menu kernel
+		//doing this in launcher kernel ruins the running prg
+		//maybe we can check here ich sktp browser is active too?
+		if ( usesWLAN() && 
+				!RaspiHasOnlyWLAN() && 
+				!m_isC128 && 
+				!isSKTPScreenActive() && 
+				strcmp( m_currentKernelRunning, "m" ) == 0 && 
+				( strcmp( m_CSDBDownloadExtension, "d64" ) != 0)
+		)
+			requireCacheWellnessTreatment();
 	}
 	
 	if (m_queueDelay > 0 )
 	{
 		m_queueDelay--;
 		//logger->Write( "handleQueuedNetworkAction", LogNotice, "m_queueDelay: %i", m_queueDelay);		
-		
 		return;
 	}
 
@@ -2090,11 +2100,15 @@ void CSidekickNet::handleModemEmulation( bool silent = false)
 			{
 				//if ( !silent)
 					logger->Write ("CSidekickNet", LogNotice, "Terminal: sent %i chars to modem", fromFrontend);
-				m_pBBSSocket->Send (inputChar, fromFrontend, MSG_DONTWAIT);
+//				m_pScheduler->Yield ();
+				m_pBBSSocket->Send (inputChar, fromFrontend, 0); //MSG_DONTWAIT);
+				
 				if ( m_modemEmuType == SK_MODEM_SWIFTLINK)
 					m_isBBSSocketFirstReceive = true;
 			}
 		}
+
+//m_isBBSSocketFirstReceive = false;
 		
 		//if ( m_modemEmuType == SK_MODEM_SWIFTLINK)
 		//m_isBBSSocketFirstReceive = true;
@@ -2104,10 +2118,16 @@ void CSidekickNet::handleModemEmulation( bool silent = false)
 		unsigned harvest = 0, attempts = 0; //dummy start value
 		int x = 0;
 		bool again = true;
+		m_pScheduler->Yield ();
+		m_pScheduler->Yield ();
+		m_pScheduler->Yield ();
 		while (again)
 		{
 			attempts++;
 			x = m_pBBSSocket->Receive ( buffer, bsize -2, m_isBBSSocketFirstReceive ? 0 : MSG_DONTWAIT);
+			m_pScheduler->Yield ();
+			m_pScheduler->Yield ();
+			m_pScheduler->Yield ();
 			if (x > 0)
 			{
 				int a = writeCharsToFrontend(buffer, x);
@@ -2115,6 +2135,12 @@ void CSidekickNet::handleModemEmulation( bool silent = false)
 				harvest += x;
 			}
 
+			if ( attempts <= 5)
+			{
+				again = true;
+			}
+			
+/*
 			if ( m_modemEmuType == SK_MODEM_SWIFTLINK && attempts <= 10 ) // && !m_isBBSSocketFirstReceive)
 			{
 				again = true;
@@ -2125,6 +2151,7 @@ void CSidekickNet::handleModemEmulation( bool silent = false)
 			{
 				again = true;
 			}
+			*/			
 			else
 			{
 				again = false;
