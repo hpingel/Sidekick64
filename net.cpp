@@ -315,6 +315,12 @@ boolean CSidekickNet::Initialize()
 	m_CSDB.logPrefix = getLoggerStringForHost( CSDB_HOST, 443);
 	m_CSDB.valid = success;
 
+	m_CSDB_HVSC.hostName = "hvsc.csdb.dk";
+	m_CSDB_HVSC.port = 443;
+	m_CSDB_HVSC.ipAddress = getIPForHost( m_CSDB_HVSC.hostName, success );
+	m_CSDB_HVSC.logPrefix = getLoggerStringForHost( m_CSDB_HVSC.hostName, 443);
+	m_CSDB_HVSC.valid = success;
+
 	m_NTPServerIP  = getIPForHost( NTPServer, success );
 
 	if (strcmp(netSktpHostName,"") != 0)
@@ -1382,11 +1388,12 @@ void CSidekickNet::updateSktpScreenContent(){
 				
 				if (strcmp(hostName, m_CSDB.hostName) == 0){
 					m_CSDBDownloadHost = m_CSDB;
-					//logger->Write( "updateSktpScreenContent", LogNotice, "host is csdb");
+				}
+				else if ( strcmp(hostName, m_CSDB_HVSC.hostName) == 0){
+					m_CSDBDownloadHost = m_CSDB_HVSC;
 				}
 				else if ( strcmp(hostName, m_SKTPServer.hostName) == 0){
 					m_CSDBDownloadHost = m_SKTPServer;
-					//logger->Write( "updateSktpScreenContent", LogNotice, "host is sktpserver");
 				}
 				else{
 					logger->Write( "updateSktpScreenContent", LogNotice, "Error: Unknown host: >%s<", hostName);

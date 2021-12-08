@@ -302,6 +302,7 @@ private:
 		
 	remoteHTTPTarget m_SKTPServer;
 	remoteHTTPTarget m_CSDB;
+	remoteHTTPTarget m_CSDB_HVSC;
 };
 
 #endif
