@@ -1250,7 +1250,7 @@ boolean CSidekickNet::launchSktpSession(){
 			urlSuffix.Append(netSktpHostPassword);
 		}
 	}
-	urlSuffix.Append("&sktpv=2&type=");
+	urlSuffix.Append("&sktpv=3&type=");
 	#ifndef IS264
 	if (m_isC128)
 		urlSuffix.Append("128");
@@ -1531,7 +1531,7 @@ unsigned char * CSidekickNet::GetSktpScreenContentChunk( u16 & startPos, u8 &col
 		u16 byteLength= 0;
 		u8 startPosL = m_sktpScreenContent[ m_sktpScreenPosition + 2 ];//screen pos x/y
 		u8 startPosM = m_sktpScreenContent[ m_sktpScreenPosition + 3 ]&3;//screen pos x/y
-		if (type < 3)
+		if (type < 3 || type == 6)
 		{
 			scrLength += ((m_sktpScreenContent[ m_sktpScreenPosition + 3 ]&16)+ 
 									 (m_sktpScreenContent[ m_sktpScreenPosition + 3 ]&32)) *16; //msb bits
