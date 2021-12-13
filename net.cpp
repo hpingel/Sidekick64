@@ -1454,7 +1454,9 @@ void CSidekickNet::updateSktpScreenContent(){
 			if ( m_sktpResponseType == 3) // no session or session expired
 			{
 				m_sktpScreenErrorCode = 7; //will not do anything
+				logger->Write( "updateSktpScreenContent", LogNotice, "Notice: Session has expired, starting new SKTP session");
 				m_sktpSession = 0;
+				m_sktpKey = 0; //keypress is out of context with a new session
 				updateSktpScreenContent();
 				return;
 			}
