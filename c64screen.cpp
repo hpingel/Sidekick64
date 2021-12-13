@@ -2104,6 +2104,8 @@ void printSKTPScreen()
 				printC64( 1, 3, "Error: Port should not be zero", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
 			else if (pSidekickNet->getSKTPErrorCode() == 2)
 				printC64( 1, 3, "HTTP(s) request didn't work out", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
+			else if (pSidekickNet->getSKTPErrorCode() == 7)
+				printC64( 1, 3, "Invalid session id or session expired.", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
 			if (pSidekickNet->getSKTPErrorCode() == 1)
 			{
 				printC64( 1, 3, "Could not resolve SKTP hostname", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
