@@ -1451,6 +1451,13 @@ void CSidekickNet::updateSktpScreenContent(){
 				m_CSDBDownloadSavePath = savePath;
 				//m_sktpResponseType = 1; //just to clear the screen
 			}
+			if ( m_sktpResponseType == 3) // no session or session expired
+			{
+				m_sktpScreenErrorCode = 7; //will not do anything
+				m_sktpSession = 0;
+				updateSktpScreenContent();
+				return;
+			}
 			else
 			{
 				m_sktpScreenContent = (unsigned char * ) pResponseBuffer;
