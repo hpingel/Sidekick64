@@ -2132,6 +2132,16 @@ void printSKTPScreen()
 				pSidekickNet->ResetSktpScreenContentChunks();
 				while (!pSidekickNet->IsSktpScreenContentEndReached())
 				{
+					/*
+					chunk types:
+					0 normal chunk
+					1 char repeat chunk
+					2 screencode chunk
+					3 meta screen refresh
+					4 colors & charset
+					5 vertical repeat chunk
+					6 paintbrush chunk
+					*/
 					u8 type = pSidekickNet->GetSktpScreenContentChunkType();
 					if ( type == 0 || type == 1 || type == 2 || type == 5 || type == 6)
 					{
@@ -2146,6 +2156,7 @@ void printSKTPScreen()
 						}
 						else
 						{
+							//paintbrush chunk (6)
 							u8 gap = color;
 							for (u8 z = 0; z < repeat+1; z++)
 								for (u16 c = 0; c < strlen(content); c++)
