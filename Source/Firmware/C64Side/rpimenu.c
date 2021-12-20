@@ -302,7 +302,8 @@ int main (void)
 
         // sendKeypress
         //key = cgetc();
-        if ( ( key == 29 || key == 's' || key == 'S' ) && *((char *)(0x0427)) != 0 )				
+				//key == 29 ||
+        if ( ( key == 's' || key == 'S' ) && *((char *)(0x0427)) != 0 )				
 				{
 						__asm__ ("lda #$0a");
 						__asm__ ("ldx #$20");
