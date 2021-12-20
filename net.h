@@ -107,6 +107,7 @@ public:
 	void queueFrameRequest();
 	void queueSktpKeypress( int );
 	bool isSKTPRefreshWaiting();
+	void cancelSKTPRefresh();
 	void setSktpRefreshTimeout( unsigned timeout);
 	void queuedSktpRefreshAllowed();
 	void handleQueuedNetworkAction();
@@ -270,6 +271,7 @@ private:
 	unsigned m_timeoutCounterStart;
 	unsigned m_skipSktpRefresh;
 	unsigned m_sktpRefreshTimeout;
+	boolean  m_sktpRefreshWaiting;
 	unsigned m_sktpScreenPosition;
 	unsigned m_sktpResponseLength;
 	unsigned m_sktpResponseType;

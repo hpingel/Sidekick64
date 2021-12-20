@@ -169,6 +169,7 @@ CSidekickNet::CSidekickNet(
 		m_timeoutCounterStart(0),
 		m_skipSktpRefresh(0),
 		m_sktpRefreshTimeout(0),
+		m_sktpRefreshWaiting(false),
 		m_sktpScreenPosition(0),
 		m_sktpResponseLength(0),
 		m_sktpResponseType(0),
@@ -724,16 +725,21 @@ void CSidekickNet::queueSktpKeypress( int key )
 
 bool CSidekickNet::isSKTPRefreshWaiting()
 {
-	return m_sktpRefreshTimeout > 0;
+	return m_sktpRefreshWaiting;
 }
+
+void CSidekickNet::cancelSKTPRefresh()
+{
+	m_sktpRefreshWaiting = false;
+}
+
 
 void CSidekickNet::setSktpRefreshTimeout( unsigned timeout )
 {
 	//logger->Write ("CSidekickNet::setSktpRefreshTimeout", LogNotice, "%i", timeout);
-	m_sktpRefreshTimeout = timeout *2;
+	m_sktpRefreshWaiting = true;
 	m_skipSktpRefresh = 0;
-	if ( timeout > 0)
-		queuedSktpRefreshAllowed();
+	m_sktpRefreshTimeout = timeout;
 }
 
 void CSidekickNet::queuedSktpRefreshAllowed()
@@ -741,16 +747,13 @@ void CSidekickNet::queuedSktpRefreshAllowed()
 	//refesh when user didn't press a key
 	//this has to be quick for multiplayer games (value 4)
 	//and can be slow for csdb browsing (value 16)
-	m_skipSktpRefresh++;
-	if ( m_sktpRefreshTimeout == 0 || (m_skipSktpRefresh > m_sktpRefreshTimeout && !isAnyNetworkActionQueued()))
+	if ( m_sktpRefreshWaiting && ++m_skipSktpRefresh >= m_sktpRefreshTimeout && !isAnyNetworkActionQueued())
 	{
+		m_sktpRefreshWaiting = false;
 		m_skipSktpRefresh = 0;
 		m_sktpRefreshTimeout = 0;
-		//logger->Write ("CSidekickNet::queuedSktpRefreshAllowed", LogNotice, "keypress triggered");
-		//queueSktpKeypress( 0 ); //key zero
 		m_sktpKey = 0;
 		updateSktpScreenContent();
-		//m_isMenuScreenUpdateNeeded = true;
 		m_isMenuScreenUpdateNeeded = true;
 	}
 }
@@ -851,8 +854,8 @@ void CSidekickNet::handleQueuedNetworkAction()
 	//boolean isRunning = IsStillRunning();
 	boolean isRunning = IsRunning();
 	//logger->Write( "handleQueuedNetworkAction", LogNotice, "Yield");
-	if ( isRunning )
-		m_pScheduler->Yield (); // this is needed for webserver and wlan keep-alive
+//	if ( isRunning )
+//		m_pScheduler->Yield (); // this is needed for webserver and wlan keep-alive
 	
 	if ( isRunning && (!isAnyNetworkActionQueued() || !usesWLAN()) )
 	{
@@ -944,7 +947,7 @@ void CSidekickNet::handleQueuedNetworkAction()
 			//m_isMenuScreenUpdateNeeded = true;
 			m_isSktpKeypressQueued = false;
 		}
-		else if (m_skipSktpRefresh > 0)
+		else if (m_sktpRefreshWaiting)
 			queuedSktpRefreshAllowed();
 
 	}
@@ -1522,7 +1525,8 @@ boolean CSidekickNet::getSKTPBorderBGColorCharset( u8 &borderColor, u8 &bgColor)
 
 void CSidekickNet::enableSktpRefreshTimeout(){
 	//logger->Write( "enableSktpRefreshTimeout", LogNotice, "enabled");
-	setSktpRefreshTimeout( m_sktpScreenContent[ ++m_sktpScreenPosition ] );
+	u8 timeout = m_sktpScreenContent[ ++m_sktpScreenPosition ];
+	setSktpRefreshTimeout( timeout == 0 ? 1 : timeout);
 	m_sktpScreenPosition++;
 }
 
@@ -1812,20 +1816,20 @@ void CSidekickNet::handleModemEmulation( bool silent = false)
 
 	if (  m_modemEmuType == 0 ) return;
 
+	if ( (strcmp( m_currentKernelRunning, "m" ) == 0) && m_isBBSSocketConnected){
+		cleanUpModemEmuSocket();
+	}
+
 	if ( m_modemEmuType == SK_MODEM_SWIFTLINK )
 	{
 		if ( silent && m_isBBSSocketConnected)
 			return; // come back in none-silent case
-		else if ( !silent && m_socketPort > 0 && !m_isBBSSocketConnected)
+		else if ( !silent && (m_socketPort > 0) && !m_isBBSSocketConnected)
 		{
 			SocketConnect( m_socketHost, m_socketPort, false);
 			m_socketPort = 0; //prevent retry
 			return;
 		}
-	}
-
-	if ( (strcmp( m_currentKernelRunning, "m" ) == 0) && m_isBBSSocketConnected){
-		cleanUpModemEmuSocket();
 	}
 
 	//buffers should be at least of size FRAME_BUFFER_SIZE (1600)
