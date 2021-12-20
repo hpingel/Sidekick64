@@ -46,7 +46,7 @@ unsigned delayHandleNetworkValue = 1500000;
 const u8 RPIMENUPRG[] =
 {
 //Caution: Whenever upstream rpimenu.prg changes we have to manually call converttool!
-//./webcontent/converttool -b rpimenu.prg > rpimenu_prg.h
+//../webcontent/converttool -b rpimenu.prg > rpimenu_prg.h
 //This has to be put into the workflow
 
 #include "C64Side/rpimenu_prg.h"
@@ -564,7 +564,7 @@ boolean CKernelMenu::handleNetwork( boolean doRender)
 	//else if (m_SidekickNet.usesWLAN() && modeC128)
 	//	delayHandleNetworkValue = 1200000;
 	if ( m_SidekickNet.isSKTPScreenActive())
-		delayHandleNetworkValue = 1200000;
+		delayHandleNetworkValue = 900000;
 	
 	enableFIQInterrupt();
 	return doRender;
@@ -719,7 +719,8 @@ void CKernelMenu::Run( void )
 			startForC128 = 0;
 			#ifdef WITH_NET
 			//disable queued screenrefreshs
-			if (m_SidekickNet.isSKTPRefreshWaiting()) m_SidekickNet.setSktpRefreshTimeout(0);
+			if (m_SidekickNet.isSKTPRefreshWaiting()) 
+				m_SidekickNet.cancelSKTPRefresh();
 			handleNetwork( true );
 			lastAutoRefresh = 0;
 			#else
@@ -745,13 +746,17 @@ void CKernelMenu::Run( void )
 			boolean timedRefresh = false;
 			if ( isAutomaticScreenRefreshNeeded() )
 			{
-				boolean toggle = !m_SidekickNet.IsRunning() && ++autoRefreshTimeLookup > 1500000;
-				if ( toggle ){
+				boolean toggle = 
+					!m_SidekickNet.IsRunning() && 
+					(++autoRefreshTimeLookup > (m_SidekickNet.RaspiHasOnlyWLAN() ? 6000000 : 1500000));
+				if ( toggle )
+				{
 					autoRefreshTimeLookup = 0;
 					DisableFIQInterrupt();
 				}
 				unsigned uptime = m_Timer.GetUptime();
-				if ( lastAutoRefresh == 0){
+				if ( lastAutoRefresh == 0)
+				{
 					lastAutoRefresh = uptime;
 				}
 				else if ( uptime - lastAutoRefresh > 0 )
@@ -764,15 +769,19 @@ void CKernelMenu::Run( void )
 					updateMenu = 1;
 					//logger->Write( "SidekickMenu", LogNotice, "timed refresh happening" );
 					renderC64(); //puts the active menu page into the raspi memory
-					warmCache( pFIQ );
-					DELAY(1<<18);
+					//if ( !m_SidekickNet.RaspiHasOnlyWLAN())
+					{
+						warmCache( pFIQ );
+						DELAY(1<<18);
+					}
 					enableFIQInterrupt();
 					CLR_GPIO( bNMI );
 					doneWithHandling = 1;
 					updateMenu = 0;
-					keepNMILow = 1; //this means the duration of NMI going down is a little longer
+					keepNMILow = 2; //this means the duration of NMI going down is a little longer
 				}
-				else if ( toggle ){
+				else if ( toggle )
+				{
 					doCacheWellnessTreatment();
 					enableFIQInterrupt();
 				}
@@ -780,11 +789,9 @@ void CKernelMenu::Run( void )
 			else
 			{
 				lastAutoRefresh = 0;
-//				if ( m_SidekickNet.isSKTPScreenActive() )
-//					m_SidekickNet.queueSktpRefresh( 16 );
 			}
 
-			if ( !timedRefresh )
+			if ( !timedRefresh && keepNMILow == 0)
 			{
 				if ( m_SidekickNet.isMenuScreenUpdateNeeded() )
 				{
@@ -803,15 +810,15 @@ void CKernelMenu::Run( void )
 					CLR_GPIO( bNMI );
 					doneWithHandling = 1;
 					updateMenu = 0;
-					keepNMILow = 1; //this means the duration of NMI going down is a little longer
+					keepNMILow = 2; //this means the duration of NMI going down is a little longer
 				}
 				else if ( ( m_SidekickNet.IsConnecting() || m_SidekickNet.IsRunning()) && 
-					(++m_timeStampOfLastNetworkEvent > delayHandleNetworkValue || m_SidekickNet.isSKTPRefreshWaiting() && m_timeStampOfLastNetworkEvent > delayHandleNetworkValue/1.5 )
+					(++m_timeStampOfLastNetworkEvent > delayHandleNetworkValue || m_SidekickNet.isSKTPRefreshWaiting() && m_timeStampOfLastNetworkEvent > delayHandleNetworkValue/1.3 )
 				){
 					if ( handleNetwork( false)) //this makes the webserver respond quickly even when there is no keypress user action
 					{
 						CLR_GPIO( bNMI );
-						keepNMILow = 1; //this means the duration of NMI going down is a little longer
+						keepNMILow = 2; //this means the duration of NMI going down is a little longer
 					}
 				}
 			}
