@@ -1037,9 +1037,9 @@ boolean CSidekickNet::checkForFinishedDownload()
 	boolean bTemp = m_isDownloadReady;
 	if ( m_isDownloadReady){
 		m_isDownloadReady = false;
-		m_isDownloadReadyForLaunch = false;
 		if ( m_bSaveCSDBDownload2SD )
 		{
+			m_isDownloadReadyForLaunch = false;
 			if (m_loglevel > 2)
 				logger->Write( "isDownloadReady", LogNotice, "Download is ready and we want to save it.");
 			m_isCSDBDownloadSavingQueued = true;
@@ -1065,6 +1065,12 @@ boolean CSidekickNet::checkForFinishedDownload()
 				setErrorMsgC64((char*)"     Saving and launching CRT file      ");
 				//m_queueDelay = 15;
 			}
+			requireCacheWellnessTreatment();
+		}
+		else{
+			m_isDownloadReadyForLaunch = true;
+			//                    "012345678901234567890123456789012345XXXX"
+			setErrorMsgC64((char*)"      Launching download (no save)      ");
 			requireCacheWellnessTreatment();
 		}
 	}
