@@ -997,12 +997,15 @@ void CSidekickNet::saveDownload2SD()
 	m_isDownloadReadyForLaunch = true;
 }
 
-void CSidekickNet::prepareLaunchOfUpload( char * ext ){
-	m_isDownloadReadyForLaunch = true;
+void CSidekickNet::prepareLaunchOfUpload( char * ext, char * filename ){
+	//m_isDownloadReadyForLaunch = true;
+	m_isCSDBDownloadSavingQueued = true;
 	memcpy(m_CSDBDownloadExtension,ext,3);
 	m_CSDBDownloadExtension[3]='\0';
-	memcpy(m_CSDBDownloadFilename,"http_upload",11);
-	m_CSDBDownloadFilename[11]='\0';
+	memcpy(m_CSDBDownloadFilename, filename, strlen(filename));
+	m_CSDBDownloadFilename[strlen(filename)]='\0';
+	setSavePath("!upload");
+
 	
   //TODO:
 	//m_CSDBDownloadSavePath
@@ -1426,38 +1429,17 @@ void CSidekickNet::updateSktpScreenContent(){
 				#endif
 //				logger->Write( "updateSktpScreenContent", LogNotice, "extension: >%s<", extension);
 
-				CString savePath;
-				if (m_bSaveCSDBDownload2SD)
-				{
-					savePath = "SD:";
-					if ( strcmp(m_CSDBDownloadExtension,"prg") == 0)
-#ifndef IS264
-						savePath.Append( (const char *) "PRG/" );
-#else
-						savePath.Append( (const char *) "PRG264/" );
-#endif
-					else if ( strcmp(m_CSDBDownloadExtension,"crt") == 0)
-#ifndef IS264
-						savePath.Append( (const char *) "CRT/" );
-#else
-						savePath.Append( (const char *) "CART264/" );
-#endif
-					else if ( strcmp(m_CSDBDownloadExtension,"d64") == 0)
-#ifndef IS264
-						savePath.Append( (const char *) "D64/" );
-#else
-						savePath.Append( (const char *) "D264/" );
-#endif
-					else if ( strcmp(m_CSDBDownloadExtension,"sid") == 0)
-						savePath.Append( (const char *) "SID/" );
-					savePath.Append(m_CSDBDownloadFilename);
-				}
+				
 				m_sktpResponseLength = 1;
 				m_sktpScreenContent = (unsigned char * ) pResponseBuffer;
 				m_sktpScreenPosition = 1;
 				m_isCSDBDownloadQueued = true;
 				m_queueDelay = 0;
-				m_CSDBDownloadSavePath = savePath;
+				if (m_bSaveCSDBDownload2SD)
+					setSavePath("!downloads");
+				else
+					m_CSDBDownloadSavePath = (char *)"";
+				
 				//m_sktpResponseType = 1; //just to clear the screen
 			}
 			if ( m_sktpResponseType == 3) // no session or session expired
@@ -1484,6 +1466,43 @@ void CSidekickNet::updateSktpScreenContent(){
 		m_sktpScreenErrorCode = 2;
 	}
 	m_sktpKey = 0;
+}
+
+
+void CSidekickNet::setSavePath(char * subfolder)
+{
+	CString savePath;
+	savePath = "SD:";
+	if ( strcmp(m_CSDBDownloadExtension,"prg") == 0)
+#ifndef IS264
+		savePath.Append( (const char *) "PRG/" );
+#else
+		savePath.Append( (const char *) "PRG264/" );
+#endif
+	else if ( strcmp(m_CSDBDownloadExtension,"crt") == 0)
+#ifndef IS264
+		savePath.Append( (const char *) "CRT/" );
+#else
+		savePath.Append( (const char *) "CART264/" );
+#endif
+	else if ( strcmp(m_CSDBDownloadExtension,"d64") == 0)
+#ifndef IS264
+		savePath.Append( (const char *) "D64/" );
+#else
+		savePath.Append( (const char *) "D264/" );
+#endif
+	else if ( strcmp(m_CSDBDownloadExtension,"sid") == 0)
+		savePath.Append( (const char *) "SID/" );
+	savePath.Append(subfolder);
+	
+	f_mkdir(savePath);
+	
+	savePath.Append("/");
+	savePath.Append(m_CSDBDownloadFilename);
+
+	m_CSDBDownloadSavePath = savePath;
+	//logger->Write( "setSavePath", LogNotice, "savePath: '%s'", savePath);
+	
 }
 
 boolean CSidekickNet::IsSktpScreenContentEndReached()

@@ -121,6 +121,7 @@ public:
 	boolean isDownloadReadyForLaunch();
 	boolean isWireless(){ return m_useWLAN;};
 	boolean RaspiHasOnlyWLAN();
+	void setSavePath(char*);
 	boolean IsSktpScreenContentEndReached();
 	boolean IsSktpScreenToBeCleared();
 	boolean IsSktpScreenUnchanged();
@@ -154,7 +155,7 @@ public:
 	void requestReboot();
 	void requireCacheWellnessTreatment();
 	void getNetRAM( u8 *, u32 *);
-	void prepareLaunchOfUpload( char * );
+	void prepareLaunchOfUpload( char *, char * );
 	CString getBaudrate();
 	CString getLoggerStringForHost( CString hostname, int port);
 	boolean isSKTPScreenActive();

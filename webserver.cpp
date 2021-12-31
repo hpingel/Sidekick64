@@ -122,9 +122,43 @@ CHTTPDaemon *CWebServer::CreateWorker (CNetSubSystem *pNetSubSystem, CSocket *pS
 		if (GetMultipartFormPart (&pPartHeader, &pPartData, &nPartLength))
 		{
 			assert (pPartHeader != 0);
-			if (   strstr (pPartHeader, "name=\"kernelimg\"") != 0
-			    && ( strstr (pPartHeader, "filename=\"kernel") != 0 || strstr (pPartHeader, "filename=\"rpi4_kernel") != 0 )
-			    && strstr (pPartHeader, ".img\"") != 0
+
+			//parse form field content for filename
+			char filename[255];
+			char extension[10];
+			filename[0] = '\0';
+			extension[0] = '\0';
+			char * startpos = strstr (pPartHeader, "filename=\"");
+			if ( startpos != 0)
+			{
+				startpos += 10;
+				u16 fnl = 0;
+				u16 exl = 0;
+				u16 extensionStart = 0;
+				while ( (startpos[fnl] != '\"') && (fnl < 254) )
+				{
+					filename[fnl] = startpos[fnl];
+					if ( filename[fnl] == '.' )
+						extensionStart = fnl+1;
+					fnl++;
+				}
+				filename[fnl] = '\0';
+				while ( extensionStart > 0 && extensionStart < fnl && exl < 9)
+				{
+					u8 tmp = filename[extensionStart + exl];
+					if (tmp >=65 && tmp <=90) tmp+=32; //strtolower
+					extension[exl] = tmp;
+					exl++;
+				}
+				extension[exl] = '\0';
+				//logger->Write( FromWebServer, LogNotice, "found filename: '%s' %i", filename, strlen(filename));
+				//logger->Write( FromWebServer, LogNotice, "found extension: '%s' %i", extension, strlen(extension));
+			}
+
+			
+			if (strstr (pPartHeader, "name=\"kernelimg\"") != 0
+			    && ( strstr (filename, "kernel") != 0 || strstr (filename, "rpi4_kernel") != 0 )
+			    && strcmp (extension, "img") == 0
 			    && nPartLength > 0)
 			{
 				assert (pPartData != 0);
@@ -133,61 +167,37 @@ CHTTPDaemon *CWebServer::CreateWorker (CNetSubSystem *pNetSubSystem, CSocket *pS
 
 #ifndef IS264
 				#if RASPPI >= 4
-  				const char * filename = m_SidekickNet->usesWLAN() ? "SD:rpi4_kernel_sk64_wlan.img" : "SD:rpi4_kernel_sk64_net.img";
+  				const char * filenamek = m_SidekickNet->usesWLAN() ? "SD:rpi4_kernel_sk64_wlan.img" : "SD:rpi4_kernel_sk64_net.img";
 				#else
-  				const char * filename = m_SidekickNet->usesWLAN() ? "SD:kernel_sk64_wlan.img" : "SD:kernel_sk64_net.img";
+  				const char * filenamek = m_SidekickNet->usesWLAN() ? "SD:kernel_sk64_wlan.img" : "SD:kernel_sk64_net.img";
 				#endif
 #else
 				#if RASPPI >= 4
-					const char * filename = m_SidekickNet->usesWLAN() ? "SD:rpi4_kernel_sk264_wlan.img" : "SD:rpi4_kernel_sk264_net.img";
+					const char * filenamek = m_SidekickNet->usesWLAN() ? "SD:rpi4_kernel_sk264_wlan.img" : "SD:rpi4_kernel_sk264_net.img";
 				#else
-					const char * filename = m_SidekickNet->usesWLAN() ? "SD:kernel_sk264_wlan.img" : "SD:kernel_sk264_net.img";
+					const char * filenamek = m_SidekickNet->usesWLAN() ? "SD:kernel_sk264_wlan.img" : "SD:kernel_sk264_net.img";
 				#endif
 #endif			
 				logger->Write( FromWebServer, LogNotice, "Saving kernel image to SD card, length: %u", nPartLength);
-				//f_unlink("SD:kernel_sk64_net.img.old");
-				//f_rename("SD:kernel_sk64_net.img","SD:kernel_sk64_net.img.old");
-				writeFile( logger, "SD:", filename, (u8*) pPartData, nPartLength );
+				writeFile( logger, "SD:", filenamek, (u8*) pPartData, nPartLength );
 				m_SidekickNet->requireCacheWellnessTreatment();
 				m_SidekickNet->requestReboot();
 				
 				pMsg = "Now rebooting into new kernel...";
 			}
-/*			
-			else if ( strstr (pPartHeader, "filename=\"rpimenu.prg") != 0  && nPartLength > 0 )
-			{
-				#ifndef IS264
-  				const char * filename = "SD:C64/rpimenu.prg";
-				#else
-					const char * filename = "SD:C16/rpimenu.prg";
-				#endif
-				logger->Write( FromWebServer, LogNotice, "Saving rpimenu.prg to SD card, length: %u", nPartLength);
-				writeFile( logger, "SD:", filename, (u8*) pPartData, nPartLength );
-				m_SidekickNet->requireCacheWellnessTreatment();
-				m_SidekickNet->requestReboot();
-				
-				pMsg = "Now uploading new rpimenu.prg to folder C64 and rebooting.";
-			}
-*/			
 			else if (nPartLength > 0)
 			{
-				char * type = "";
-				if ( strstr (pPartHeader, ".prg\"") || strstr (pPartHeader, ".PRG\""))
-				 	type = "prg";
-				if ( strstr (pPartHeader, ".d64\"") || strstr (pPartHeader, ".D64\""))
-					type = "d64";
-				if ( strstr (pPartHeader, ".crt\"") || strstr (pPartHeader, ".CRT\""))
-					type = "crt";
-				if ( strstr (pPartHeader, ".sid\"") || strstr (pPartHeader, ".SID\""))
-					type = "sid";
-				if ( strstr (pPartHeader, ".bin\"") || strstr (pPartHeader, ".BIN\""))
-					type = "bin";
-					
-				if (strcmp(type,"") != 0)
-				{
+
+				if (( strcmp (extension, "prg") == 0 ||
+						strcmp (extension, "d64") == 0 ||
+						strcmp (extension, "crt") == 0 ||
+						strcmp (extension, "sid") == 0 ||
+						strcmp (extension, "bin") == 0) &&
+						strlen(filename)>0
+				){
 					prgSizeLaunch = nPartLength;
 					memcpy( prgDataLaunch, pPartData, nPartLength);
-					m_SidekickNet->prepareLaunchOfUpload( type );
+					m_SidekickNet->prepareLaunchOfUpload( extension, filename );
 					pMsg = "Now launching payload...";
 				}
 				else
