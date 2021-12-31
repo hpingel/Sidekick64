@@ -5,30 +5,43 @@ The main goal of this fork of Sidekick64 is to find out if it is possible to use
 Once network features were squeezed into the "clockwork" of Sidekick64 without disturbing it too much, I started to add some network demos and tried to implement modem emulation to make use of the newly gained network capabilities. Without the excellent network examples of the Circle bare metal framework this would have been much harder to achieve.
 ## Summary: Network features in a nutshell
 Currently the following network related features are offered by the experimental Sidekick64 network kernel:
-* Join your network, obtain IP address and stuff via DHCP (mandatory)
-* Both cable based LAN (RPI 3B+ only) and WLAN are possible but require their own kernel images. There is one kernel image for WLAN and one image for cable based ethernet.
+* Join your network, obtain IP address (DHCP mandatory)
+* Cable based LAN (RPI 3B+ only) and WLAN are both possible. There is one kernel image for WLAN and one image for cable based ethernet.
 * WLAN-Kernel: Store WLAN SSID and passphrase in configuration file on SD card
 * System date and time will be set via NTP (UTC)
 * A network connection can be established by the user via keypress at the Sidekick menu when needed or can be configured to be automatically done during each Sidekick64 boot.
 * Web interface
- 	- A web interface can be activated for Sidekick64 that offers an upload form to other devices on the local network. This allows a Sidekick64 kernel update without removing the SD card or it allows to upload and launch PRGs, SIDs, CRTs, D64, BIN or the like remotely from a different machine.
- 	- The web interface can be reached via the IP address or by hostname (default is "sidekick64" if no custom hostname was configured)
+ 	- Becomes available once the built-in web server is activated.
+	- Offers a file upload form allowing a Sidekick64 kernel update without removing the SD card.
+	- Also allows to upload, save and launch PRGs, SIDs, CRTs, D64, BIN files.
+ 	- Can be reached via the IP address or by hostname (default is "sidekick64" if no custom hostname was configured)
 * Modem emulation
 	- Only compatible with terminal software in PRG format (CCGMS, etc.)
 	- Userport modem emulation is possible via a little hardware extension
 	- (highly experimental) Swiftlink emulation
-* Experimental SKTP browser
-	- Load screen content to C64 via HTTP or HTTPS via a simple binary protocol from a web application called "SKTP server". 
-	- Trigger download and launch of remote binary files like PRG, D64, SID, CRT, etc. 
+* SKTP browser
+	- Load screen content to C64 via HTTP or HTTPS via a simple binary protocol from a web application called "SKTP server".
+	- Trigger download and launch of remote binary files like PRG, D64, SID, CRT, BIN, etc.
 	- Example apps:
-		- Browse and download stuff from CSDb via webservice provided by CSDb.
+		- Browse and download stuff from [C-64 Scene Database](https://csdb.dk/) (CSDb) via webservice provided by CSDb.
+		- Browse and download stuff from [High Voltage SID Collection](https://www.hvsc.c64.org/) (HVSC) (via instance hosted at hvsc.csdb.dk)
 		- Access to RSS-Feeds.
 		- Join a simple text chat to chat with other SKTP users.
+		- PETSCII Experiments (including advent calendar)
 * Changes to the Sidekick64 menu
 	- Added network menu page entry to main menu (open with key @, also allow access to with subpages "SKTP browser" and System information
 	- Added SKTP browser: .... Control screen content and user key presses remotely via "SKTP server" (HTTP server with web application). Ability to download, launch and save files fetched via HTTP(S): PRG, SID, CRT, D64
 	- Added system information page: Allows to see the current RPi CPU temperature, basic network connection information and also meta info like date and time and information about the Sidekick64 kernel running
 * Outlook: Sidekick264 network support is also implemented in a highly experimental state. Due to the many variants that have to be tested Sidekick264 network has not been tested a lot.
+## Quickstart: How to get it working quickly
+1. Important: On the Sidekick64 PCB, set the jumper A13-BTN to BTN (vertical position).
+2. Download Sidekick64 release v0.48 by Frenetic / @frntc from [here](https://github.com/frntc/Sidekick64/releases), unpack the archive and copy the files to an SD card to create a working vanilla Sidekick64 SD card. Make sure your Sidekick64 is booting and working.
+3. Download the latest alpha release of the network kernel (either choose between WLAN and cable based network image or get both) from [here](https://github.com/hpingel/Sidekick64/releases). The respective files are called `kernel_sk64_net.img` and `kernel_sk64_wlan.img`. Copy the needed images to the root folder of your SD card.
+4. In case of cable based network no further files besides `kernel_sk64_net.img` have to be added to the SD card although you may want to update some firmware files.
+5. If you wish to use the WLAN kernel image `kernel_sk64_wlan.img` you additionally need to download the archive `wlan.zip`. It contains a folder `wlan` that has to be copied to the SD card's root folder. The file `wpa_supplicant.conf` needs to be edited to add the correct SSID and passphrase of your personal WLAN.
+6. Important: You need to edit the file `sidekick64.txt` in the root folder. Change the name of the kernel image that should be booted. Example: `kernel=kernel_sk64_wlan.img`. You can always revert to booting the vanilla kernel by changing this line to `kernel=kernel_sk64.img`.
+7. `raspberry_firmware_updated.zip`: This archive can also be downloaded from [here](https://github.com/hpingel/Sidekick64/releases). It provides current versions of some firmware files. This is not mandatory to use but recommended. The files in this archive replace files in the root folder of the SD card. Create backups of the old versions to be able to revert to them.
+8. Boot Sidekick64 and you should see a menu item "Network" on the main menu. If it doesn't boot, connect a HDMI screen to the Raspberry and have a look if you can see any error messages during boot.
 
 ## Joining a network
 ### Basics
@@ -77,13 +90,18 @@ This enables us to do the following:
 * It allows interaction with most services on the World Wide Web
 * In addition to screen updates SKTP allows to request Sidekick64 to download a payload from a web adress (via HTTP or HTTPS), store and/or execute it on the C64. This means, files like PRG, SID, CRT, etc. may be downloaded from the internet and directly launched on the C64. This is tightly coupled to the Sidekick64 menu code as the possibility to launch is essential.
 
-Currently three example applications exist that make use of SKTP:
+Currently four example applications exist that make use of SKTP:
 ### CSDb Launcher
 Allows to browse latest releases and a couple of selected top lists to easily access attractive releases from the world of the C64 demo scene.
+### HVSC Browser
+Allows to browse and play the complete music in the High Voltage SID Collection.
 ### Forum64 RSS Viewer
 Allows to launch a dynamically generated PRG (available in different flavours for C64, C128@80columns, C16/Plus/4) that displays the latest posts from the RSS feed of Forum64.
 ### Simple text chat
 To test and demonstrate multiuser capabilities a simple text chat is available.
+
+If you want to try the SKTP browser without Sidekick64 there is a [Javascript based SKTP client](https://sktpdemo.cafeobskur.de/) available running in any web browser.
+
 ## Network configuration via SD card
 You may change some network default settings by editing configuration files on the SD card via an SD card reader plugged into your Desktop/Notebook/PC/MAC/Pi/etc.
 
@@ -115,7 +133,7 @@ The following options may be added to the file `C64/sidekick64.cfg` but are not 
 
 * **NET_MODEM_DEFAULT_BAUDRATE**: The modem emulation baud rate may be changed in a terminal program like CCGMS by using the command `atb`. But you can also configure your favourite baud rate by adding a line with this parameter like this: `NET_MODEM_DEFAULT_BAUDRATE "4800"`. Possible values are 300, 1200, 2400, 4800, 9600. Default value: "1200"
 
-* **NET_SKTPHOST_NAME**: To use the SKTP browser it needs to know which external SKTP server to connect to. Provide an SKTP server address like in this example: `NET_SKTPHOST_NAME "example.com"`. Default value: none
+* **NET_SKTPHOST_NAME**: To use the SKTP browser it needs to know the SKTP server's hostname to connect to. Provide an SKTP server address, for example the following demo instance: `NET_SKTPHOST_NAME "sktpdemo.cafeobskur.de"`. Default value: none
 
 * **NET_SKTPHOST_PORT**: If you have specified an SKTP host (see above) you may also provide a port number (only needed if this should differ from 80). For example, the line `NET_SKTPHOST_PORT "443"` will enforce HTTPS access. Default: "80"
 
@@ -129,7 +147,7 @@ The power consumption change depends on the Raspberry Pi model used.  While a mo
 
 Now for the CPU temperature: In an everyday use case the Raspberry Pi would throttle CPU cores once it detects that the CPU  is getting "hot" but in the case of Sidekick64 the reliability of the communication with the expansion port of the C64 is a priority and therefore throttling the Raspberry's CPU is not an option as it would destabilize the emulation which would lead to crashes or flickering menu screens. This may sound dangerous, but in fact there is not much harm done except for an emulation that was stable before suddenly becoming unstable.
 While the CPU temperature of a running Sidekick64 would normally be below 55° Celsius, turning on network features and enabling the USB stack with it may eventually make the temperature hit 60° Celsius. This is not a problem as such but has consequences that need to be known and understood to circumvent problems.
-With default settings, a Raspberry Pi will automatically start to throttle its CPU once the 60° C are reached to prevent overheating (although the CPU would be capable of running with more than 80°C without damage). If you observe a CPU temperature of 59°C on the system info screen of the network menu then your Sidekick64 emulation may appear to become unstable very soon. Nothing can break, nothing can be damaged, as the Raspberry is still running fine and just behaving as it should behave. Only the emulation appears unstable. 
+With default settings, a Raspberry Pi will automatically start to throttle its CPU once the 60° C are reached to prevent overheating (although the CPU would be capable of running with more than 80°C without damage). If you observe a CPU temperature of 59°C on the system info screen of the network menu then your Sidekick64 emulation may appear to become unstable very soon. Nothing can break, nothing can be damaged, as the Raspberry is still running fine and just behaving as it should behave. Only the emulation appears unstable.
 If you detect that the Raspberry's CPU temperature is likely to reach the 60° C there are two directions in which you can go to solve the problem: Either improve the air circulation around the CPU to stop it from reaching 60°C or increase the default throttling temperature limit to something higher - like for example 62°C - and hope that the Raspberry's CPU will not reach the new limit.
 How quickly your Sidekick's Raspberry CPU is heating up may depend on different factors:
 *    Inside a case: Does the case allow for some airflow?
@@ -147,15 +165,15 @@ Sidekick64 ships with a C64 assembler program that is responsible for fetching t
 To avoid the hassle of constantly replacing the rpimenu.prg on the SD card when switching between vanilla kernel and network kernel, the modified rpimenu.prg is currently baked directly into the network kernel image so that there is no possibility to have the wrong version on the SD card and no need to replace any PRG files.
 ### Framework related differences
 #### Bigger kernel image size
-Although it doesn't present any problems given todays sizes of SD cards, the Sidekick64 network kernel images are generally bigger in file size than the original kernel (TODO: Add example numbers). Although the rpimenu.prg file is currently baked into the network kernel image to avoid confusion when switching between vanilla kernel and network kernel, these are only a couple of additional bytes. The majority of the gain in size is only explainable by highlighting that circle-stdlib is normally being used during compilation for the network kernel mainly for the reason to offer the option to use HTTPS (with the help of mbedtls and newlib).
+Although it doesn't present any problems given todays sizes of SD cards, the Sidekick64 network kernel images are generally bigger in file size than the original kernel (TODO: Add example numbers). Although the rpimenu.prg file is currently baked into the network kernel image to avoid confusion when switching between vanilla kernel and network kernel, these are only a couple of additional bytes. The majority of the gain in size is only explainable by highlighting that [circle-stdlib](https://github.com/smuehlst/circle-stdlib) is normally being used during compilation for the network kernel mainly for the reason to offer the option to use HTTPS (with the help of mbedtls and newlib).
 #### Bare metal framework Circle and circle-stdlib
-The Sidekick kernel software is based on the bare metal Raspberry Pi C++ framework Circle created by Rene Stange. While the official Sidekick software v0.48 (at the time of writing the latest release) uses Circle Step 43.1, the network enabled Sidekick fork is based on the latest available version - Circle Step 44.1. The network fork is also using the GCC 10 based toolchain version and Raspberry Pi firmware versions that are recommended to be used together with Circle Step 44.1.
+The Sidekick kernel software is based on the bare metal Raspberry Pi C++ framework [Circle](https://github.com/rsta2/circle) created by Rene Stange. While the official Sidekick software v0.48 (at the time of writing the latest release) uses Circle Step 43.1, the network enabled Sidekick fork is based on the latest available version - Circle Step 44.3. The network fork is also using the GCC 10 based toolchain version and Raspberry Pi firmware versions that are recommended to be used together with Circle Step 44.3.
 
-Because it seemed to make a lot of sense to be able to make use of HTTPS requests  with a network enabled Sidekick, the network fork is commonly compiled against the project circle-stdlib that is maintained by Stephan Mühlstrasser. It combines Circle together with newlib as C++ standard library and already includes mbedtls. This means, the network fork is being compiled directly against circle-stdlib (at the time of writing circle-stdlib v15.8 including Circle Step 44.1).
+Because it seemed to make a lot of sense to be able to make use of HTTPS requests  with a network enabled Sidekick, the network fork is commonly compiled against the project [circle-stdlib](https://github.com/smuehlst/circle-stdlib) that is maintained by Stephan Mühlstrasser. It combines Circle together with newlib as C++ standard library and already includes mbedtls. This means, the network fork is being compiled directly against circle-stdlib (at the time of writing circle-stdlib v15.10 including Circle Step 44.3).
 
 There are multiple variants of the Makefile available within the network branch as sometimes we want to test something just with Circle and sometimes with circle-stdlib.
 #### Network kernel variants
-Because WLAN and Ethernet can not be supported at the same time with the same drivers by circle, there is the need to compile two different network kernel variants. One for WLAN, one for Ethernet based network.
+Because WLAN and Ethernet can not be supported at the same time with the same drivers by Circle, there is the need to compile two different network kernel variants. One for WLAN, one for Ethernet based network.
 
 This also means that at compile time some compilation flags have to be set that are different from vanilla Sidekick64:
 *  Enabling USE_SD_HOST for the WLAN kernel (which conflicts with REALTIME)
@@ -171,13 +189,13 @@ During the runtime of Sidekick64 the SD card is normally only mounted for a shor
 This is explained in detail in the section [USB stack, power consumption and CPU temperature](#usb-stack-power-consumption-and-cpu-temperature). A Raspberry Pi 3A+ is less affected unless it is inside of an enclosure without any airflow.
 
 ### Recommended setting for jumper "A13-BTN"
-Until the following is resolved by a software change it is recommended to leave the jumper A13-BTN open or set to BTN.
+Until the following is resolved by a software change it is recommended to leave the jumper A13-BTN  set to BTN.
 
 The Sidekick64 PCB can be configured to listen to the signal A13 of the C64/C128 by closing the "A13-BTN" jumper in position A13. The main purpose of this setting is to emulate the presence of a C128 function ROM in software (while the real socket U36 stays empty). If you are not running Sidekick64 with a C128 or while you are not trying to emulate a function ROM at a C128, the jumper setting A13 is not mandatory.
 
 Background: During tests of the network kernel we have observed that the menu screen refresh might be affected if the signal jumper is set to A13. This is most obvious in the network setting subscreen of the Sidekick menu where the CPU temperature is displayed and the screen will automatically refresh itself regularly. The Sidekick64 network enabled kernel uses an NMI based screen refresh while the menu is active. It seems that the A13 signal influences the triggering of NMIs.
 
-### Network reliability 
+### Network reliability
 Depending on the current emulation type Sidekick64 may be too busy to handle network traffic in parallel without instabilities in the emulation of the current payload. This typically applies to cartridge emulation like EasyFlash, NeoRAM or Freezer cartridges. This means, network connectivity will hibernate while Sidekick64 emulates a cartridge. Pressing the Sidekick64 reset button for a more than one second will stop the emulation, bring the Sidekick menu back up and also continue network connectivity.
 
 Cable-based ethernet with the Raspberry Pi 3B+ works reliable after hibernation but WLAN needs to reconnect to the Access point and may freeze the Sidekick64 if it fails to do so. In a lucky situation the reconnect only takes two or three seconds.
@@ -194,8 +212,10 @@ While there is no problem with storing CRT files (cartridge images) in their des
 ### Git branch will regularly be rebased and history will be rewritten
 This git repository is rebased frequently on top of Frenetic's latest Sidekick64 releases to make it as easy as possible to be merged into Frenetic's main git repository should it become stable enough for Frenetic to decide to integrate it with the mainline code. Regular rebases are necessary in this fork and will rewrite git history of this repository so it might be irritating to try to pull from this branch from time to time as local and remote history will not match.
 # Credits
-I would like to thank 
-* Frenetic for releasing exciting open source retro projects like Sidekick64 and for his help on pointing me to the areas in his source code where I could safely try to add some network stuff. 
-* Rene Stange for creating, sharing and documenting Circle with attention to detail and Stephan Mühlstrasser for creating and continuously updating circle-stdlib with the latest upstream components. 
-* My network testers for their valuable feedback! (TODO: Add nickname list)
-* I would also like to thank the CSDb admins for offering the CSDb web service and last but not least the very active C64 demo scene for still releasing exciting demos, music and other stuff.
+I would like to thank
+* Frenetic for releasing exciting open source retro projects like Sidekick64 and for his help on pointing me to the areas in his source code where I could safely try to add some network stuff.
+* Rene Stange for creating, sharing and documenting Circle with attention to detail and Stephan Mühlstrasser for creating and continuously updating circle-stdlib with the latest upstream components.
+* My network testers call286 (also for proof-reading), ILAH, znarF, SkulleateR, JohnFante, Emwee, TurboMicha, felixw, -trb- at forum64.de for their valuable feedback and ideas!
+* I would also like to thank the CSDb admins for offering the CSDb web service and also hosting an instance of the HVSC. Last but not least thanks to the very active C64 demo scene for still releasing exciting demos, music and other stuff.
+
+Written by: hpingel aka emulaThor
