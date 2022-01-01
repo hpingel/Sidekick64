@@ -33,15 +33,23 @@ Currently the following network related features are offered by the experimental
 	- Added SKTP browser: .... Control screen content and user key presses remotely via "SKTP server" (HTTP server with web application). Ability to download, launch and save files fetched via HTTP(S): PRG, SID, CRT, D64
 	- Added system information page: Allows to see the current RPi CPU temperature, basic network connection information and also meta info like date and time and information about the Sidekick64 kernel running
 * Outlook: Sidekick264 network support is also implemented in a highly experimental state. Due to the many variants that have to be tested Sidekick264 network has not been tested a lot.
-## Quickstart: How to get it working quickly
+## Quickstart
+
 1. Important: On the Sidekick64 PCB, set the jumper A13-BTN to BTN (vertical position).
-2. Download Sidekick64 release v0.48 by Frenetic / @frntc from [here](https://github.com/frntc/Sidekick64/releases), unpack the archive and copy the files to an SD card to create a working vanilla Sidekick64 SD card. Make sure your Sidekick64 is booting and working.
-3. Download the latest alpha release of the network kernel (either choose between WLAN and cable based network image or get both) from [here](https://github.com/hpingel/Sidekick64/releases). The respective files are called `kernel_sk64_net.img` and `kernel_sk64_wlan.img`. Copy the needed images to the root folder of your SD card.
-4. In case of cable based network no further files besides `kernel_sk64_net.img` have to be added to the SD card although you may want to update some firmware files.
-5. If you wish to use the WLAN kernel image `kernel_sk64_wlan.img` you additionally need to download the archive `wlan.zip`. It contains a folder `wlan` that has to be copied to the SD card's root folder. The file `wpa_supplicant.conf` needs to be edited to add the correct SSID and passphrase of your personal WLAN.
-6. Important: You need to edit the file `sidekick64.txt` in the root folder. Change the name of the kernel image that should be booted. Example: `kernel=kernel_sk64_wlan.img`. You can always revert to booting the vanilla kernel by changing this line to `kernel=kernel_sk64.img`.
-7. `raspberry_firmware_updated.zip`: This archive can also be downloaded from [here](https://github.com/hpingel/Sidekick64/releases). It provides current versions of some firmware files. This is not mandatory to use but recommended. The files in this archive replace files in the root folder of the SD card. Create backups of the old versions to be able to revert to them.
-8. Boot Sidekick64 and you should see a menu item "Network" on the main menu. If it doesn't boot, connect a HDMI screen to the Raspberry and have a look if you can see any error messages during boot.
+2. Download the following archives and files to your PC/MAC/Desktop:
+   - Basis: [Sidekick64 release v0.48 by Frenetic](https://github.com/frntc/Sidekick64/releases/download/0.48/Sidekick_64_and_264_v0.48.zip)
+   - For *cable* based network with Raspberry Pi 3B+: [`kernel_sk64_net.img`](https://github.com/hpingel/Sidekick64/releases/download/sk64-v0.48%2Bnet-alpha2/kernel_sk64_net.img)  (link points to release alpha2)
+   - For *WLAN* based network with Raspberry Pi 3A+ or 3B+:
+    - [`kernel_sk64_wlan.img`](https://github.com/hpingel/Sidekick64/releases/download/sk64-v0.48%2Bnet-alpha2/kernel_sk64_wlan.img)  (link points to release alpha2)
+    - [`wlan.zip`](https://github.com/hpingel/Sidekick64/releases/download/sk64-v0.48%2Bnet-alpha1/wlan.zip)
+  - [`raspberry_firmware_updated.zip`](https://github.com/hpingel/Sidekick64/releases/download/sk64-v0.48%2Bnet-alpha1/raspberry_firmware_updated.zip). It provides current versions of some Raspberry Pi firmware files.
+3. Extract all downloaded zip archives.
+4. Copy the files of Sidekick64 release v0.48 (by Frenetic) to an SD card to create a working vanilla Sidekick64 SD card. Make sure your Sidekick64 is already booting and working fine with the SD card in this state.
+5. Copy the network kernel(s) file(s) you want to use to the root folder of your SD card. So next to the existing kernel file `kernel_sk64.img` you will see one or two network kernel files (`kernel_sk64_net.img` and/or `kernel_sk64_wlan.img`).
+6. The files in the archive `raspberry_firmware_updated.zip` replace existing files in the root folder of the SD card with newer versions. If you wish you can create backups of the old versions to be able to revert to them.
+7. If you wish to use the WLAN kernel image `kernel_sk64_wlan.img` you additionally need to copy the folder `wlan` (from archive `wlan.zip`) to the SD card's root folder. The file `wpa_supplicant.conf` needs to be edited to add the correct SSID and passphrase of your personal WLAN.
+8. Important: You need to edit the file `sidekick64.txt` in the root folder. Change the name of the kernel image that should be booted. Example: `kernel=kernel_sk64_wlan.img`. You can always revert to booting the vanilla kernel by changing this line to `kernel=kernel_sk64.img`.
+9. Boot Sidekick64 and you should see a menu item "Network" on the main menu. If it doesn't boot, connect a HDMI screen to the Raspberry and have a look if you can see any error messages during boot.
 
 ## Joining a network
 ### Basics
