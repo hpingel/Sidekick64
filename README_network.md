@@ -81,24 +81,36 @@ Two types of modems may be emulated as long as Sidekick is not busy with emulati
 ### Minimal Hayes compatible AT-command set
 Besides implementing two modem types a basic command line interface also had to be implemented to set the baud rate and connect to a BBS via hostname and port. At the moment, the following commands are implemented (while trying to stay compatible with the [Zimodem firmware](https://github.com/bozimmerman/Zimodem) by Bo Zimmerman):
 
-* ATI (currently shows welcome message and modem emulation type )
-* ATI2 (print current local IP address of Sidekick64 )
-* ATI7 (print current date and time)
-* ATB (change baud rate, values possible are ATB300, ATB1200, ATB2400, ATB4800, ATB9600 - this doesn't affect the Swiftlink emulation so it is only relevant for Userport modem emulation)
-* ATD"host:port" or ATDThost:port (connect to a remote server host with port)
-* ATD@RC (development shortcut to quickly connect to the [Retrocampus BBS](https://retrocampus.com/bbs/) of Francesco Sblendorio)
+* `ATI` (currently shows welcome message and modem emulation type )
+* `ATI2` (print current local IP address of Sidekick64 )
+* `ATI7` (print current date and time)
+* `ATB` (change baud rate, values possible are ATB300, ATB1200, ATB2400, ATB4800, ATB9600 - this doesn't affect the Swiftlink emulation so it is only relevant for Userport modem emulation)
+* `ATD"host:port"` or ATDThost:port (connect to a remote server host with port)
+* `ATD@RC` (temporary development shortcut to quickly connect to the [Retrocampus BBS](https://retrocampus.com/bbs/) of Francesco Sblendorio)
 
 The default baud rate can also be changed by setting the configuration parameter `NET_MODEM_DEFAULT_BAUDRATE` to a desired value. Check section [Configuration parameters](#configuration-parameters) for further details.
 
 
 When it comes to the type of modem being emulated, there is a choice:
 ### Userport modem
-A userport based UP9600 modem may be emulated with relatively simple cabling or with a helper PCB that plugs into the userport and is connected to Sidekick 64 via USB via a cheap FTDI-USB-adapter, the emulation currently works with a baud rate up to 4800.
+A userport based UP9600 modem may be emulated with relatively simple cabling or with a helper PCB that plugs into the userport and is connected to Sidekick 64 via USB via a cheap FTDI-USB-adapter.
+The cabling needed is the same as described in this [blog post](https://1200baud.wordpress.com/2012/10/14/build-your-own-c64-2400-baud-usb-device-for-less-than-15/) by alwyz. He also links to a [helpful Wiki page](http://www.hardwarebook.info/C64_RS232_User_Port) describing the assignment needed for software emulated RS232 at the Userport in a table. This table doesn't include the additional connections for needed for the UP9600 hack which are described in alwyz's blog post. If you already own a PCB for userport modem emulation based on ESP32 or ESP8266 chances are very high that you can reuse this PCB if you can remove the ESP from it (if it has a socket).
 
-For a reliable baud rate of 9600 flow control has to be implemented in Circle. The Sidekick kernel must be compiled with Circle option USE_USB_SOF_INTR to allow using the FTDI-USB-adapter.
+We connect RX (crossed), TX (crossed) and GND between the Userport and the FTDI adapter.
+
+The emulation currently works with a baud rate up to 4800. For a reliable baud rate of 9600 flow control has to be implemented in Circle (and then we need another two cables for connecting CTS and RTS). The Sidekick kernel must be compiled with Circle option USE_USB_SOF_INTR to allow using the FTDI-USB-adapter.
+
+If you have cabled up your userport to the FTDI-Adapter and plugged the FTDI into a USB port of the Raspberry Pi, enable Userport modem emulation like this:
+* In the network menu screen of Sidekick64 hit the key "m" until the modem emulation type is shown to be "Userport".
+* In CCGMS, set modem type to `UP9600` or to `Userport modem` depending on your cabling.
+
 
 ### Swiftlink/Link232 modem (highly experimental)
-A Swiftlink modem may be emulated (which normally would be connected to the expansion port). This is still highly experimental at the moment and will crash Sidekick64 after a couple of seconds.
+A Swiftlink modem may be emulated (which normally would be connected to the expansion port). This is still highly experimental at the moment and will crash CCGMS after a couple of screens.
+
+If you want to test this, use the latest cable based network kernel as Swiftlink emulation works better there than with the WLAN kernel.
+* In the network menu screen of Sidekick64 hit the key "m" until the modem emulation type is shown to be "Swiftlink".
+* In CCGMS, set modem type to `Swift/Turbo DE`. The Baud rate setting can be left unchanged.
 
 ## SKTP browser
 SKTP jokingly stands for "Sidekick64 Transfer Protocol" and is a very simple and experimental binary protocol on top of HTTP that is so unspectacular that doesn't really deserve a name. Its main purpose is to allow the C64 to send keypresses or other events to a web application and in response get screen updates from a web application. Basically, the C64 works like a terminal and presents screen content that was arranged by a web application.
