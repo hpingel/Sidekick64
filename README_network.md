@@ -78,7 +78,18 @@ In theory it is possible to have the Sidekick64 cartridge lying on a table witho
 ## Modem emulation
 Two types of modems may be emulated as long as Sidekick is not busy with emulating something very demanding like an EasyFlash or a Freezer cartridge. As long as Sidekick is in launcher mode or in the BASIC prompt mode, modem emulation is possible with PRGs loaded via Sidekick or from a floppy disk. Terminal software used has to be in PRG format which is not a problem as CCGMS2021 and other tools all are available as PRGs.
 
-Besides implementing two modem types a basic command line interface also had to be implemented to set the baud rate and connect to a BBS via hostname and port. The default baud rate can also be changed by setting the configuration parameter `NET_MODEM_DEFAULT_BAUDRATE` to a desired value. Check section [Configuration parameters](#configuration-parameters) for further details.
+### Minimal Hayes compatible AT-command set
+Besides implementing two modem types a basic command line interface also had to be implemented to set the baud rate and connect to a BBS via hostname and port. At the moment, the following commands are implemented (while trying to stay compatible with the [Zimodem firmware](https://github.com/bozimmerman/Zimodem) by Bo Zimmerman):
+
+* ATI (currently shows welcome message and modem emulation type )
+* ATI2 (print current local IP address of Sidekick64 )
+* ATI7 (print current date and time)
+* ATB (change baud rate, values possible are ATB300, ATB1200, ATB2400, ATB4800, ATB9600 - this doesn't affect the Swiftlink emulation so it is only relevant for Userport modem emulation)
+* ATD"host:port" or ATDThost:port (connect to a remote server host with port)
+* ATD@RC (development shortcut to quickly connect to the [Retrocampus BBS](https://retrocampus.com/bbs/) of Francesco Sblendorio)
+
+The default baud rate can also be changed by setting the configuration parameter `NET_MODEM_DEFAULT_BAUDRATE` to a desired value. Check section [Configuration parameters](#configuration-parameters) for further details.
+
 
 When it comes to the type of modem being emulated, there is a choice:
 ### Userport modem
