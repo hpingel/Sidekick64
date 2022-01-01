@@ -89,7 +89,7 @@ Currently the following network related features are offered by the experimental
    - For *WLAN* based network with Raspberry Pi 3A+ or 3B+:
     - [`kernel_sk64_wlan.img`](https://github.com/hpingel/Sidekick64/releases/download/sk64-v0.48%2Bnet-alpha2/kernel_sk64_wlan.img)  (link points to release alpha2)
     - [`wlan.zip`](https://github.com/hpingel/Sidekick64/releases/download/sk64-v0.48%2Bnet-alpha1/wlan.zip)
-  - [`raspberry_firmware_updated.zip`](https://github.com/hpingel/Sidekick64/releases/download/sk64-v0.48%2Bnet-alpha1/raspberry_firmware_updated.zip). It provides current versions of some Raspberry Pi firmware files.
+   - [`raspberry_firmware_updated.zip`](https://github.com/hpingel/Sidekick64/releases/download/sk64-v0.48%2Bnet-alpha1/raspberry_firmware_updated.zip). It provides current versions of some Raspberry Pi firmware files.
 3. Extract all downloaded zip archives.
 4. Copy the files of Sidekick64 release v0.48 (by Frenetic) to an SD card to create a working vanilla Sidekick64 SD card. Make sure your Sidekick64 is already booting and working fine with the SD card in this state.
 5. Copy the network kernel(s) file(s) you want to use to the root folder of your SD card. So next to the existing kernel file `kernel_sk64.img` you will see one or two network kernel files (`kernel_sk64_net.img` and/or `kernel_sk64_wlan.img`).
@@ -132,7 +132,7 @@ Besides implementing two modem types a basic command line interface also had to 
 * `ATI` (currently shows welcome message and modem emulation type )
 * `ATI2` (print current local IP address of Sidekick64 )
 * `ATI7` (print current date and time)
-* `ATB` (change baud rate, values possible are ATB300, ATB1200, ATB2400, ATB4800, ATB9600 - this doesn't affect the Swiftlink emulation so it is only relevant for Userport modem emulation)
+* `ATB` (change baud rate, values possible are `ATB300`, `ATB1200`, `ATB2400`, `ATB4800`, `ATB9600` - this doesn't affect the Swiftlink emulation so it is only relevant for Userport modem emulation)
 * `ATD"host:port"` or ATDThost:port (connect to a remote server host with port)
 * `ATD@RC` (temporary development shortcut to quickly connect to the [Retrocampus BBS](https://retrocampus.com/bbs/) of Francesco Sblendorio)
 
@@ -210,7 +210,7 @@ The following options may be added to the file `C64/sidekick64.cfg` but are not 
 
 * **NET_SIDEKICK_HOSTNAME**: If you want to customize the hostname of your Sidekick64 you may do so by providing the hostname in a line like this: `NET_SIDEKICK_HOSTNAME "mySidekickNumberOne"`. This hostname may be used to access the web interface without the need to type in the IP address (example: http://mySidekickNumberOne). Default value: "sidekick64"
 
-* **NET_MODEM_DEFAULT_BAUDRATE**: The modem emulation baud rate may be changed in a terminal program like CCGMS by using the command `atb`. But you can also configure your favourite baud rate by adding a line with this parameter like this: `NET_MODEM_DEFAULT_BAUDRATE "4800"`. Possible values are 300, 1200, 2400, 4800, 9600. Default value: "1200"
+* **NET_MODEM_DEFAULT_BAUDRATE**: The modem emulation baud rate may be changed in a terminal program like CCGMS by using the command `ATB`. But you can also configure your favourite baud rate by adding a line with this parameter like this: `NET_MODEM_DEFAULT_BAUDRATE "4800"`. Possible values are 300, 1200, 2400, 4800, 9600. Default value: "1200"
 
 * **NET_SKTPHOST_NAME**: To use the SKTP browser it needs to know the SKTP server's hostname to connect to. Provide an SKTP server address, for example the following demo instance: `NET_SKTPHOST_NAME "sktpdemo.cafeobskur.de"`. Default value: none
 
