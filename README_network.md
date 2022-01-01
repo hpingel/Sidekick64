@@ -1,4 +1,51 @@
+
 # Network features for Sidekick64
+
+<!-- TOC -->
+
+- [Network features for Sidekick64](#network-features-for-sidekick64)
+	- [Introduction](#introduction)
+	- [Summary: Network features in a nutshell](#summary-network-features-in-a-nutshell)
+	- [Quickstart](#quickstart)
+	- [Joining a network](#joining-a-network)
+		- [Basics](#basics)
+		- [Network on demand](#network-on-demand)
+		- [Network on boot](#network-on-boot)
+	- [Web interface and web server](#web-interface-and-web-server)
+	- [Stand-alone Sidekick mode (via web interface)](#stand-alone-sidekick-mode-via-web-interface)
+	- [Modem emulation](#modem-emulation)
+		- [Minimal Hayes compatible AT-command set](#minimal-hayes-compatible-at-command-set)
+		- [Userport modem](#userport-modem)
+		- [Swiftlink/Turbo232 modem (highly experimental)](#swiftlinkturbo232-modem-highly-experimental)
+	- [SKTP browser](#sktp-browser)
+		- [CSDb Launcher](#csdb-launcher)
+		- [HVSC Browser](#hvsc-browser)
+		- [Forum64 RSS Viewer](#forum64-rss-viewer)
+		- [Simple text chat](#simple-text-chat)
+	- [Network configuration via SD card](#network-configuration-via-sd-card)
+		- [Booting the right Sidekick64 kernel image](#booting-the-right-sidekick64-kernel-image)
+		- [WLAN, SSID and passphrase](#wlan-ssid-and-passphrase)
+		- [Configuration parameters](#configuration-parameters)
+	- [Differences to vanilla Sidekick64](#differences-to-vanilla-sidekick64)
+		- [USB stack, power consumption and CPU temperature](#usb-stack-power-consumption-and-cpu-temperature)
+		- [Changes to the Sidekick64 menu](#changes-to-the-sidekick64-menu)
+			- [New submenu "Network"](#new-submenu-network)
+			- [Enforced screen refreshes](#enforced-screen-refreshes)
+		- [Framework related differences](#framework-related-differences)
+			- [Bigger kernel image size](#bigger-kernel-image-size)
+			- [Bare metal framework Circle and circle-stdlib](#bare-metal-framework-circle-and-circle-stdlib)
+			- [Network kernel variants](#network-kernel-variants)
+		- [SD card: Mount state, potentially more write operations](#sd-card-mount-state-potentially-more-write-operations)
+	- [Known problems](#known-problems)
+		- [Raspberry Pi 3B+ needs a cooling airflow](#raspberry-pi-3b-needs-a-cooling-airflow)
+		- [Recommended setting for jumper "A13-BTN"](#recommended-setting-for-jumper-a13-btn)
+		- [Network reliability](#network-reliability)
+		- [CRT files in root folder](#crt-files-in-root-folder)
+		- [Git branch will regularly be rebased and history will be rewritten](#git-branch-will-regularly-be-rebased-and-history-will-be-rewritten)
+	- [Credits](#credits)
+
+<!-- /TOC -->
+
 ## Introduction
 The main goal of this fork of Sidekick64 is to find out if it is possible to use the network capabilities of a Raspberry Pi in parallel with the emulation modes of Sidekick64 without meddling too much with any timings needed for reliably emulating C64 carts. Further goals were for me to learn how to use the Circle bare metal framework and to learn how Sidekick64 does its magic by trying to understand its source code.
 
@@ -105,7 +152,7 @@ If you have cabled up your userport to the FTDI-Adapter and plugged the FTDI int
 * In CCGMS, set modem type to `UP9600` or to `Userport modem` depending on your cabling.
 
 
-### Swiftlink/Link232 modem (highly experimental)
+### Swiftlink/Turbo232 modem (highly experimental)
 A Swiftlink modem may be emulated (which normally would be connected to the expansion port). This is still highly experimental at the moment and will crash CCGMS after a couple of screens.
 
 If you want to test this, use the latest cable based network kernel as Swiftlink emulation works better there than with the WLAN kernel.
@@ -242,7 +289,7 @@ To wrap it up, WLAN is less convenient to use than ethernet via cable. In exchan
 While there is no problem with storing CRT files (cartridge images) in their destined locations on the SD card it is not recommended to put any CRT files into the root folder of the SD card as  mbedtls will likely look for certificate files in the root folder when HTTPS is being used.
 ### Git branch will regularly be rebased and history will be rewritten
 This git repository is rebased frequently on top of Frenetic's latest Sidekick64 releases to make it as easy as possible to be merged into Frenetic's main git repository should it become stable enough for Frenetic to decide to integrate it with the mainline code. Regular rebases are necessary in this fork and will rewrite git history of this repository so it might be irritating to try to pull from this branch from time to time as local and remote history will not match.
-# Credits
+## Credits
 I would like to thank
 * Frenetic for releasing exciting open source retro projects like Sidekick64 and for his help on pointing me to the areas in his source code where I could safely try to add some network stuff.
 * Rene Stange for creating, sharing and documenting Circle with attention to detail and Stephan Mühlstrasser for creating and continuously updating circle-stdlib with the latest upstream components.
