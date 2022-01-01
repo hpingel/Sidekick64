@@ -97,6 +97,7 @@ Currently the following network related features are offered by the experimental
 7. If you wish to use the WLAN kernel image `kernel_sk64_wlan.img` you additionally need to copy the folder `wlan` (from archive `wlan.zip`) to the SD card's root folder. The file `wpa_supplicant.conf` needs to be edited to add the correct SSID and passphrase of your personal WLAN.
 8. Important: You need to edit the file `sidekick64.txt` in the root folder. Change the name of the kernel image that should be booted. Example: `kernel=kernel_sk64_wlan.img`. You can always revert to booting the vanilla kernel by changing this line to `kernel=kernel_sk64.img`.
 9. Boot Sidekick64 and you should see a menu item "Network" on the main menu. If it doesn't boot, connect a HDMI screen to the Raspberry and have a look if you can see any error messages during boot.
+10. To use the SKTP browser it needs to know the SKTP server's hostname to connect to. Add the following line to the file `C64/sidekick64.cfg` on the SD card: `NET_SKTPHOST_NAME "sktpdemo.cafeobskur.de"`
 
 ## Joining a network
 ### Basics
