@@ -84,12 +84,12 @@ Currently the following network related features are offered by the experimental
 
 1. Important: On the Sidekick64 PCB, set the jumper A13-BTN to BTN (vertical position).
 2. Download the following archives and files to your PC/MAC/Desktop:
-   - Basis: [Sidekick64 release v0.48 by Frenetic](https://github.com/frntc/Sidekick64/releases/download/0.48/Sidekick_64_and_264_v0.48.zip)
-   - For *cable* based network with Raspberry Pi 3B+: [`kernel_sk64_net.img`](https://github.com/hpingel/Sidekick64/releases/download/sk64-v0.48%2Bnet-alpha2/kernel_sk64_net.img)  (link points to release alpha2)
-   - For *WLAN* based network with Raspberry Pi 3A+ or 3B+:
-    - [`kernel_sk64_wlan.img`](https://github.com/hpingel/Sidekick64/releases/download/sk64-v0.48%2Bnet-alpha2/kernel_sk64_wlan.img)  (link points to release alpha2)
-    - [`wlan.zip`](https://github.com/hpingel/Sidekick64/releases/download/sk64-v0.48%2Bnet-alpha1/wlan.zip)
-   - [`raspberry_firmware_updated.zip`](https://github.com/hpingel/Sidekick64/releases/download/sk64-v0.48%2Bnet-alpha1/raspberry_firmware_updated.zip). It provides current versions of some Raspberry Pi firmware files.
+    * Basis: [Sidekick64 release v0.48 by Frenetic](https://github.com/frntc/Sidekick64/releases/download/0.48/Sidekick_64_and_264_v0.48.zip)
+    * For *cable* based network with Raspberry Pi 3B+: [`kernel_sk64_net.img`](https://github.com/hpingel/Sidekick64/releases/download/sk64-v0.48%2Bnet-alpha2/kernel_sk64_net.img)  (link points to release alpha2)
+    * For *WLAN* based network with Raspberry Pi 3A+ or 3B+:
+        - [`kernel_sk64_wlan.img`](https://github.com/hpingel/Sidekick64/releases/download/sk64-v0.48%2Bnet-alpha2/kernel_sk64_wlan.img)  (link points to release alpha2)
+        - [`wlan.zip`](https://github.com/hpingel/Sidekick64/releases/download/sk64-v0.48%2Bnet-alpha1/wlan.zip)
+    * [`raspberry_firmware_updated.zip`](https://github.com/hpingel/Sidekick64/releases/download/sk64-v0.48%2Bnet-alpha1/raspberry_firmware_updated.zip). It provides current versions of some Raspberry Pi firmware files.
 3. Extract all downloaded zip archives.
 4. Copy the files of Sidekick64 release v0.48 (by Frenetic) to an SD card to create a working vanilla Sidekick64 SD card. Make sure your Sidekick64 is already booting and working fine with the SD card in this state.
 5. Copy the network kernel(s) file(s) you want to use to the root folder of your SD card. So next to the existing kernel file `kernel_sk64.img` you will see one or two network kernel files (`kernel_sk64_net.img` and/or `kernel_sk64_wlan.img`).
