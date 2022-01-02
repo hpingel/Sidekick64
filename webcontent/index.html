@@ -39,10 +39,22 @@
 
 		<form action="index.html" method="post" enctype="multipart/form-data">
 			<div class="form-group">
-				
 				<div class="custom-file">
 				  <input type="file" class="custom-file-input" id="skUploadFile" name="kernelimg" >
 				  <label class="custom-file-label" for="skUploadFile">Choose file</label>
+				</div>
+				<br/><br/>
+				<div class="custom-control custom-radio custom-control-inline">
+					<input checked type="radio" id="customRadioInline1" name="radio_saveorlaunch" value="s" class="custom-control-input">
+					<label class="custom-control-label" for="customRadioInline1">Save file to SD card</label>
+				</div>
+				<div class="custom-control custom-radio custom-control-inline">
+					<input type="radio" id="customRadioInline2" name="radio_saveorlaunch" value="l" class="custom-control-input">
+					<label class="custom-control-label" for="customRadioInline2">Launch file</label>
+				</div>
+				<div class="custom-control custom-radio custom-control-inline">
+					<input checked type="radio" id="customRadioInline3" name="radio_saveorlaunch" value="b" class="custom-control-input">
+					<label class="custom-control-label" for="customRadioInline4">Save &amp; Launch</label>
 				</div>
 				<br/><br/>
 				<input type="submit" class="btn btn-success" value="Upload" />

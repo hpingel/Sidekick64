@@ -119,15 +119,19 @@ CHTTPDaemon *CWebServer::CreateWorker (CNetSubSystem *pNetSubSystem, CSocket *pS
 		const char *pPartHeader;
 		const u8 *pPartData;
 		unsigned nPartLength;
+		
+		char filename[255];
+		char extension[10];
+		u8 radiobutton = 0;
+		filename[0] = '\0';
+		extension[0] = '\0';
+		
+		bool noFormParts = true;
+		
 		if (GetMultipartFormPart (&pPartHeader, &pPartData, &nPartLength))
 		{
+			noFormParts = false;
 			assert (pPartHeader != 0);
-
-			//parse form field content for filename
-			char filename[255];
-			char extension[10];
-			filename[0] = '\0';
-			extension[0] = '\0';
 			char * startpos = strstr (pPartHeader, "filename=\"");
 			if ( startpos != 0)
 			{
@@ -151,68 +155,105 @@ CHTTPDaemon *CWebServer::CreateWorker (CNetSubSystem *pNetSubSystem, CSocket *pS
 					exl++;
 				}
 				extension[exl] = '\0';
-				//logger->Write( FromWebServer, LogNotice, "found filename: '%s' %i", filename, strlen(filename));
-				//logger->Write( FromWebServer, LogNotice, "found extension: '%s' %i", extension, strlen(extension));
+				logger->Write( FromWebServer, LogNotice, "found filename: '%s' %i", filename, strlen(filename));
+				logger->Write( FromWebServer, LogNotice, "found extension: '%s' %i", extension, strlen(extension));
 			}
+		}
 
+		const char *pPartHeader_radio;
+		const u8 *pPartData_radio;
+		unsigned nPartLength_radio;
 			
-			if (strstr (pPartHeader, "name=\"kernelimg\"") != 0
-			    && ( strstr (filename, "kernel") != 0 || strstr (filename, "rpi4_kernel") != 0 )
-			    && strcmp (extension, "img") == 0
-			    && nPartLength > 0)
+		if (GetMultipartFormPart (&pPartHeader_radio, &pPartData_radio, &nPartLength_radio))
+		{
+			noFormParts = false;
+			assert (pPartHeader != 0);
+			char * match = "name=\"radio_saveorlaunch\"";
+			char * startpos2 = strstr (pPartHeader_radio, match);
+			if ( startpos2 != 0)
 			{
-				assert (pPartData != 0);
-				
-				m_SidekickNet->requireCacheWellnessTreatment();
-
-#ifndef IS264
-				#if RASPPI >= 4
-  				const char * filenamek = m_SidekickNet->usesWLAN() ? "SD:rpi4_kernel_sk64_wlan.img" : "SD:rpi4_kernel_sk64_net.img";
-				#else
-  				const char * filenamek = m_SidekickNet->usesWLAN() ? "SD:kernel_sk64_wlan.img" : "SD:kernel_sk64_net.img";
-				#endif
-#else
-				#if RASPPI >= 4
-					const char * filenamek = m_SidekickNet->usesWLAN() ? "SD:rpi4_kernel_sk264_wlan.img" : "SD:rpi4_kernel_sk264_net.img";
-				#else
-					const char * filenamek = m_SidekickNet->usesWLAN() ? "SD:kernel_sk264_wlan.img" : "SD:kernel_sk264_net.img";
-				#endif
-#endif			
-				logger->Write( FromWebServer, LogNotice, "Saving kernel image to SD card, length: %u", nPartLength);
-				writeFile( logger, "SD:", filenamek, (u8*) pPartData, nPartLength );
-				m_SidekickNet->requireCacheWellnessTreatment();
-				m_SidekickNet->requestReboot();
-				
-				pMsg = "Now rebooting into new kernel...";
-			}
-			else if (nPartLength > 0)
-			{
-
-				if (( strcmp (extension, "prg") == 0 ||
-						strcmp (extension, "d64") == 0 ||
-						strcmp (extension, "crt") == 0 ||
-						strcmp (extension, "sid") == 0 ||
-						strcmp (extension, "bin") == 0) &&
-						strlen(filename)>0
-				){
-					prgSizeLaunch = nPartLength;
-					memcpy( prgDataLaunch, pPartData, nPartLength);
-					m_SidekickNet->prepareLaunchOfUpload( extension, filename );
-					pMsg = "Now launching payload...";
+				/*
+				CString log;
+				u8 l =strlen(match);
+				char * wups;
+				char trix;
+				for (int x = -15; x < 15; x ++){
+					trix = startpos2[ l +x];
+					sprintf( wups, ",%i: '%s' %u ", x, trix, trix);
+					log.Append( wups);
 				}
-				else
-				{
-					pMsg = "Invalid request (1)";
-				}
+					logger->Write( FromWebServer, LogNotice, log);
+				*/						
+				radiobutton = startpos2[strlen(match)+4];
+				logger->Write( FromWebServer, LogNotice, "found radiobutton: '%u' ", radiobutton);
 			}
 			else
-				pMsg = "Invalid request (2)";
+				logger->Write( FromWebServer, LogNotice, "did not find radiobutton");
+		}
+
+		if(!noFormParts){
+
+		if (strstr (pPartHeader, "name=\"kernelimg\"") != 0
+		    && ( strstr (filename, "kernel") != 0 || strstr (filename, "rpi4_kernel") != 0 )
+		    && strcmp (extension, "img") == 0
+		    && nPartLength > 0)
+		{
+			assert (pPartData != 0);
+			
+			m_SidekickNet->requireCacheWellnessTreatment();
+
+#ifndef IS264
+			#if RASPPI >= 4
+				const char * filenamek = m_SidekickNet->usesWLAN() ? "SD:rpi4_kernel_sk64_wlan.img" : "SD:rpi4_kernel_sk64_net.img";
+			#else
+				const char * filenamek = m_SidekickNet->usesWLAN() ? "SD:kernel_sk64_wlan.img" : "SD:kernel_sk64_net.img";
+			#endif
+#else
+			#if RASPPI >= 4
+				const char * filenamek = m_SidekickNet->usesWLAN() ? "SD:rpi4_kernel_sk264_wlan.img" : "SD:rpi4_kernel_sk264_net.img";
+			#else
+				const char * filenamek = m_SidekickNet->usesWLAN() ? "SD:kernel_sk264_wlan.img" : "SD:kernel_sk264_net.img";
+			#endif
+#endif			
+			logger->Write( FromWebServer, LogNotice, "Saving kernel image to SD card, length: %u", nPartLength);
+			writeFile( logger, "SD:", filenamek, (u8*) pPartData, nPartLength );
+			m_SidekickNet->requireCacheWellnessTreatment();
+			m_SidekickNet->requestReboot();
+			
+			pMsg = "Now rebooting into new kernel...";
+		}
+		else if (nPartLength > 0)
+		{
+
+			if (( strcmp (extension, "prg") == 0 ||
+					strcmp (extension, "d64") == 0 ||
+					strcmp (extension, "crt") == 0 ||
+					strcmp (extension, "sid") == 0 ||
+					strcmp (extension, "bin") == 0) &&
+					strlen(filename)>0
+			){
+				prgSizeLaunch = nPartLength;
+				memcpy( prgDataLaunch, pPartData, nPartLength);
+				u8 mode = 0; //launch only 108
+				if ( radiobutton == 115) mode = 1; //save only
+				else if ( radiobutton == 98) mode = 2; //save and launch
+				
+				m_SidekickNet->prepareLaunchOfUpload( extension, filename, mode);
+				pMsg = "Now launching payload...";
+			}
+			else
+			{
+				pMsg = "Invalid request (1)";
+			}
 		}
 		else
-		{
-			pMsg = "Send a PRG, SID, CRT, D64 or BIN file to Sidekick64 for instant launch. Or upload a Sidekick kernel image update (includes reboot).";
-			m_SidekickNet->enterWebUploadMode();
-		}
+			pMsg = "Invalid request (2)";
+	}
+	else
+	{
+		pMsg = "Send a PRG, SID, CRT, D64 or BIN file to Sidekick64 for instant launch. Or upload a Sidekick kernel image update (includes reboot).";
+		m_SidekickNet->enterWebUploadMode();
+	}
 
 		assert (pMsg != 0);
 		String.Format (s_Upload, pMsg, CIRCLE_VERSION_STRING,
