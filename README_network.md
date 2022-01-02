@@ -82,7 +82,7 @@ Currently the following network related features are offered by the experimental
 * Outlook: Sidekick264 network support is also implemented in a highly experimental state. Due to the many variants that have to be tested Sidekick264 network has not been tested a lot.
 ## Quickstart
 
-1. Important: On the Sidekick64 PCB, set the jumper A13-BTN to BTN (vertical position).
+1. Important: On the Sidekick64 PCB, set the jumper A13-BTN to BTN (vertical position). The reason for this is explained in section [Recommended setting for jumper "A13-BTN"](#recommended-setting-for-jumper-a13-btn).
 2. Download the following archives and files to your PC/MAC/Desktop:
     * Basis: [Sidekick64 release v0.48 by Frenetic](https://github.com/frntc/Sidekick64/releases/download/0.48/Sidekick_64_and_264_v0.48.zip)
     * For *cable* based network with Raspberry Pi 3B+: [`kernel_sk64_net.img`](https://github.com/hpingel/Sidekick64/releases/download/sk64-v0.48%2Bnet-alpha2/kernel_sk64_net.img)  (link points to release alpha2)
@@ -94,7 +94,7 @@ Currently the following network related features are offered by the experimental
 4. Copy the files of Sidekick64 release v0.48 (by Frenetic) to an SD card to create a working vanilla Sidekick64 SD card. Make sure your Sidekick64 is already booting and working fine with the SD card in this state.
 5. Copy the network kernel(s) file(s) you want to use to the root folder of your SD card. So next to the existing kernel file `kernel_sk64.img` you will see one or two network kernel files (`kernel_sk64_net.img` and/or `kernel_sk64_wlan.img`).
 6. The files in the archive `raspberry_firmware_updated.zip` replace existing files in the root folder of the SD card with newer versions. If you wish you can create backups of the old versions to be able to revert to them.
-7. If you wish to use the WLAN kernel image `kernel_sk64_wlan.img` you additionally need to copy the folder `wlan` (from archive `wlan.zip`) to the SD card's root folder. The file `wpa_supplicant.conf` needs to be edited to add the correct SSID and passphrase of your personal WLAN.
+7. If you wish to use the WLAN kernel image `kernel_sk64_wlan.img` you additionally need to copy the folder `wlan` (from archive `wlan.zip`) to the SD card's root folder. The file `wpa_supplicant.conf` needs to be edited to add the correct SSID and passphrase of your personal WLAN. See [WLAN, SSID and passphrase](#wlan-ssid-and-passphrase) for details.
 8. Important: You need to edit the file `sidekick64.txt` in the root folder. Change the name of the kernel image that should be booted. Example: `kernel=kernel_sk64_wlan.img`. You can always revert to booting the vanilla kernel by changing this line to `kernel=kernel_sk64.img`.
 9. Boot Sidekick64 and you should see a menu item "Network" on the main menu. If it doesn't boot, connect a HDMI screen to the Raspberry and have a look if you can see any error messages during boot.
 10. To use the SKTP browser it needs to know the SKTP server's hostname to connect to. Add the following line to the file `C64/sidekick64.cfg` on the SD card: `NET_SKTPHOST_NAME "sktpdemo.cafeobskur.de"`
@@ -198,7 +198,16 @@ Within the file `sidekick64.txt` in the root folder of the SD card you can clari
 
 If you use the WLAN kernel, you have to check if you have a folder `wlan` on your SD card containing the Raspberry Pi firmware files for WLAN networking.
 
-You also have to edit the file `wlan/wpa_supplicant.conf` and add SSID and passphrase in cleartext. For security and privacy reasons, you should not share this file with anybody and it is recommended that you use a "playground WLAN" (a separate WLAN access point to your normal one which may have restricted rights or may have a disposable/easily changeable passphrase).
+You also have to edit the file `wlan/wpa_supplicant.conf` and add SSID and passphrase in cleartext. Edit the two values for `ssid` and `psk`:
+
+	network={
+		ssid="my-ssid"
+		psk="my-password"
+		proto=WPA2
+		key_mgmt=WPA-PSK
+	}
+
+For security and privacy reasons, you should not share this file with anybody and it is recommended that you use a "playground WLAN" (a separate WLAN access point to your normal one which may have restricted rights or may have a disposable/easily changeable passphrase).
 
 ### Configuration parameters
 
