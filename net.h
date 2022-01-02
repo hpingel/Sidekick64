@@ -155,7 +155,7 @@ public:
 	void requestReboot();
 	void requireCacheWellnessTreatment();
 	void getNetRAM( u8 *, u32 *);
-	void prepareLaunchOfUpload( char *, char * );
+	void prepareLaunchOfUpload( char *, char *, u8 );
 	CString getBaudrate();
 	CString getLoggerStringForHost( CString hostname, int port);
 	boolean isSKTPScreenActive();
@@ -254,6 +254,7 @@ private:
 	boolean m_isCSDBDownloadSavingQueued;
 	boolean m_isDownloadReady;
 	boolean m_isDownloadReadyForLaunch;
+	boolean m_doLaunchAfterSave;
 	boolean m_isRebootRequested;
 	boolean m_isReturnToMenuRequested;
 	char * m_networkActionStatusMsg;
