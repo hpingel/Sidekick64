@@ -151,6 +151,7 @@ CSidekickNet::CSidekickNet(
 		m_isCSDBDownloadSavingQueued( false ),
 		m_isDownloadReady( false ),
 		m_isDownloadReadyForLaunch( false ),
+		m_doLaunchAfterSave(false),
 		m_isRebootRequested( false ),
 		m_isReturnToMenuRequested( false ),
 		m_networkActionStatusMsg( (char * ) ""),
@@ -994,26 +995,38 @@ void CSidekickNet::saveDownload2SD()
 	writeFile( logger, DRIVE, m_CSDBDownloadSavePath, (u8*) prgDataLaunch, prgSizeLaunch );
 	requireCacheWellnessTreatment();
 	logger->Write( "saveDownload2SD", LogNotice, "Finished writing.");
-	m_isDownloadReadyForLaunch = true;
+	if (m_doLaunchAfterSave){
+		m_isDownloadReadyForLaunch = true;
+		m_doLaunchAfterSave = false;
+	}
 }
 
-void CSidekickNet::prepareLaunchOfUpload( char * ext, char * filename ){
-	//m_isDownloadReadyForLaunch = true;
-	m_isCSDBDownloadSavingQueued = true;
+void CSidekickNet::prepareLaunchOfUpload( char * ext, char * filename, u8 mode ){
+	//mode 0 = launch, 1 = save, 2= launch & save
+	if (mode == 1)
+		m_isCSDBDownloadSavingQueued = true;
+	else if (mode == 0)
+		m_isDownloadReadyForLaunch = true;
+	else if (mode == 2){
+		m_isCSDBDownloadSavingQueued = true;
+		m_doLaunchAfterSave = true;
+	}
+	else{
+		logger->Write( "prepareLaunchOfUpload", LogError, "Illegal value for mode (%u).", mode);
+	}
+	
 	memcpy(m_CSDBDownloadExtension,ext,3);
 	m_CSDBDownloadExtension[3]='\0';
 	memcpy(m_CSDBDownloadFilename, filename, strlen(filename));
 	m_CSDBDownloadFilename[strlen(filename)]='\0';
-	setSavePath("!upload");
+	if ( m_isCSDBDownloadSavingQueued )
+		setSavePath("!upload");
 
 	
-  //TODO:
-	//m_CSDBDownloadSavePath
 	//if already in launcher kernel (l), leave it
-	if ( strcmp( m_currentKernelRunning, "l" ) == 0){
+	if ( strcmp( m_currentKernelRunning, "l" ) == 0 && (m_isDownloadReadyForLaunch || m_doLaunchAfterSave)){
 		m_isReturnToMenuRequested = true;
 		//logger->Write( "prepareLaunchOfUpload", LogNotice, "ReturnToMenuRequested.");
-		
 	}
 }
 
@@ -1030,6 +1043,7 @@ void CSidekickNet::cleanupDownloadData()
 	m_CSDBDownloadSavePath = (char *)"";
 	m_bSaveCSDBDownload2SD = false;
 	m_isDownloadReadyForLaunch = false;
+	m_doLaunchAfterSave = false;
 	requireCacheWellnessTreatment();
 }
 
@@ -1053,22 +1067,26 @@ boolean CSidekickNet::checkForFinishedDownload()
 			if ( strcmp( m_CSDBDownloadExtension, "d64" ) == 0)
 			{
 				//                    "012345678901234567890123456789012345XXXX"
-				setErrorMsgC64((char*)"     Saving and launching D64 file      ");
+				setErrorMsgC64((char*)"             Saving D64 file            ");
+//				setErrorMsgC64((char*)"     Saving and launching D64 file      ");
 			}
 			else if ( strcmp( m_CSDBDownloadExtension, "prg" ) == 0)
 			{
 				//                    "012345678901234567890123456789012345XXXX"
-				setErrorMsgC64((char*)"     Saving and launching PRG file      ");
+				setErrorMsgC64((char*)"             Saving PRG file            ");
+//				setErrorMsgC64((char*)"     Saving and launching PRG file      ");
 			}
 			else if ( strcmp( m_CSDBDownloadExtension, "sid" ) == 0)
 			{
 				//                    "012345678901234567890123456789012345XXXX"
-				setErrorMsgC64((char*)"     Saving and launching SID file      ");
+				setErrorMsgC64((char*)"             Saving SID file            ");
+//				setErrorMsgC64((char*)"     Saving and launching SID file      ");
 			}
 			else if ( strcmp( m_CSDBDownloadExtension, "crt" ) == 0)
 			{
 				//                    "012345678901234567890123456789012345XXXX"
-				setErrorMsgC64((char*)"     Saving and launching CRT file      ");
+				setErrorMsgC64((char*)"             Saving CRT file            ");
+//				setErrorMsgC64((char*)"     Saving and launching CRT file      ");
 				//m_queueDelay = 15;
 			}
 			requireCacheWellnessTreatment();
