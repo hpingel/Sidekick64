@@ -205,7 +205,7 @@ private:
 	#endif
 	void cleanUpModemEmuSocket();
 	int readCharFromFrontend( unsigned char * );
-	int writeCharsToFrontend( unsigned char * buffer, unsigned length);
+	int writeCharsToFrontend( unsigned char *, unsigned length);
 	void SendErrorResponse();
 	void SocketConnect( char *, unsigned, bool );
 	void SocketConnectIP( CIPAddress, unsigned );

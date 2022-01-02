@@ -1877,7 +1877,12 @@ void CSidekickNet::handleModemEmulation( bool silent = false)
 				if (m_modemCommandLength > 0)
 					m_modemCommand[ --m_modemCommandLength ] = '\0';
 			}
-			else if ((inputChar[0] < 32 || inputChar[0] > 127) && inputChar[0] != 13)
+			else if (
+				(
+					inputChar[0] < 32 || 
+					(inputChar[0] > 127 && inputChar[0] < 193) ||
+					inputChar[0] > 218
+				) && inputChar[0] != 13)
 			{
 				//ignore key
 				if ( !silent)
@@ -1904,6 +1909,8 @@ void CSidekickNet::handleModemEmulation( bool silent = false)
 				
 				if(m_modemCommandLength < 2)
 				{
+					if(m_modemCommandLength > 0)
+						SendErrorResponse();
 					m_modemCommandLength = 0;
 					m_modemCommand[0] = '\0';
 					return;
@@ -2057,23 +2064,25 @@ void CSidekickNet::handleModemEmulation( bool silent = false)
 					if ( start + 2 == stop)
 					{
 						CString strHelper;
-						char * tmp;
+						unsigned char tmp[50];
 						
 						if( m_modemCommand[start+1] == '7')
 						{
 							//ati7 time and date
-							CString strHelper = getTimeString();
+							strHelper = getTimeString();
 							strHelper.Append("\r");
-							sprintf( tmp, strHelper, "" );
-							a = writeCharsToFrontend( (unsigned char *) tmp, strlen(tmp));
+							unsigned l = sprintf( (char *) tmp, strHelper );
+							//logger->Write ("CSidekickNet", LogNotice, "get time: sh:'%s',tmp:'%s'", strHelper, tmp );
+							a = writeCharsToFrontend(tmp, l);
 						}
 						else if( m_modemCommand[start+1] == '2')
 						{
 							//ati2 ip address
 							GetNetConfig()->GetIPAddress ()->Format (&strHelper);
 							strHelper.Append("\r");
-							sprintf( tmp, strHelper, "" );
-							a = writeCharsToFrontend( (unsigned char *) tmp, strlen(tmp));
+							unsigned l = sprintf( (char* )tmp, strHelper );
+							//logger->Write ("CSidekickNet", LogNotice, "get ip: sh:'%s', tmp:'%s'", strHelper, tmp );
+							a = writeCharsToFrontend(tmp, l);
 						}
 					}
 					else if (start +1 == stop){
