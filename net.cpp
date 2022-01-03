@@ -999,6 +999,12 @@ void CSidekickNet::saveDownload2SD()
 		m_isDownloadReadyForLaunch = true;
 		m_doLaunchAfterSave = false;
 	}
+	else if (strcmp( m_currentKernelRunning, "m" ) == 0 ){
+		redrawSktpScreen();
+		setSktpRefreshTimeout(10);
+		cleanupDownloadData();
+		//logger->Write( "saveDownload2SD", LogNotice, "clear Error + update needed + redraw");
+	}
 }
 
 void CSidekickNet::prepareLaunchOfUpload( char * ext, char * filename, u8 mode, char * msgtemp2 ){
@@ -1084,25 +1090,25 @@ boolean CSidekickNet::checkForFinishedDownload()
 			if ( strcmp( m_CSDBDownloadExtension, "d64" ) == 0)
 			{
 				//                    "012345678901234567890123456789012345XXXX"
-				setErrorMsgC64((char*)"             Saving D64 file            ");
+				setErrorMsgC64((char*)"             Saving D64 file            ", false);
 //				setErrorMsgC64((char*)"     Saving and launching D64 file      ");
 			}
 			else if ( strcmp( m_CSDBDownloadExtension, "prg" ) == 0)
 			{
 				//                    "012345678901234567890123456789012345XXXX"
-				setErrorMsgC64((char*)"             Saving PRG file            ");
+				setErrorMsgC64((char*)"             Saving PRG file            ", false);
 //				setErrorMsgC64((char*)"     Saving and launching PRG file      ");
 			}
 			else if ( strcmp( m_CSDBDownloadExtension, "sid" ) == 0)
 			{
 				//                    "012345678901234567890123456789012345XXXX"
-				setErrorMsgC64((char*)"             Saving SID file            ");
+				setErrorMsgC64((char*)"             Saving SID file            ", false);
 //				setErrorMsgC64((char*)"     Saving and launching SID file      ");
 			}
 			else if ( strcmp( m_CSDBDownloadExtension, "crt" ) == 0)
 			{
 				//                    "012345678901234567890123456789012345XXXX"
-				setErrorMsgC64((char*)"             Saving CRT file            ");
+				setErrorMsgC64((char*)"             Saving CRT file            ", false);
 //				setErrorMsgC64((char*)"     Saving and launching CRT file      ");
 				//m_queueDelay = 15;
 			}
@@ -1111,7 +1117,7 @@ boolean CSidekickNet::checkForFinishedDownload()
 		else{
 			m_isDownloadReadyForLaunch = true;
 			//                    "012345678901234567890123456789012345XXXX"
-			setErrorMsgC64((char*)"      Launching download (no save)      ");
+			setErrorMsgC64((char*)"       Launching without saving         ");
 			requireCacheWellnessTreatment();
 		}
 	}
@@ -1345,6 +1351,7 @@ CString CSidekickNet::getSktpPath( unsigned key )
 	{
 		m_sktpSession = 1;
 		path.Append( "&redraw=1" );
+		//logger->Write( "getSktpPath", LogNotice, "Enforce sktp page redraw.");
 	}
 	return path;
 }
@@ -1403,6 +1410,7 @@ void CSidekickNet::updateSktpScreenContent(){
 		{
 			//logger->Write( "updateSktpScreenContent", LogNotice, "HTTP Document m_sktpResponseLength: %i", m_sktpResponseLength);
 			m_sktpResponseType = pResponseBuffer[0];
+			//logger->Write( "updateSktpScreenContent", LogNotice, "response type : %i", m_sktpResponseType);
 			if ( m_sktpResponseType == 2) // url for binary download, e. g. csdb
 			{
 				u8 tmpUrlLength = pResponseBuffer[1];
