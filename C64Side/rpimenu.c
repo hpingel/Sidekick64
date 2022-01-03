@@ -302,6 +302,7 @@ int main (void)
         // sendKeypress
         //key = cgetc();
 				//key == 29 ||
+				/*
         if ( ( key == 's' || key == 'S' ) && *((char *)(0x0427)) != 0 )				
 				{
 						__asm__ ("lda #$0a");
@@ -310,7 +311,7 @@ int main (void)
 						__asm__ ("sta $d850,x");
 						__asm__ ("dex");
 						__asm__ ("bne loop");
-				}
+				}*/
 
 				        wireDetection();
 				        *((char *)(0xdf01)) = key;
