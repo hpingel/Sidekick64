@@ -1001,33 +1001,50 @@ void CSidekickNet::saveDownload2SD()
 	}
 }
 
-void CSidekickNet::prepareLaunchOfUpload( char * ext, char * filename, u8 mode ){
+void CSidekickNet::prepareLaunchOfUpload( char * ext, char * filename, u8 mode, char * msgtemp2 ){
 	//mode 0 = launch, 1 = save, 2= launch & save
-	if (mode == 1)
+	
+	char msgtemp[255] = "Now ";
+	
+	if (mode == 1){
 		m_isCSDBDownloadSavingQueued = true;
-	else if (mode == 0)
+		strcat( msgtemp, "saving ");
+	}
+	else if (mode == 0){
 		m_isDownloadReadyForLaunch = true;
+		m_isCSDBDownloadSavingQueued = false;
+		strcat( msgtemp, "launching ");
+	}
 	else if (mode == 2){
 		m_isCSDBDownloadSavingQueued = true;
 		m_doLaunchAfterSave = true;
+		strcat( msgtemp, "launching and saving ");
 	}
 	else{
 		logger->Write( "prepareLaunchOfUpload", LogError, "Illegal value for mode (%u).", mode);
 	}
+
+	strcat( msgtemp, filename);
 	
 	memcpy(m_CSDBDownloadExtension,ext,3);
 	m_CSDBDownloadExtension[3]='\0';
 	memcpy(m_CSDBDownloadFilename, filename, strlen(filename));
 	m_CSDBDownloadFilename[strlen(filename)]='\0';
-	if ( m_isCSDBDownloadSavingQueued )
+	if ( m_isCSDBDownloadSavingQueued ){
 		setSavePath("!upload");
+		strcat( msgtemp, " to ");
+		strcat( msgtemp, m_CSDBDownloadSavePath);
+	}
+	strcat( msgtemp, ".\0");
+	logger->Write( "prepareLaunchOfUpload", LogNotice, "Message: '%s'.", msgtemp);
+	sprintf(msgtemp2, msgtemp);
 
-	
 	//if already in launcher kernel (l), leave it
 	if ( strcmp( m_currentKernelRunning, "l" ) == 0 && (m_isDownloadReadyForLaunch || m_doLaunchAfterSave)){
 		m_isReturnToMenuRequested = true;
 		//logger->Write( "prepareLaunchOfUpload", LogNotice, "ReturnToMenuRequested.");
 	}
+	
 }
 
 void CSidekickNet::cleanupDownloadData()

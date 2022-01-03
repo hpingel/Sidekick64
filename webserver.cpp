@@ -114,8 +114,9 @@ CHTTPDaemon *CWebServer::CreateWorker (CNetSubSystem *pNetSubSystem, CSocket *pS
 	}
 	else if ( strcmp (pPath, "/upload.html") == 0)
 	{*/
-		const char *pMsg = 0;
-
+		//const 
+		char * pMsg;
+		pMsg[0] = '\0';
 		const char *pPartHeader;
 		const u8 *pPartData;
 		unsigned nPartLength;
@@ -155,8 +156,8 @@ CHTTPDaemon *CWebServer::CreateWorker (CNetSubSystem *pNetSubSystem, CSocket *pS
 					exl++;
 				}
 				extension[exl] = '\0';
-				logger->Write( FromWebServer, LogNotice, "found filename: '%s' %i", filename, strlen(filename));
-				logger->Write( FromWebServer, LogNotice, "found extension: '%s' %i", extension, strlen(extension));
+				//logger->Write( FromWebServer, LogNotice, "found filename: '%s' %i", filename, strlen(filename));
+				//logger->Write( FromWebServer, LogNotice, "found extension: '%s' %i", extension, strlen(extension));
 			}
 		}
 
@@ -172,20 +173,8 @@ CHTTPDaemon *CWebServer::CreateWorker (CNetSubSystem *pNetSubSystem, CSocket *pS
 			char * startpos2 = strstr (pPartHeader_radio, match);
 			if ( startpos2 != 0)
 			{
-				/*
-				CString log;
-				u8 l =strlen(match);
-				char * wups;
-				char trix;
-				for (int x = -15; x < 15; x ++){
-					trix = startpos2[ l +x];
-					sprintf( wups, ",%i: '%s' %u ", x, trix, trix);
-					log.Append( wups);
-				}
-					logger->Write( FromWebServer, LogNotice, log);
-				*/						
 				radiobutton = startpos2[strlen(match)+4];
-				logger->Write( FromWebServer, LogNotice, "found radiobutton: '%u' ", radiobutton);
+				//logger->Write( FromWebServer, LogNotice, "found radiobutton: '%u' ", radiobutton);
 			}
 			else
 				logger->Write( FromWebServer, LogNotice, "did not find radiobutton");
@@ -238,8 +227,7 @@ CHTTPDaemon *CWebServer::CreateWorker (CNetSubSystem *pNetSubSystem, CSocket *pS
 				if ( radiobutton == 115) mode = 1; //save only
 				else if ( radiobutton == 98) mode = 2; //save and launch
 				
-				m_SidekickNet->prepareLaunchOfUpload( extension, filename, mode);
-				pMsg = "Now launching payload...";
+				m_SidekickNet->prepareLaunchOfUpload( extension, filename, mode, pMsg);
 			}
 			else
 			{

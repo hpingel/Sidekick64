@@ -155,7 +155,7 @@ public:
 	void requestReboot();
 	void requireCacheWellnessTreatment();
 	void getNetRAM( u8 *, u32 *);
-	void prepareLaunchOfUpload( char *, char *, u8 );
+	void prepareLaunchOfUpload( char *, char *, u8, char * );
 	CString getBaudrate();
 	CString getLoggerStringForHost( CString hostname, int port);
 	boolean isSKTPScreenActive();
