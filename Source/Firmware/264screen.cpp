@@ -1566,4 +1566,14 @@ void renderErrorMsg()
 boolean isAutomaticScreenRefreshNeeded(){
 	return (menuScreen == MENU_SYSTEMINFO );
 }
+
+void resetF7BrowserState(){
+	typeInName = cursorPos = scrollPos = lastLine = 0;
+	lastRolled = lastSubIndex = -1;
+	for (u8 z=0; z<20;z++){
+		dir[ z ].level=0;
+		dir[ z ].size=0;
+	}
+}
+
 #endif

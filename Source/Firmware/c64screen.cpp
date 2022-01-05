@@ -1100,7 +1100,6 @@ void handleC64( int k, u32 *launchKernel, char *FILENAME, char *filenameKernal, 
 			}
 			cursorPos = scrollPos = 0;
 		}
-		
 		// virtual key press
 		if ( k == 92 && typeInName == 0 )
 		{
@@ -2760,4 +2759,14 @@ void renderErrorMsg()
 boolean isAutomaticScreenRefreshNeeded(){
 	return (menuScreen == MENU_SYSTEMINFO );
 }
+
+void resetF7BrowserState(){
+	typeInName = cursorPos = scrollPos = lastLine = 0;
+	lastRolled = lastScrolled = lastSubIndex = -1;
+	for (u8 z=0; z<20;z++){
+		dir[ z ].level=0;
+		dir[ z ].size=0;
+	}
+}
+
 #endif

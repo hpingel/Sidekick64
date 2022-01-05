@@ -83,8 +83,8 @@ static const char CSDB_HOST[] = "csdb.dk";
 #define SK_MODEM_USERPORT_USB 2
 
 #ifdef WITH_WLAN
-#define DRIVE		"SD:"
-#define FIRMWARE_PATH	DRIVE "/wlan/"		// wlan firmware files must be provided here
+#define DRIVEWLAN "SD:"
+#define FIRMWARE_PATH	DRIVEWLAN "/wlan/"		// wlan firmware files must be provided here
 #define CONFIG_FILE	FIRMWARE_PATH "/wpa_supplicant.conf"
 #endif
 
@@ -993,6 +993,9 @@ void CSidekickNet::saveDownload2SD()
 	}
 	requireCacheWellnessTreatment();
 	writeFile( logger, DRIVE, m_CSDBDownloadSavePath, (u8*) prgDataLaunch, prgSizeLaunch );
+	resetF7BrowserState();
+	extern void scanDirectories( char *DRIVE );
+	scanDirectories( (char *)DRIVE );
 	requireCacheWellnessTreatment();
 	logger->Write( "saveDownload2SD", LogNotice, "Finished writing.");
 	if (m_doLaunchAfterSave){
@@ -1001,7 +1004,7 @@ void CSidekickNet::saveDownload2SD()
 	}
 	else if (strcmp( m_currentKernelRunning, "m" ) == 0 ){
 		redrawSktpScreen();
-		setSktpRefreshTimeout(10);
+		setSktpRefreshTimeout(5);
 		cleanupDownloadData();
 		//logger->Write( "saveDownload2SD", LogNotice, "clear Error + update needed + redraw");
 	}
