@@ -55,6 +55,7 @@ extern void renderErrorMsg();
 extern void clearErrorMsg();
 #ifdef WITH_NET
 extern boolean isAutomaticScreenRefreshNeeded();
+extern void resetF7BrowserState();
 #endif
 
 
