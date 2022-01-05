@@ -85,9 +85,9 @@ Currently the following network related features are offered by the experimental
 1. Important: On the Sidekick64 PCB, set the jumper A13-BTN to BTN (vertical position). The reason for this is explained in section [Recommended setting for jumper "A13-BTN"](#recommended-setting-for-jumper-a13-btn).
 2. Download the following archives and files to your PC/MAC/Desktop:
     * Basis: [Sidekick64 release v0.48 by Frenetic](https://github.com/frntc/Sidekick64/releases/download/0.48/Sidekick_64_and_264_v0.48.zip)
-    * For *cable* based network with Raspberry Pi 3B+: [`kernel_sk64_net.img`](https://github.com/hpingel/Sidekick64/releases/download/sk64-v0.48%2Bnet-alpha2/kernel_sk64_net.img)  (link points to release alpha2)
+    * For *cable* based network with Raspberry Pi 3B+: [`kernel_sk64_net.img`](https://github.com/hpingel/Sidekick64/releases/download/sk64-v0.48%2Bnet-alpha3/kernel_sk64_net.img)  (link points to release alpha3)
     * For *WLAN* based network with Raspberry Pi 3A+ or 3B+:
-        - [`kernel_sk64_wlan.img`](https://github.com/hpingel/Sidekick64/releases/download/sk64-v0.48%2Bnet-alpha2/kernel_sk64_wlan.img)  (link points to release alpha2)
+        - [`kernel_sk64_wlan.img`](https://github.com/hpingel/Sidekick64/releases/download/sk64-v0.48%2Bnet-alpha3/kernel_sk64_wlan.img)  (link points to release alpha3)
         - [`wlan.zip`](https://github.com/hpingel/Sidekick64/releases/download/sk64-v0.48%2Bnet-alpha1/wlan.zip)
     * [`raspberry_firmware_updated.zip`](https://github.com/hpingel/Sidekick64/releases/download/sk64-v0.48%2Bnet-alpha1/raspberry_firmware_updated.zip). It provides current versions of some Raspberry Pi firmware files.
 3. Extract all downloaded zip archives.
@@ -112,7 +112,7 @@ Additionally, a user might not need network connectivity with Sidekick64 on a da
 On the other hand it also seemed to make sense to offer a configuration option to always directly establish a network connection during boot time of Sidekick64 if desired. Therefore, a setting can be added to enforce network on boot - see section [Configuration parameters](#configuration-parameters) for details. Enabling this will mean that the Sidekick64 will need several seconds longer to boot until it shows its normal menu screen on the C64.
 
 ## Web interface and web server
-One way to transfer files from a PC, tablet or smartphone to Sidekick64 is to use the web interface that is provided by the built-in webserver. The web interface allows to upload Sidekick64 kernel images (overwrites the current Sidekick kernel on SD card and reboots), PRG files, SID files, CRT files, D64 files or BIN files (C128 custom roms). The file types targeted at the C64/C128 platform will be launched directly via Sidekick64 after the upload is finished.
+One way to transfer files from a PC, tablet or smartphone to Sidekick64 is to use the web interface that is provided by the built-in webserver. The web interface allows to upload Sidekick64 kernel images (overwrites the current Sidekick kernel on SD card and reboots), PRG files, SID files, CRT files, D64 files or BIN files (C128 custom roms). The file types targeted at the C64/C128 platform can be launched directly via Sidekick64 after the upload is finished and/or saved to the SD card.
 
 The webserver can be launched manually from the Sidekick64 menu's network page by pressing "w" on the keyboard or it may also become active straight after a network connection is established by adding a configuration parameter - see section [Configuration parameters](#configuration-parameters) for details. In combination with network on boot this might be helpful for developers who want to test their own cross-developed C64 software sending it from a PC over to Sidekick64 to be executed on the real machine.
 
@@ -144,7 +144,7 @@ When it comes to the type of modem being emulated, there is a choice:
 A userport based UP9600 modem may be emulated with relatively simple cabling or with a helper PCB that plugs into the userport and is connected to Sidekick 64 via USB via a cheap FTDI-USB-adapter.
 The cabling needed is the same as described in this [blog post](https://1200baud.wordpress.com/2012/10/14/build-your-own-c64-2400-baud-usb-device-for-less-than-15/) by alwyz. He also links to a [helpful Wiki page](http://www.hardwarebook.info/C64_RS232_User_Port) describing the assignment needed for software emulated RS232 at the Userport in a table. This table doesn't include the additional connections for needed for the UP9600 hack which are described in alwyz's blog post. If you already own a PCB for userport modem emulation based on ESP32 or ESP8266 chances are very high that you can reuse this PCB if you can remove the ESP from it (if it has a socket).
 
-We connect RX (crossed), TX (crossed) and GND between the Userport and the FTDI adapter.
+We connect RX (crossed), TX (crossed) and GND between the Userport and the FTDI adapter (set to 5V).
 
 The emulation currently works with a baud rate up to 4800. For a reliable baud rate of 9600 flow control has to be implemented in Circle (and then we need another two cables for connecting CTS and RTS). The Sidekick kernel must be compiled with Circle option USE_USB_SOF_INTR to allow using the FTDI-USB-adapter.
 
@@ -167,7 +167,7 @@ This enables us to do the following:
 * Applications / features available through Sidekick64 don't have to run on Sidekick64 but can be running in a hosted or cloud environment. This means for example that changes and updates required to such an application will not force the Sidekick64 kernel to be updated.
 * In theory it allows interactive multi user applications like simple games or chat apps.
 * It allows interaction with most services on the World Wide Web
-* In addition to screen updates SKTP allows to request Sidekick64 to download a payload from a web adress (via HTTP or HTTPS), store and/or execute it on the C64. This means, files like PRG, SID, CRT, etc. may be downloaded from the internet and directly launched on the C64. This is tightly coupled to the Sidekick64 menu code as the possibility to launch is essential.
+* In addition to screen updates SKTP allows to request Sidekick64 to download a payload from a web adress (via HTTP or HTTPS), store it on the SD card and/or execute it on the C64. This means, files like PRG, SID, CRT, etc. may be downloaded from the internet. This is tightly coupled to the Sidekick64 menu code as the possibility to launch a binary is essential here.
 
 Currently four example applications exist that make use of SKTP:
 ### CSDb Launcher
