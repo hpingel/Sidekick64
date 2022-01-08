@@ -2064,7 +2064,10 @@ void printSystemInfoScreen()
 	//printC64( x+1, y1+8, "Press >Q< for reboot ", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
 	printC64( x+1, y1+14, "Sidekick Kernel Info", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
 	printC64( x+1, y1+15, "Compiled on: " COMPILE_TIME, skinValues.SKIN_MENU_TEXT_ITEM, 0 );
-	printC64( x+1, y1+16, "Git branch : " GIT_BRANCH, skinValues.SKIN_MENU_TEXT_ITEM, 0 );
+	if ( strcmp( GIT_TAG, "" ) == 0 )
+		printC64( x+1, y1+16, "Git branch : " GIT_BRANCH, skinValues.SKIN_MENU_TEXT_ITEM, 0 );
+	else
+		printC64( x+1, y1+16, "Git tag    : " GIT_TAG, skinValues.SKIN_MENU_TEXT_ITEM, 0 );
 	printC64( x+1, y1+17, "Git hash   : " GIT_HASH, skinValues.SKIN_MENU_TEXT_ITEM, 0 );
 	printC64( x+1, y1+18, "Circle     : " CIRCLE_VERSION_STRING, skinValues.SKIN_MENU_TEXT_ITEM, 0 );
 
@@ -2421,11 +2424,12 @@ boolean isAutomaticScreenRefreshNeeded(){
 }
 
 void resetF7BrowserState(){
-	typeInName = cursorPos = scrollPos = lastLine = 0;
-	lastRolled = lastScrolled = lastSubIndex = -1;
-	for (u8 z=0; z<20;z++){
-		dir[ z ].level=0;
-		dir[ z ].size=0;
+	
+	if ( nDirEntries > 6){ // >6 --> something was expanded
+		typeInName = cursorPos = scrollPos = lastLine = 0;
+		lastRolled = lastScrolled = lastSubIndex = -1;
+		extern void scanDirectories( char *DRIVE );
+		scanDirectories( (char *)DRIVE );
 	}
 }
 

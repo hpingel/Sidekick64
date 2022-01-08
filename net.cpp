@@ -993,9 +993,8 @@ void CSidekickNet::saveDownload2SD()
 	}
 	requireCacheWellnessTreatment();
 	writeFile( logger, DRIVE, m_CSDBDownloadSavePath, (u8*) prgDataLaunch, prgSizeLaunch );
+	requireCacheWellnessTreatment();
 	resetF7BrowserState();
-	extern void scanDirectories( char *DRIVE );
-	scanDirectories( (char *)DRIVE );
 	requireCacheWellnessTreatment();
 	logger->Write( "saveDownload2SD", LogNotice, "Finished writing.");
 	if (m_doLaunchAfterSave){
@@ -1622,7 +1621,7 @@ unsigned char * CSidekickNet::GetSktpScreenContentChunk( u16 & startPos, u8 &col
 		}
 		color        = m_sktpScreenContent[ m_sktpScreenPosition + 4 ];// this is gap in case 6
 		if ( type != 6)
-			color = color&15;//0-15, here we have some bits, this is gap in case 6
+			color = color&127;//0-15 for c64, 0-127 for c264, this is gap in case 6
 		inverse    = m_sktpScreenContent[ m_sktpScreenPosition + 4 ]>>7;//test bit 8
 		startPos = startPosM * 256 + startPosL;//screen pos x/y
 		
