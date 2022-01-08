@@ -67,6 +67,11 @@ extern CLogger *logger;
 #ifdef WITH_NET
 extern CSidekickNet * pSidekickNet;
 #include "circle/version.h"
+
+u8 SKTPborderColor = 0; 
+u8 SKTPbgColor = 0; 
+boolean SKTPisLowerCharset = true;
+
 #endif
 
 // todo 
@@ -150,7 +155,9 @@ void printC64( u32 x, u32 y, const char *t, u8 color, u8 flag, u32 convert, u32 
 		u32 c = t[ i ], c2 = c;
 
 		// screen code conversion 
-		if ( convert == 1 )
+		if ( convert == 4 ){//nothing
+		}
+		else if ( convert == 1 )
 		{
 			c2 = PETSCII2ScreenCode( c );
 		} else
@@ -161,6 +168,8 @@ void printC64( u32 x, u32 y, const char *t, u8 color, u8 flag, u32 convert, u32 
 				c = c + 'a' - 'A';
 			if ( ( c >= 'a' ) && ( c <= 'z' ) )
 				c2 = c + 1 - 'a';
+			if ( c == '_' )
+				c2 = 100;
 		}
 
 		c64screen[ x + y * 40 + i ] = c2 | flag;
@@ -1216,7 +1225,10 @@ void printNetworkScreen()
 
 	if ( pSidekickNet->IsRunning() )
 	{
-		printC64( x+1, y1+4, "You are connected.",   skinValues.SKIN_MENU_TEXT_ITEM, 0 );
+		if (pSidekickNet->isWireless())
+			printC64( x+1, y1+4, "You are connected (via WLAN).",   skinValues.SKIN_MENU_TEXT_ITEM, 0 );
+		else
+			printC64( x+1, y1+4, "You are connected (via network cable).",   skinValues.SKIN_MENU_TEXT_ITEM, 0 );
 		if (strcmp(netSktpHostName,"") != 0)
 			printC64( x+1, y1+(++y2), "* - Launch SKTP browser", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
 		if (!netEnableWebserver)
@@ -1314,7 +1326,10 @@ void printSystemInfoScreen()
 	//printC64( x+1, y1+8, "Press >Q< for reboot ", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
 	printC64( x+1, y1+14, "Sidekick Kernel Info", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
 	printC64( x+1, y1+15, "Compiled on: " COMPILE_TIME, skinValues.SKIN_MENU_TEXT_ITEM, 0 );
-	printC64( x+1, y1+16, "Git branch : " GIT_BRANCH, skinValues.SKIN_MENU_TEXT_ITEM, 0 );
+	if ( strcmp( GIT_TAG, "" ) == 0 )
+		printC64( x+1, y1+16, "Git branch : " GIT_BRANCH, skinValues.SKIN_MENU_TEXT_ITEM, 0 );
+	else
+		printC64( x+1, y1+16, "Git tag    : " GIT_TAG, skinValues.SKIN_MENU_TEXT_ITEM, 0 );
 	printC64( x+1, y1+17, "Git hash   : " GIT_HASH, skinValues.SKIN_MENU_TEXT_ITEM, 0 );
 	printC64( x+1, y1+18, "Circle     : " CIRCLE_VERSION_STRING, skinValues.SKIN_MENU_TEXT_ITEM, 0 );
 
@@ -1333,32 +1348,115 @@ void printSKTPScreen()
 	
 	if ( pSidekickNet->IsRunning() )
 	{
-		if ( pSidekickNet->IsSktpScreenToBeCleared() ) clearC64();
-
-		if ( !pSidekickNet->IsSktpScreenUnchanged() )
+		if ( pSidekickNet->getSKTPErrorCode() > 0)
 		{
-			u16 pos = 0;
-			u8 color = 0;
-			u8 repeat = 0;
-			unsigned y = 0;
-			unsigned x = 0;
-			boolean inverse = false;
-			char * content;
-			while (!pSidekickNet->IsSktpScreenContentEndReached())
+			clearC64();
+			printC64( 1, 2, "Sorry, an SKTP error occured, press F7", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
+			if (pSidekickNet->getSKTPErrorCode() == 6)
 			{
-				content = (char *) pSidekickNet->GetSktpScreenContentChunk( pos, color, inverse, repeat);
-				y = pos / 40;
-				x = pos % 40;
-				printC64( x, y+yOffset, content, color, inverse ? 0x80 : 0, 1); //color +96
+				printC64( 1, 3, "This SKTP server requires a newer SKTP browser,", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
+				printC64( 1, 4, "please update your Sidekick kernel.", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
 			}
-			pSidekickNet->ResetSktpScreenContentChunks();
+			else if (pSidekickNet->getSKTPErrorCode() == 5)
+				printC64( 1, 3, "Could not get valid session id from SKTP server", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
+			else if (pSidekickNet->getSKTPErrorCode() == 3)
+				printC64( 1, 3, "You should not even get here...", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
+			else if (pSidekickNet->getSKTPErrorCode() == 4)
+				printC64( 1, 3, "Error: Port should not be zero", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
+			else if (pSidekickNet->getSKTPErrorCode() == 2)
+				printC64( 1, 3, "HTTP(s) request didn't work out", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
+			else if (pSidekickNet->getSKTPErrorCode() == 7)
+				printC64( 1, 3, "Invalid session id or session expired.", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
+			if (pSidekickNet->getSKTPErrorCode() == 1)
+			{
+				printC64( 1, 3, "Could not resolve SKTP hostname", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
+				unsigned port = netSktpHostPort;
+				if (port == 0 ) port = 80;
+				CString strHelper = pSidekickNet->getLoggerStringForHost(netSktpHostName, port);
+				char * tmpHost;
+				sprintf( tmpHost, strHelper, "" );
+				printC64( 1, 4, tmpHost,   skinValues.SKIN_MENU_TEXT_HEADER, 0 );
+			}
+			
+		}
+		else
+		{
+			if ( pSidekickNet->IsSktpScreenToBeCleared() ) clearC64();
+
+			if ( !pSidekickNet->IsSktpScreenUnchanged() )
+			{
+				u16 pos = 0;
+				u8 color = 0;
+				u8 y = 0;
+				u8 x = 0;
+				u8 repeat = 0;
+				boolean inverse = false;
+				char * content;
+				pSidekickNet->ResetSktpScreenContentChunks();
+				while (!pSidekickNet->IsSktpScreenContentEndReached())
+				{
+					/*
+					chunk types:
+					0 normal chunk
+					1 char repeat chunk
+					2 screencode chunk
+					3 meta screen refresh
+					4 colors & charset
+					5 vertical repeat chunk
+					6 paintbrush chunk
+					*/
+					u8 type = pSidekickNet->GetSktpScreenContentChunkType();
+					if ( type == 0 || type == 1 || type == 2 || type == 5 || type == 6)
+					{
+						content = (char *) pSidekickNet->GetSktpScreenContentChunk( pos, color, inverse, repeat);
+						y = pos / 40;
+						x = pos % 40;
+						if (type < 5) repeat = 1;
+						if (type < 6)
+						{
+							for (u8 z = 0; z < repeat; z++)
+								printC64( x, y+yOffset+z, content, color, inverse ? 0x80 : 0, (type == 2 || type == 5) ? 4:1);
+						}
+						else
+						{
+							//paintbrush chunk (6)
+							u8 gap = color;
+							for (u8 z = 0; z < repeat+1; z++)
+								for (u16 c = 0; c < strlen(content); c++)
+								{
+									u8 co = content[c];
+									if ( co == 16 ) co = 0;
+									c64color[ x + ((y+yOffset) * 40) + c + (z*(gap + strlen(content))) ] = co;
+								}
+						}
+					}
+					else if (type == 3)
+						pSidekickNet->enableSktpRefreshTimeout();
+					else if (type == 4)
+						SKTPisLowerCharset = (pSidekickNet->getSKTPBorderBGColorCharset( SKTPborderColor, SKTPbgColor) == 1);
+					else if (type == 255)
+					{
+						logger->Write( "printSKTPScreen", LogWarning, "end of sktp response was reached");
+						break;
+					}
+					else{
+						logger->Write( "printSKTPScreen", LogWarning, "sktp screen early exit");
+						break; //in case of unknown chunk types at the end of the content we break as we don't 
+						//how long they are
+					}
+				}
+				pSidekickNet->ResetSktpScreenContentChunks();
+			}
 		}
 	}
 	//printC64( 1, 24, pSidekickNet->getSysMonInfo(0), skinValues.SKIN_MENU_TEXT_ITEM, 0 );
 
-	c64screen[ 1000 ] = ((0x6800 >> 8) & 0xFC);
-	c64screen[ 1001 ] = 0;
-	c64screen[ 1002 ] = 0;
+//	if ( SKTPisLowerCharset ) 
+		c64screen[ 1000 ] = ((0x6800 >> 8) & 0xFC); //lowercase
+//	else
+//		c64screen[ 1000 ] = ((0x6000 >> 8) & 0xFC); //uppercase
+	c64screen[ 1001 ] = SKTPborderColor;
+	c64screen[ 1002 ] = SKTPbgColor;
 
 }
 	
@@ -1570,10 +1668,8 @@ boolean isAutomaticScreenRefreshNeeded(){
 void resetF7BrowserState(){
 	typeInName = cursorPos = scrollPos = lastLine = 0;
 	lastRolled = lastSubIndex = -1;
-	for (u8 z=0; z<20;z++){
-		dir[ z ].level=0;
-		dir[ z ].size=0;
-	}
+	extern void scanDirectories( char *DRIVE );
+	scanDirectories( (char *)DRIVE );
 }
 
 #endif

@@ -667,7 +667,10 @@ void scanDirectories( char *DRIVE )
 		strcpy( (char*)dir[ head ].name, NAME );					\
 		dir[ head ].f = DIR_DIRECTORY | (ALL?DIR_LISTALL:0);		\
 		dir[ head ].parent = 0xffffffff;							\
-		dir[ head ].next = nDirEntries;
+		dir[ head ].next = nDirEntries; \
+		dir[ head ].level=0; \
+		dir[ head ].size=0;
+		
 
 	APPEND_SUBTREE_UNSCANNED( "CRT", "SD:CRT", 0 )
 	APPEND_SUBTREE_UNSCANNED( "D64", "SD:D64", 0 )
