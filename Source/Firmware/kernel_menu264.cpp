@@ -65,7 +65,11 @@ static u32 prgSize AAA;
 static unsigned char prgData[ 65536 ] AAA;
 
 u32 prgSizeLaunch AAA;
-unsigned char prgDataLaunch[ 65536 ] AAA;
+//increasing size of prgDataLaunch so that we
+//can either store a prg or a crt in it
+//unsigned char prgDataLaunch[ 65536 ] AAA;
+unsigned char prgDataLaunch[ 1027*1024 ] AAA;
+
 
 u32 prgCurSize = 0;
 unsigned char *prgCurLaunch;
@@ -374,7 +378,7 @@ boolean CKernelMenu::Initialize( void )
 	if ( !readConfig( logger, (char*)DRIVE, (char*)FILENAME_CONFIG ) )
 	{
 		latchSetClearImm( LED_INITERR_HIGH, LED_INITERR_LOW );
-		logger->Write( "RaspiMenu", LogPanic, "error reading .cfg" );
+		logger->Write( "SidekickMenu", LogPanic, "error reading .cfg" );
 	}
 
 	u32 t;
@@ -387,6 +391,9 @@ boolean CKernelMenu::Initialize( void )
 	} 
 
 	#ifdef WITH_NET
+		if (m_SidekickNet.usesWLAN())  
+			delayHandleNetworkValue = 1200000;
+	
 		if ( m_SidekickNet.ConnectOnBoot() ){
 			boolean bNetOK = bOK ? m_SidekickNet.Initialize() : false;
 			if (bNetOK){
@@ -449,6 +456,8 @@ void CKernelMenu::DisableFIQInterrupt( void )
 #ifdef WITH_NET
 boolean CKernelMenu::handleNetwork( boolean doRender)
 {
+	//handleC64 - processes the key the user has pressed to determine how 
+	//the screen has to change (e.g. jump from page a to page b)
 	DisableFIQInterrupt();
 	if (doRender)
 		handleC64( lastChar, &launchKernel, FILENAME, filenameKernal);
@@ -489,10 +498,12 @@ boolean CKernelMenu::handleNetwork( boolean doRender)
 	}
 	m_timeStampOfLastNetworkEvent = 0;
 	
-	if (m_SidekickNet.isWebserverRunning() && m_SidekickNet.usesWLAN())
-		delayHandleNetworkValue = 850000; // 900000 works, 850000 maybe, also check F7 browser
-	if ( m_SidekickNet.isSKTPScreenActive() )
-		delayHandleNetworkValue = 1100000;
+	if (m_SidekickNet.usesWLAN()) // && !modeC128)
+		delayHandleNetworkValue = m_SidekickNet.isWebserverRunning() ? 850000 : 900000; //, 850000 maybe, also check F7 browser
+	//else if (m_SidekickNet.usesWLAN() && modeC128)
+	//	delayHandleNetworkValue = 1200000;
+	if ( m_SidekickNet.isSKTPScreenActive())
+		delayHandleNetworkValue = 900000;
 	
 	enableFIQInterrupt();
 	return doRender;
@@ -662,13 +673,17 @@ void CKernelMenu::Run( void )
 			boolean timedRefresh = false;
 			if ( isAutomaticScreenRefreshNeeded() )
 			{
-				boolean toggle = !m_SidekickNet.IsRunning() && ++autoRefreshTimeLookup > 1500000;
-				if ( toggle ){
+				boolean toggle = 
+					!m_SidekickNet.IsRunning() && 
+					(++autoRefreshTimeLookup > (m_SidekickNet.RaspiHasOnlyWLAN() ? 6000000 : 1500000));
+				if ( toggle )
+				{
 					autoRefreshTimeLookup = 0;
 					DisableFIQInterrupt();
 				}
 				unsigned uptime = m_Timer.GetUptime();
-				if ( lastAutoRefresh == 0){
+				if ( lastAutoRefresh == 0)
+				{
 					lastAutoRefresh = uptime;
 				}
 				else if ( uptime - lastAutoRefresh > 0 )
@@ -690,10 +705,10 @@ void CKernelMenu::Run( void )
 					CLR_GPIO( bNMI );
 					doneWithHandling = 1;
 					updateMenu = 0;
-					keepNMILow = 1; //this means the duration of NMI going down is a little longer
-					
+					keepNMILow = 2; //this means the duration of NMI going down is a little longer
 				}
-				else if ( toggle ){
+				else if ( toggle )
+				{
 					doCacheWellnessTreatment();
 					enableFIQInterrupt();
 				}
@@ -701,11 +716,9 @@ void CKernelMenu::Run( void )
 			else
 			{
 				lastAutoRefresh = 0;
-//				if ( m_SidekickNet.isSKTPScreenActive() )
-//					m_SidekickNet.queueSktpRefresh( 16 );
 			}
-		
-			if ( !timedRefresh )
+
+			if ( !timedRefresh && keepNMILow == 0)
 			{
 				if ( m_SidekickNet.isMenuScreenUpdateNeeded() )
 				{
@@ -722,17 +735,15 @@ void CKernelMenu::Run( void )
  
 					doneWithHandling = 1;
 					updateMenu = 0;
-					keepNMILow = 1; //this means the duration of NMI going down is a little longer
-					//delayHandleNetworkValue = 1500000;
-					//m_timeStampOfLastNetworkEvent = 0;
+					keepNMILow = 2; //this means the duration of NMI going down is a little longer
 				}
-		
-				else if ( ( m_SidekickNet.IsConnecting() || m_SidekickNet.IsRunning()) &&  ++m_timeStampOfLastNetworkEvent > delayHandleNetworkValue)
-				{
+				else if ( ( m_SidekickNet.IsConnecting() || m_SidekickNet.IsRunning()) && 
+					(++m_timeStampOfLastNetworkEvent > delayHandleNetworkValue || m_SidekickNet.isSKTPRefreshWaiting() && m_timeStampOfLastNetworkEvent > delayHandleNetworkValue/1.3 )
+				){
 					if ( handleNetwork( false)) //this makes the webserver respond quickly even when there is no keypress user action
 					{
 						CLR_GPIO( bNMI );
-						keepNMILow = 1; //this means the duration of NMI going down is a little longer
+						keepNMILow = 2; //this means the duration of NMI going down is a little longer
 					}
 				}
 			}

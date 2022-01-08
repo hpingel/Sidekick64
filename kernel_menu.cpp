@@ -769,11 +769,8 @@ void CKernelMenu::Run( void )
 					updateMenu = 1;
 					//logger->Write( "SidekickMenu", LogNotice, "timed refresh happening" );
 					renderC64(); //puts the active menu page into the raspi memory
-					//if ( !m_SidekickNet.RaspiHasOnlyWLAN())
-					{
-						warmCache( pFIQ );
-						DELAY(1<<18);
-					}
+					warmCache( pFIQ );
+					DELAY(1<<18);
 					enableFIQInterrupt();
 					CLR_GPIO( bNMI );
 					doneWithHandling = 1;
