@@ -31,6 +31,9 @@
 
 #define MAX_CONTENT_SIZE	40000
 
+static const char FILENAME_CONFIG[] = "SD:C64/sidekick64.cfg";		
+static const char DRIVE[] = "SD:";
+
 extern u32 prgSizeLaunch;
 extern unsigned char prgDataLaunch[ 1027*1024 ] AAA;
 
@@ -123,11 +126,16 @@ CHTTPDaemon *CWebServer::CreateWorker (CNetSubSystem *pNetSubSystem, CSocket *pS
 		
 		char filename[255];
 		char extension[10];
-		u8 radiobutton = 0;
+		u8 startChar = 0;
 		filename[0] = '\0';
 		extension[0] = '\0';
 		
 		bool noFormParts = true;
+		bool textFileTransfer = false;
+		
+		u32 cfgBytes;
+		char cfg[ 16384 ];
+		memset( cfg, 0, 16384 );
 		
 		if (GetMultipartFormPart (&pPartHeader, &pPartData, &nPartLength))
 		{
@@ -159,6 +167,38 @@ CHTTPDaemon *CWebServer::CreateWorker (CNetSubSystem *pNetSubSystem, CSocket *pS
 				//logger->Write( FromWebServer, LogNotice, "found filename: '%s' %i", filename, strlen(filename));
 				//logger->Write( FromWebServer, LogNotice, "found extension: '%s' %i", extension, strlen(extension));
 			}
+			else{
+					char * matchTA = "name=\"textarea_config\"";
+					char * startposTextArea = strstr (pPartHeader, matchTA);
+					if( startposTextArea != 0){
+						u8 c = 0;
+						while (c < strlen(matchTA)+4){
+							c++;
+							startposTextArea++;
+						}
+
+						char * endposTextArea = strstr (startposTextArea, "---------");
+						char * current = startposTextArea;
+						u16 charCount = 0;// strlen(startposTextArea);
+						//7000
+						while (charCount < 7000 && current++ != endposTextArea )
+							charCount ++;
+						if ( charCount < 16000 && charCount > 2)
+						{
+							memcpy( cfg, startposTextArea, --charCount);
+							cfg[--charCount] = '\0';
+							logger->Write( FromWebServer, LogNotice, "config string lentgh: %i",charCount );
+							writeFile( logger, DRIVE, FILENAME_CONFIG, (u8*) cfg, charCount );
+							m_SidekickNet->requireCacheWellnessTreatment();
+							textFileTransfer = true;
+						}
+						else
+						{
+							pMsg = "Config file content fetched but illegal length!";
+							logger->Write( FromWebServer, LogNotice, "illegal config string lentgh: %i",charCount );
+						}
+					}
+			}
 		}
 
 		const char *pPartHeader_radio;
@@ -169,20 +209,49 @@ CHTTPDaemon *CWebServer::CreateWorker (CNetSubSystem *pNetSubSystem, CSocket *pS
 		{
 			noFormParts = false;
 			assert (pPartHeader != 0);
-			char * match = "name=\"radio_saveorlaunch\"";
-			char * startpos2 = strstr (pPartHeader_radio, match);
-			if ( startpos2 != 0)
+			char * match;
+			char * startpos2;
+			if( textFileTransfer)
 			{
-				radiobutton = startpos2[strlen(match)+4];
-				//logger->Write( FromWebServer, LogNotice, "found radiobutton: '%u' ", radiobutton);
+				match = "name=\"radio_configsavereboot\"";
+				startpos2 = strstr (pPartHeader_radio, match);
+				if ( startpos2 != 0)
+				{
+					startChar = startpos2[strlen(match)+4]; //r/s
+					//logger->Write( FromWebServer, LogNotice, "found radiobutton: '%u' ", startChar);
+					if ( startChar == 114)
+					{
+						pMsg = "Config file changes were saved to SD card. Now rebooting.";
+						m_SidekickNet->requestReboot();
+						
+					}
+					else
+						pMsg = "Config file changes were saved to SD card.";
+				}
+				else
+					logger->Write( FromWebServer, LogNotice, "did not find radiobutton");
+
+				
 			}
-			else
-				logger->Write( FromWebServer, LogNotice, "did not find radiobutton");
+			else{
+				match = "name=\"radio_saveorlaunch\"";
+				startpos2 = strstr (pPartHeader_radio, match);
+				if ( startpos2 != 0)
+				{
+					startChar = startpos2[strlen(match)+4];
+					//logger->Write( FromWebServer, LogNotice, "found radiobutton: '%u' ", startChar);
+				}
+				else
+					logger->Write( FromWebServer, LogNotice, "did not find radiobutton");
+			}
 		}
 
 		if(!noFormParts){
 
-		if (strstr (pPartHeader, "name=\"kernelimg\"") != 0
+		if (textFileTransfer){
+			//nothing to do here
+		}
+		else if (strstr (pPartHeader, "name=\"kernelimg\"") != 0
 		    && ( strstr (filename, "kernel") != 0 || strstr (filename, "rpi4_kernel") != 0 )
 		    && strcmp (extension, "img") == 0
 		    && nPartLength > 0)
@@ -224,8 +293,8 @@ CHTTPDaemon *CWebServer::CreateWorker (CNetSubSystem *pNetSubSystem, CSocket *pS
 				prgSizeLaunch = nPartLength;
 				memcpy( prgDataLaunch, pPartData, nPartLength);
 				u8 mode = 0; //launch only 108
-				if ( radiobutton == 115) mode = 1; //save only
-				else if ( radiobutton == 98) mode = 2; //save and launch
+				if ( startChar == 115) mode = 1; //save only
+				else if ( startChar == 98) mode = 2; //save and launch
 				
 				m_SidekickNet->prepareLaunchOfUpload( extension, filename, mode, pMsg);
 			}
@@ -244,7 +313,13 @@ CHTTPDaemon *CWebServer::CreateWorker (CNetSubSystem *pNetSubSystem, CSocket *pS
 	}
 
 		assert (pMsg != 0);
-		String.Format (s_Upload, pMsg, CIRCLE_VERSION_STRING,
+		
+		if (!textFileTransfer){
+			if ( !readFile( logger, DRIVE, FILENAME_CONFIG, (u8*)cfg, &cfgBytes ) )
+				logger->Write( FromWebServer, LogNotice, "Could not read config file");
+		}
+		
+		String.Format (s_Upload, pMsg, cfg, CIRCLE_VERSION_STRING,
 			       CMachineInfo::Get ()->GetMachineName ());
 
 		pContent = (const u8 *) (const char *) String;
