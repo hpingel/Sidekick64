@@ -37,7 +37,7 @@
 		<br/>
 		<p>%s</p>
 
-		<form action="index.html" method="post" enctype="multipart/form-data">
+		<form action="index.html" method="post" name="upload_form" enctype="multipart/form-data">
 			<div class="form-group">
 				<div class="custom-file">
 				  <input type="file" class="custom-file-input" id="skUploadFile" name="kernelimg" >
@@ -58,6 +58,26 @@
 				</div>
 				<br/><br/>
 				<input type="submit" class="btn btn-success" value="Upload" />
+				<br/><br/>
+			</div>
+		</form>
+
+		<form action="index.html" method="post" name="config_form" enctype="multipart/form-data">
+			<div class="form-group">
+				<label for="textarea_config">Edit configuration file SD:C64/sidekick64.cfg</label>
+		    <textarea class="form-control" name="textarea_config" id="textarea_config" rows="10" 
+					style="background-color: #4d4d4d; font-family: monospace; color: #ECFFDC;">%s</textarea>
+				<br/>
+				<div class="custom-control custom-radio custom-control-inline">
+					<input checked type="radio" id="radio_configsave1" name="radio_configsavereboot" value="s" class="custom-control-input">
+					<label class="custom-control-label" for="radio_configsave1">Save file to SD card</label>
+				</div>
+				<div class="custom-control custom-radio custom-control-inline">
+					<input type="radio" id="radio_configsave2" name="radio_configsavereboot" value="r" class="custom-control-input">
+					<label class="custom-control-label" for="radio_configsave2">Save file and reboot Sidekick</label>
+				</div>
+				<br/><br/>
+				<input type="submit" class="btn btn-success" value="Save" />
 				<br/><br/>
 			</div>
 		</form>
