@@ -1590,7 +1590,7 @@ boolean CSidekickNet::getSKTPBorderBGColorCharset( u8 &borderColor, u8 &bgColor)
 void CSidekickNet::enableSktpRefreshTimeout(){
 	//logger->Write( "enableSktpRefreshTimeout", LogNotice, "enabled");
 	u8 timeout = m_sktpScreenContent[ ++m_sktpScreenPosition ];
-	setSktpRefreshTimeout( timeout == 0 ? 1 : timeout);
+	setSktpRefreshTimeout( timeout < 3 ? 3 : timeout); //minimum value
 	m_sktpScreenPosition++;
 }
 
