@@ -179,11 +179,10 @@ CHTTPDaemon *CWebServer::CreateWorker (CNetSubSystem *pNetSubSystem, CSocket *pS
 
 						char * endposTextArea = strstr (startposTextArea, "---------");
 						char * current = startposTextArea;
-						u16 charCount = 0;// strlen(startposTextArea);
-						//7000
-						while (charCount < 7000 && current++ != endposTextArea )
+						u16 charCount = 0;
+						while (charCount < 16384 && current++ != endposTextArea )
 							charCount ++;
-						if ( charCount < 16000 && charCount > 2)
+						if ( charCount < 16384 && charCount > 2)
 						{
 							memcpy( cfg, startposTextArea, --charCount);
 							cfg[--charCount] = '\0';

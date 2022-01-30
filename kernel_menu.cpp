@@ -788,9 +788,10 @@ void CKernelMenu::Run( void )
 				lastAutoRefresh = 0;
 			}
 
+			//through FIQ call value updateMenu can always change, so check it again
 			if ( !timedRefresh && keepNMILow == 0)
 			{
-				if ( m_SidekickNet.isMenuScreenUpdateNeeded() )
+				if ( m_SidekickNet.isMenuScreenUpdateNeeded() && updateMenu == 0)
 				{
 					//we never end up in here for a sktp timed screen refresh
 					DisableFIQInterrupt();
@@ -804,18 +805,27 @@ void CKernelMenu::Run( void )
 					DELAY(1<<18);
 					//doCacheWellnessTreatment();
 					enableFIQInterrupt();
-					CLR_GPIO( bNMI );
-					doneWithHandling = 1;
-					updateMenu = 0;
-					keepNMILow = 2; //this means the duration of NMI going down is a little longer
+					if (updateMenu == 0)
+					{
+						CLR_GPIO( bNMI );
+						doneWithHandling = 1;
+						updateMenu = 0;
+						keepNMILow = 2; //this means the duration of NMI going down is a little longer
+					}
 				}
-				else if ( ( m_SidekickNet.IsConnecting() || m_SidekickNet.IsRunning()) && 
-					(++m_timeStampOfLastNetworkEvent > delayHandleNetworkValue || m_SidekickNet.isSKTPRefreshWaiting() && m_timeStampOfLastNetworkEvent > delayHandleNetworkValue/1.3 )
+				else if ( 
+					updateMenu == 0 &&
+					( m_SidekickNet.IsConnecting() || m_SidekickNet.IsRunning()) && 
+					(++m_timeStampOfLastNetworkEvent > delayHandleNetworkValue || m_SidekickNet.isSKTPRefreshWaiting() && 
+					m_timeStampOfLastNetworkEvent > delayHandleNetworkValue/1.3 )
 				){
 					if ( handleNetwork( false)) //this makes the webserver respond quickly even when there is no keypress user action
 					{
-						CLR_GPIO( bNMI );
-						keepNMILow = 2; //this means the duration of NMI going down is a little longer
+						if (updateMenu == 0)
+						{
+							CLR_GPIO( bNMI );
+							keepNMILow = 2; //this means the duration of NMI going down is a little longer
+						}
 					}
 				}
 			}
