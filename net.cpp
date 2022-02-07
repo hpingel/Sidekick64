@@ -957,12 +957,14 @@ void CSidekickNet::handleQueuedNetworkAction()
 boolean CSidekickNet::checkForSaveableDownload(){
 	if (m_isCSDBDownloadSavingQueued)
 	{
-		if (m_loglevel > 0)
-			logger->Write( "checkForSaveableDownload", LogNotice, "sCSDBDownloadSavingQueued");		
-		m_isCSDBDownloadSavingQueued = false;
-		saveDownload2SD();
-		m_isSktpKeypressQueued = false;
-		return true;
+		{
+			if (m_loglevel > 0)
+				logger->Write( "checkForSaveableDownload", LogNotice, "sCSDBDownloadSavingQueued");		
+			m_isCSDBDownloadSavingQueued = false;
+			saveDownload2SD();
+			m_isSktpKeypressQueued = false;
+			return true;
+		}
 	}
 	return false;
 }
@@ -1082,7 +1084,13 @@ boolean CSidekickNet::checkForFinishedDownload()
 	boolean bTemp = m_isDownloadReady;
 	if ( m_isDownloadReady){
 		m_isDownloadReady = false;
-		if ( m_bSaveCSDBDownload2SD )
+		if ( strcmp( m_CSDBDownloadExtension, "tga" ) == 0)
+		{
+			//display image
+			//m_isDownloadReadyForLaunch = true;
+			m_isCSDBDownloadSavingQueued = true;
+		}
+		else if ( m_bSaveCSDBDownload2SD )
 		{
 			m_isDownloadReadyForLaunch = false;
 			if (m_loglevel > 2)
@@ -1244,6 +1252,30 @@ void CSidekickNet::getCSDBBinaryContent( ){
 		if (m_loglevel > 3)
 			logger->Write( "getCSDBBinaryContent", LogNotice, "memcpy finished.");
 		requireCacheWellnessTreatment();
+		
+		//tgastuff
+		if ( screenType == 1 && strcmp( m_CSDBDownloadExtension, "tga" ) == 0)
+		{
+			//logger->Write( "getCSDBBinaryContent", LogNotice, "now render tga image on display");		
+			//requireCacheWellnessTreatment();
+//			CLR_GPIO( bDMA ); 
+			extern unsigned char tempTGA[ 256 * 256 * 4 ];
+			int w = 0, h = 0;
+			tftParseTGA( tempTGA, prgDataLaunch, &w, &h, false, prgSizeLaunch );
+			tftLoadBackgroundTGAMemory( tempTGA, 240, 240, false);
+//			requireCacheWellnessTreatment();
+			tftCopyBackground2Framebuffer();
+			tftInitImm();
+			tftSendFramebuffer16BitImm( tftFrameBuffer );
+			//buggy: tftSplashScreenMemory( (u8*) prgDataLaunch, prgSizeLaunch );
+			cleanupDownloadData();
+//			requireCacheWellnessTreatment();
+			//m_isCSDBDownloadSavingQueued = false;
+			m_isDownloadReady = false;
+			requireCacheWellnessTreatment();
+//			SET_GPIO( bDMA );
+		}
+		
 	}
 	else if (m_CSDBDownloadHost.port == 443)
 		setErrorMsgC64((char*)"          HTTPS request failed          ", false);
@@ -1305,7 +1337,7 @@ boolean CSidekickNet::launchSktpSession(){
 			urlSuffix.Append(netSktpHostPassword);
 		}
 	}
-	urlSuffix.Append("&sktpv=3&type=");
+	urlSuffix.Append("&sktpv=4&type=");
 	#ifndef IS264
 	if (m_isC128)
 		urlSuffix.Append("128");
@@ -1380,6 +1412,75 @@ unsigned CSidekickNet::getSKTPErrorCode(){
 	return m_sktpScreenErrorCode;
 }
 
+void CSidekickNet::parseSKTPDownloadCommand( char * pResponseBuffer, unsigned offset){
+	u8 tmpUrlLength = pResponseBuffer[offset];
+	u8 tmpFilenameLength = pResponseBuffer[offset+1];
+	m_bSaveCSDBDownload2SD = ((int)pResponseBuffer[offset+2] == 1);
+	
+	char hostName[256];
+	u16 pathStart;
+	u16 pathStartSuffix = 0;
+	//TODO add more sanity checks here
+	if ( pResponseBuffer[ offset + 3 + 4 ] == ':')      // ....http
+		pathStartSuffix = offset + 7 + 3;                 // ....http://
+	else if ( pResponseBuffer[ offset + 3 + 4 ] == 's') // ....https
+		pathStartSuffix = offset + 7 + 4;                 // ....https://
+	else
+		logger->Write( "parseSKTPDownloadCommand", LogNotice, "Error: wrong char");
+
+	for ( pathStart = pathStartSuffix; pathStart < tmpUrlLength+offset-1; pathStart++ ){
+		//logger->Write( "parseSKTPDownloadCommand", LogNotice, "hostnamebuild: char %c", pResponseBuffer[ pathStart ] );
+		if ( pResponseBuffer[ pathStart ] == '/' || pResponseBuffer[ pathStart ] == ':')
+			break;
+		hostName[ pathStart - pathStartSuffix] = pResponseBuffer[ pathStart ];
+	}
+	hostName[pathStart - pathStartSuffix] = '\0';
+	//logger->Write( "parseSKTPDownloadCommand", LogNotice, "Detected hostname: >%s<", hostName);
+
+	if ( pResponseBuffer[ pathStart ] == ':' ){
+		while( pResponseBuffer[ pathStart ] != '/')
+		{
+			//logger->Write( "parseSKTPDownloadCommand", LogNotice, "skip port: char %c", pResponseBuffer[ pathStart ] );
+			pathStart++;
+		}
+	}
+
+	if (strcmp(hostName, m_CSDB.hostName) == 0){
+		m_CSDBDownloadHost = m_CSDB;
+	}
+	else if ( strcmp(hostName, m_CSDB_HVSC.hostName) == 0){
+		m_CSDBDownloadHost = m_CSDB_HVSC;
+	}
+	else if ( strcmp(hostName, m_SKTPServer.hostName) == 0){
+		m_CSDBDownloadHost = m_SKTPServer;
+	}
+	else{
+		logger->Write( "parseSKTPDownloadCommand", LogNotice, "Error: Unknown host: >%s<", hostName);
+		m_CSDBDownloadHost = m_CSDB;
+	}
+	//logger->Write( "parseSKTPDownloadCommand", LogNotice, "hostname is ok, now memcopy");
+
+	memcpy( m_CSDBDownloadPath, &pResponseBuffer[ pathStart ], tmpUrlLength + offset -1 - pathStart + 4);
+	m_CSDBDownloadPath[tmpUrlLength + offset -1 - pathStart + 4] = '\0';
+	//logger->Write( "parseSKTPDownloadCommand", LogNotice, "download path: >%s<", m_CSDBDownloadPath);
+	memcpy( m_CSDBDownloadFilename, &pResponseBuffer[ 4 + tmpUrlLength + offset -1 ], tmpFilenameLength );
+	m_CSDBDownloadFilename[tmpFilenameLength] = '\0';
+	//logger->Write( "parseSKTPDownloadCommand", LogNotice, "filename: >%s<", m_CSDBDownloadFilename);
+	//FIXME the extension grabbing only works if the download stuff is at the end of the response
+	//this is currently the case, but never change this...
+	memcpy( m_CSDBDownloadExtension, &m_CSDBDownloadFilename[ tmpFilenameLength -3 ], 3);
+	m_CSDBDownloadExtension[3] = '\0';
+	#ifndef WITHOUT_STDLIB
+	//workaround: tolower is only available with stdlib!
+	//enforce lowercase for extension because we compare it a lot
+	for(int i = 0; i < 3; i++){
+		m_CSDBDownloadExtension[i] = tolower(m_CSDBDownloadExtension[i]);
+	}
+	#endif
+	//logger->Write( "parseSKTPDownloadCommand", LogNotice, "extension: >%s<", m_CSDBDownloadExtension);
+}
+
+
 void CSidekickNet::updateSktpScreenContent(){
 	m_sktpScreenErrorCode = 0;
 	
@@ -1415,66 +1516,7 @@ void CSidekickNet::updateSktpScreenContent(){
 			//logger->Write( "updateSktpScreenContent", LogNotice, "response type : %i", m_sktpResponseType);
 			if ( m_sktpResponseType == 2) // url for binary download, e. g. csdb
 			{
-				u8 tmpUrlLength = pResponseBuffer[1];
-				u8 tmpFilenameLength = pResponseBuffer[2];
-				m_bSaveCSDBDownload2SD = ((int)pResponseBuffer[3] == 1);
-				char hostName[256];
-				u8 pathStart;
-				u8 pathStartSuffix = 0;
-				//TODO add more sanity checks here
-				if ( pResponseBuffer[ 4 + 4 ] == ':')      // ....http
-					pathStartSuffix = 8+3;                   // ....http://
-				else if ( pResponseBuffer[ 4 + 4 ] == 's') // ....https
-					pathStartSuffix = 8+4;                   // ....https://
-				else
-					logger->Write( "updateSktpScreenContent", LogNotice, "Error: wrong char");
-
-				for ( pathStart = pathStartSuffix; pathStart < tmpUrlLength; pathStart++ ){
-					if ( pResponseBuffer[ pathStart ] == '/' || pResponseBuffer[ pathStart ] == ':')
-						break;
-					hostName[ pathStart - pathStartSuffix] = pResponseBuffer[ pathStart ];
-				}
-				hostName[pathStart - pathStartSuffix] = '\0';
-				
-				if ( pResponseBuffer[ pathStart ] == ':' ){
-					while( pResponseBuffer[ pathStart ] != '/')
-					{
-						pathStart++;
-					}
-				}
-				
-				if (strcmp(hostName, m_CSDB.hostName) == 0){
-					m_CSDBDownloadHost = m_CSDB;
-				}
-				else if ( strcmp(hostName, m_CSDB_HVSC.hostName) == 0){
-					m_CSDBDownloadHost = m_CSDB_HVSC;
-				}
-				else if ( strcmp(hostName, m_SKTPServer.hostName) == 0){
-					m_CSDBDownloadHost = m_SKTPServer;
-				}
-				else{
-					logger->Write( "updateSktpScreenContent", LogNotice, "Error: Unknown host: >%s<", hostName);
-					m_CSDBDownloadHost = m_CSDB;
-				}
-
-				memcpy( m_CSDBDownloadPath, &pResponseBuffer[ pathStart ], tmpUrlLength - pathStart + 4);
-				m_CSDBDownloadPath[tmpUrlLength - pathStart + 4] = '\0';
-//				logger->Write( "updateSktpScreenContent", LogNotice, "download path: >%s<", m_CSDBDownloadPath);
-				memcpy( m_CSDBDownloadFilename, &pResponseBuffer[ 4 + tmpUrlLength  ], tmpFilenameLength );
-				m_CSDBDownloadFilename[tmpFilenameLength] = '\0';
-//				logger->Write( "updateSktpScreenContent", LogNotice, "filename: >%s<", m_CSDBDownloadFilename);
-				memcpy( m_CSDBDownloadExtension, &pResponseBuffer[ m_sktpResponseLength -3 ], 3);
-				m_CSDBDownloadExtension[3] = '\0';
-				#ifndef WITHOUT_STDLIB
-				//workaround: tolower is only available with stdlib!
-				//enforce lowercase for extension because we compare it a lot
-				for(int i = 0; i < 3; i++){
-				  m_CSDBDownloadExtension[i] = tolower(m_CSDBDownloadExtension[i]);
-				}
-				#endif
-//				logger->Write( "updateSktpScreenContent", LogNotice, "extension: >%s<", extension);
-
-				
+				parseSKTPDownloadCommand(pResponseBuffer,1);
 				m_sktpResponseLength = 1;
 				m_sktpScreenContent = (unsigned char * ) pResponseBuffer;
 				m_sktpScreenPosition = 1;
@@ -1592,6 +1634,14 @@ void CSidekickNet::enableSktpRefreshTimeout(){
 	u8 timeout = m_sktpScreenContent[ ++m_sktpScreenPosition ];
 	setSktpRefreshTimeout( timeout < 3 ? 3 : timeout); //minimum value
 	m_sktpScreenPosition++;
+}
+
+void CSidekickNet::prepareDownloadOfTGAImage(){
+	if ( screenType == 1 ){
+		parseSKTPDownloadCommand((char*)m_sktpScreenContent, m_sktpScreenPosition+1);
+		m_isCSDBDownloadQueued = true;
+	}
+	m_sktpScreenPosition = m_sktpResponseLength;
 }
 
 unsigned char * CSidekickNet::GetSktpScreenContentChunk( u16 & startPos, u8 &color, boolean &inverse, u8 &repeat )

@@ -130,6 +130,7 @@ public:
 	u8 GetSktpScreenContentChunkType();
 	boolean getSKTPBorderBGColorCharset( u8 &borderColor, u8 &bgColor);
 	void enableSktpRefreshTimeout();
+	void prepareDownloadOfTGAImage();
 	unsigned char * GetSktpScreenContentChunk( u16 & startPos, u8 &color, boolean & inverse, u8 &repeat );
 	CString getTimeString();
 	CString getUptime();
@@ -160,6 +161,7 @@ public:
 	CString getLoggerStringForHost( CString hostname, int port);
 	boolean isSKTPScreenActive();
 	unsigned getSKTPErrorCode();
+	void parseSKTPDownloadCommand( char *, unsigned );
 	boolean isMenuScreenUpdateNeeded();
 	void setCurrentKernel( char *);
 	void setC128Mode();
