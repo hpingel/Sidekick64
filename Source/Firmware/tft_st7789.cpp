@@ -499,42 +499,47 @@ void tftSplashScreen( const u8 *fb )
 
 int tftSplashScreenFile( const char *drive, const char *fn )
 {
-	tftInitDisplay();
 	u8 temp[ 256 * 256 * 3 ];
 	u32 size;
 	extern CLogger *logger;
 	if ( readFile( logger, (char*)drive, fn, temp, &size ) )
 	{
-		tftCommand2x( CASET, 0, ysize - 1 );
-		tftCommand2x( RASET, 0, xsize - 1 );
-		tftCommand( 0x3A ); tftSendData( 0x05 );               
-		tftCommand( RAMWR );
-	
-		// convert RGB24 to RGB16 on the fly
-		for ( u32 y = 0; y < ysize; y++ )
-		{
-			for ( u32 x = 0; x < xsize; x++ )
-			{
-				u32 a = ( x + y * xsize ) * 3;
-				u32 r = temp[ a + 0 ];
-				u32 g = temp[ a + 1 ];
-				u32 b = temp[ a + 2 ];
-
-				u32 col = rgb24to16( r, g, b );
-				
-				tftSendData( col >> 8 );
-				tftSendData( col & 255 );
-				flush4BitBuffer( true );
-			}
-		}
-		//tftCommand( 0x3A ); tftSendData( 0x05 );
-		flush4BitBuffer( true );
-		return 1;
+		return tftSplashScreenMemory( temp, size );
 	}
-	flush4BitBuffer(true);
-	return 0;
+	else{
+		return 0;
+	}
 }
 
+int tftSplashScreenMemory( const u8 * temp, u32 size )
+{
+	tftInitDisplay();
+	tftCommand2x( CASET, 0, ysize - 1 );
+	tftCommand2x( RASET, 0, xsize - 1 );
+	tftCommand( 0x3A ); tftSendData( 0x05 );
+	tftCommand( RAMWR );
+
+	// convert RGB24 to RGB16 on the fly
+	for ( u32 y = 0; y < ysize; y++ )
+	{
+		for ( u32 x = 0; x < xsize; x++ )
+		{
+			u32 a = ( x + y * xsize ) * 3;
+			u32 r = temp[ a + 0 ];
+			u32 g = temp[ a + 1 ];
+			u32 b = temp[ a + 2 ];
+
+			u32 col = rgb24to16( r, g, b );
+			
+			tftSendData( col >> 8 );
+			tftSendData( col & 255 );
+			flush4BitBuffer( true );
+		}
+	}
+	//tftCommand( 0x3A ); tftSendData( 0x05 );
+	flush4BitBuffer( true );
+	return 1;
+}
 
 
 // loads a 24/32-bit, uncompressed Targa file
@@ -545,6 +550,13 @@ int tftLoadTGA( const char *drive, const char *name, unsigned char *dst, int *im
 	extern CLogger *logger;
 	if ( readFile( logger, (char*)drive, name, tga, &size ) )
 	{
+		return tftParseTGA( dst, tga, imgWidth, imgHeight, wantAlpha, size );
+	}
+	return 0;
+}
+
+int tftParseTGA( unsigned char *dst, unsigned char *tga, int *imgWidth, int *imgHeight, int wantAlpha, u32 size )
+{
 		unsigned char *type = &tga[ 0 ];
 		if ( type[ 1 ] != 0 || ( type[ 2 ] != 2 && type[ 2 ] != 3 ) )
 			return 0;
@@ -581,8 +593,6 @@ int tftLoadTGA( const char *drive, const char *name, unsigned char *dst, int *im
 			}
 		}
 		return 1;
-	}
-	return 0;
 }
 
 static unsigned char charset[ 4096 ];
@@ -774,21 +784,28 @@ void tftConvertFrameBuffer12Bit()
 }
 
 
+int tftParseTGAFromNet( unsigned char *tga, u32 size ){
+	int w = 0, h = 0;
+	tftParseTGA( tempTGA, tga, &w, &h, false, size );
+	tftLoadBackgroundTGAMemory( tempTGA, 240, 240, false);
+}
 
 int tftLoadBackgroundTGA( const char *drive, const char *name, int dither )
 {
-	int w, h;
-
+	int w = 0, h = 0;
 	int r = tftLoadTGA( drive, name, tempTGA, &w, &h, false );
-
 	if ( r == 0 )
 		return 0;
+	return tftLoadBackgroundTGAMemory( tempTGA , w, h, dither );
+}
 
+int tftLoadBackgroundTGAMemory(  unsigned char * tempTGA2, int w, int h, int dither)
+{
 	int bytesPerPixel = 3; 
 	for ( int y = 0; y < min( 240, h ); y++ )
 		for ( int x = 0; x < min( 240, w ); x++ )
 		{
-			unsigned char *p = &tempTGA[ bytesPerPixel * ( x + y * w ) ];
+			unsigned char *p = &tempTGA2[ bytesPerPixel * ( x + y * w ) ];
 
 			if ( dither )
 			{

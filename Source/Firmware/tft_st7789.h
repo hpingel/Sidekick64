@@ -51,6 +51,7 @@ extern void tftCommandImm( u8 c, u8 d );
 
 extern void tftSplashScreen( const u8 *fb );
 extern int tftSplashScreenFile( const char *drive, const char *fn );
+extern int tftSplashScreenMemory( const u8 * temp, u32 size );
 
 extern unsigned char tftBackground[ 240 * 240 * 2 ];
 extern unsigned char tftFrameBuffer[ 240 * 240 * 2 ];
@@ -64,7 +65,11 @@ extern void tftInitImm( int rot = -1 );
 
 extern u32 rgb24to16( u32 r, u32 g, u32 b );
 extern int tftLoadTGA( const char *drive, const char *name, unsigned char *dst, int *imgWidth, int *imgHeight, int wantAlpha );
+//extern int tftLoadTGA2( const char *drive, const char *name, unsigned char *dst, int *imgWidth, int *imgHeight, int wantAlpha );
+extern int tftParseTGA( unsigned char *dst, unsigned char *tga, int *imgWidth, int *imgHeight, int wantAlpha, u32 size );
+extern int tftParseTGAFromNet( unsigned char *tga, u32 size );
 extern int tftLoadBackgroundTGA( const char *drive, const char *name, int dither = 0 );
+extern int tftLoadBackgroundTGAMemory( unsigned char * tempTGA2, int w, int h, int dither = 0);
 extern void tftConvertFrameBuffer12Bit();
 extern void tftBlendRGBA( unsigned char *rgba, unsigned char *dst, int dither = 0 );
 extern void tftBlendRGBA( u32 r_, u32 g_, u32 b_, u32 a, unsigned char *dst, int dither );
