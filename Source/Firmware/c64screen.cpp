@@ -1730,13 +1730,9 @@ void handleC64( int k, u32 *launchKernel, char *FILENAME, char *filenameKernal, 
 		}
 		else if ( k == 's' || k == 'S')
 		{
-			//if (pSidekickNet->IsRunning())
-			{
-				//pSidekickNet->enteringSktpScreen(); //just for the refresh
-				menuScreen = MENU_SYSTEMINFO;
-				handleC64( 0xffffffff, launchKernel, FILENAME, filenameKernal, menuItemStr );
-				return;
-			}
+			menuScreen = MENU_SYSTEMINFO;
+			handleC64( 0xffffffff, launchKernel, FILENAME, filenameKernal, menuItemStr );
+			return;
 		}
 		else if ( k == 'c' || k == 'C')
 		{
@@ -1766,26 +1762,6 @@ void handleC64( int k, u32 *launchKernel, char *FILENAME, char *filenameKernal, 
 					pSidekickNet->setModemEmuType(1);
 			}
 		}
-		/*
-		else if ( k == 'q' || k == 'Q')
-		{
-			pSidekickNet->requestReboot();
-		}
-		*/
-		//get rid of this after implementing a proper error msg dialog
-		/*
-		else if ( k == 'd' || k == 'D')
-		{
-				if ( errorMsg != NULL ) errorMsg = NULL;
-				if (pSidekickNet->IsRunning() && menuScreen == MENU_SKTP)
-				{
-					pSidekickNet->redrawSktpScreen();
-					handleC64( 0xffffffff, launchKernel, FILENAME, filenameKernal, menuItemStr );
-					return;
-				}
-				
-		}
-		*/
 	} else
 	if ( menuScreen == MENU_SKTP )
 	{
@@ -1797,23 +1773,10 @@ void handleC64( int k, u32 *launchKernel, char *FILENAME, char *filenameKernal, 
 			handleC64( 0xffffffff, launchKernel, FILENAME, filenameKernal, menuItemStr );
 			return;
 		}
-		/*
-		else if ( k == 'n' || k == 'N')
-		{
-			//only needed temporarily for testing purposes
-			pSidekickNet->resetSktpSession();
-		}
-		*/
 		else
 		{
-			//virtual key press
-			//joystick button press
-			/*
-			if ( k == 92 && joyIdx != -1 )
-			{
-				k = VK_RETURN;
-			}*/
 			//the user has actually manually pressed a key on the Commodore keyboard
+			//or caused a joystick event
 			pSidekickNet->queueSktpKeypress(k);
 		}
 	} else
@@ -1821,7 +1784,6 @@ void handleC64( int k, u32 *launchKernel, char *FILENAME, char *filenameKernal, 
 	{
 		if ( k == VK_F7)
 		{
-			//pSidekickNet->leavingSktpScreen();
 			menuScreen = MENU_MAIN;
 			handleC64( 0xffffffff, launchKernel, FILENAME, filenameKernal, menuItemStr );
 			return;
@@ -2450,6 +2412,7 @@ void printSKTPScreen()
 					4 colors & charset
 					5 vertical repeat chunk
 					6 paintbrush chunk
+					7 tga image file url/name to be shown on color tft display
 					*/
 					u8 type = pSidekickNet->GetSktpScreenContentChunkType();
 					if ( type == 0 || type == 1 || type == 2 || type == 5 || type == 6)
@@ -2480,6 +2443,8 @@ void printSKTPScreen()
 						pSidekickNet->enableSktpRefreshTimeout();
 					else if (type == 4)
 						SKTPisLowerCharset = (pSidekickNet->getSKTPBorderBGColorCharset( SKTPborderColor, SKTPbgColor) == 1);
+					else if (type == 7)
+						pSidekickNet->prepareDownloadOfTGAImage();
 					else if (type == 255)
 					{
 						logger->Write( "printSKTPScreen", LogWarning, "end of sktp response was reached");
