@@ -791,7 +791,7 @@ void CKernelMenu::Run( void )
 			//through FIQ call value updateMenu can always change, so check it again
 			if ( !timedRefresh && keepNMILow == 0)
 			{
-				if ( m_SidekickNet.isMenuScreenUpdateNeeded() && updateMenu == 0)
+				if (updateMenu == 0 && m_SidekickNet.isMenuScreenUpdateNeeded())
 				{
 					//we never end up in here for a sktp timed screen refresh
 					DisableFIQInterrupt();
@@ -815,9 +815,10 @@ void CKernelMenu::Run( void )
 				}
 				else if ( 
 					updateMenu == 0 &&
-					( m_SidekickNet.IsConnecting() || m_SidekickNet.IsRunning()) && 
-					(++m_timeStampOfLastNetworkEvent > delayHandleNetworkValue || m_SidekickNet.isSKTPRefreshWaiting() && 
-					m_timeStampOfLastNetworkEvent > delayHandleNetworkValue/1.3 )
+					(m_SidekickNet.IsConnecting() || m_SidekickNet.IsRunning()) && 
+					(++m_timeStampOfLastNetworkEvent > delayHandleNetworkValue) || 
+					(m_SidekickNet.isSKTPRefreshWaiting() && 
+						m_timeStampOfLastNetworkEvent > delayHandleNetworkValue/1.1 )
 				){
 					if ( handleNetwork( false)) //this makes the webserver respond quickly even when there is no keypress user action
 					{
@@ -865,6 +866,8 @@ void CKernelMenu::FIQHandler (void *pParam)
 	c64CycleCount ++;
 	WAIT_AND_READ_ADDR8to12_ROMLH_IO12_BA
 
+	//TODO: For network kernel, this causes issues with jumper setting A13/BTN
+	//TODO: Find a solution for this!
 	if ( BUTTON_PRESSED )
 	{
 		FINISH_BUS_HANDLING
