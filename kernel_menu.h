@@ -137,7 +137,9 @@ public:
 	boolean Initialize( void );
 
 	void Run( void );
+#ifdef WITH_NET
 	void updateSystemMonitor();
+#endif
 	boolean isRebootRequested();
 	void doCacheWellnessTreatment();
 	
