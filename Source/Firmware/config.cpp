@@ -44,6 +44,17 @@ u8 	cfgVIC_Emulation = 0,
 u16	cfgVIC_ScanlineIntensity = 256;
 #endif
 
+#ifdef WITH_NET
+	char netSidekickHostname[ 256 ];
+	char netSktpHostName[ 256 ];
+	u32  netSktpHostPort = 0;
+	char netSktpHostUser[ 64 ];
+	char netSktpHostPassword[ 64 ];
+	u32  netModemEmuDefaultBaudrate = 0;
+	boolean netConnectOnBoot = false;
+	boolean netEnableWebserver = false;
+#endif
+
 u32 skinFontLoaded;
 char skinFontFilename[ 1024 ];
 char skinAnimationFilename[ 1024 ];
@@ -296,6 +307,82 @@ int readConfig( CLogger *logger, char *DRIVE, char *FILENAME )
 						screenRotation = 1;
 					}
 				}
+				
+#ifdef WITH_NET
+				if ( strcmp( ptr, "NET_SIDEKICK_HOSTNAME" ) == 0 )
+				{
+					ptr = strtok_r( NULL, "\"", &rest );
+					strncpy( netSidekickHostname, ptr, 255 );
+				#ifdef DEBUG_OUT
+					logger->Write( "RaspiMenu", LogNotice, " sidekick hostname >%s<", netUpdateHostName );
+				#endif
+				}
+
+				if ( strcmp( ptr, "NET_SKTPHOST_NAME" ) == 0 )
+				{
+					ptr = strtok_r( NULL, "\"", &rest );
+					strncpy( netSktpHostName, ptr, 255 );
+				#ifdef DEBUG_OUT
+					logger->Write( "RaspiMenu", LogNotice, " sktp host name >%s<", netSktpHostName );
+				#endif
+				}
+				
+				if ( strcmp( ptr, "NET_SKTPHOST_PORT" ) == 0 )
+				{
+					ptr = strtok_r( NULL, "\"", &rest );
+					netSktpHostPort = atoi( ptr );
+				#ifdef DEBUG_OUT
+					logger->Write( "RaspiMenu", LogNotice, " sktp host port >%i<", netSktpHostPort );
+				#endif
+				}
+
+				if ( strcmp( ptr, "NET_SKTPHOST_USERNAME" ) == 0 )
+				{
+					ptr = strtok_r( NULL, "\"", &rest );
+					strncpy( netSktpHostUser, ptr, 63 );
+				#ifdef DEBUG_OUT
+					logger->Write( "RaspiMenu", LogNotice, " sktp username  >%s<", netSktpHostUser );
+				#endif
+				}
+
+				if ( strcmp( ptr, "NET_SKTPHOST_PASSWORD" ) == 0 )
+				{
+					ptr = strtok_r( NULL, "\"", &rest );
+					strncpy( netSktpHostPassword, ptr, 63 );
+				#ifdef DEBUG_OUT
+					logger->Write( "RaspiMenu", LogNotice, " sktp pw >%s<", netSktpHostPassword );
+				#endif
+				}
+
+				if ( strcmp( ptr, "NET_CONNECT_ON_BOOT" ) == 0 )
+				{
+					ptr = strtok_r( NULL, "\"", &rest );
+					netConnectOnBoot = (atoi( ptr ) == 1);
+				#ifdef DEBUG_OUT
+					logger->Write( "RaspiMenu", LogNotice, " connect on boot  >%i<", netConnectOnBoot );
+				#endif
+				}
+
+				if ( strcmp( ptr, "NET_ENABLE_WEBSERVER" ) == 0 )
+				{
+					ptr = strtok_r( NULL, "\"", &rest );
+					netEnableWebserver = (atoi( ptr ) == 1);
+				#ifdef DEBUG_OUT
+					logger->Write( "RaspiMenu", LogNotice, " enable webserver  >%i<", netEnableWebserver );
+				#endif
+				}
+				
+				if ( strcmp( ptr, "NET_MODEM_DEFAULT_BAUDRATE" ) == 0 )
+				{
+					ptr = strtok_r( NULL, "\"", &rest );
+					netModemEmuDefaultBaudrate = atoi( ptr );
+				#ifdef DEBUG_OUT
+					logger->Write( "RaspiMenu", LogNotice, " modem emu default baudrate >%i<", netModemEmuDefaultBaudrate );
+				#endif
+				}
+				
+#endif
+				
 			}
 		}
 	}
@@ -719,4 +806,3 @@ int readFavorites( CLogger *logger, char *DRIVE )
 	return 0;
 
 }
-

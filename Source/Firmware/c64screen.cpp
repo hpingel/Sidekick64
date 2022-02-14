@@ -2649,6 +2649,8 @@ void setErrorMsg2( char * msg, boolean sticky = false )
 	errorSticky = sticky;
 }
 
+u32 showLogo = 1;
+
 void renderC64()
 {
 	extern u8 currentVDCMode;
