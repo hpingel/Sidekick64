@@ -27,6 +27,7 @@
  You should have received a copy of the GNU General Public License
  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
+#include <circle/chainboot.h>
 
 #include "kernel_menu.h"
 #include "dirscan.h"
@@ -39,6 +40,23 @@
 // we will read these files
 static const char DRIVE[] = "SD:";
 //static const char FILENAME_PRG[]  = "SD:C64/rpimenu.prg";		// .PRG to start
+#ifdef WITH_NET
+
+unsigned delayHandleNetworkValue = 1500000;
+
+//static 
+const u8 RPIMENUPRG[] =
+{
+//Caution: Whenever upstream rpimenu.prg changes we have to manually call converttool!
+//../webcontent/converttool -b rpimenu.prg > rpimenu_prg.h
+//This has to be put into the workflow
+
+#include "C64Side/rpimenu_prg.h"
+};
+
+CSidekickNet *pSidekickNet = 0;//used for c64screen to display net config params
+
+#endif
 static const char FILENAME_MENU[]   = "SD:C64/menu.bin";			// 16k cart for menu
 static const char FILENAME_CBM80[]  = "SD:C64/launch.cbm80";		// launch code (CBM80 8k cart)
 static const char FILENAME_CONFIG[] = "SD:C64/sidekick64.cfg";		
@@ -70,8 +88,15 @@ static u32	currentOfs      = 0;
 
 static u8   firstMenuAfterBoot = 1;
 
+// the menu .PRG and program to launch
+static u32 prgSize AAA;
+static unsigned char prgData[ 65536 ] AAA;
+
 u32 prgSizeLaunch AAA;
-unsigned char prgDataLaunch[ 65536 ] AAA;
+//increasing size of prgDataLaunch so that we
+//can either store a prg or a crt in it
+//unsigned char prgDataLaunch[ 65536 ] AAA;
+unsigned char prgDataLaunch[ 1027*1024 ] AAA;
 
 // CBM80 to launch the menu
 static unsigned char cart_pool2[ 16384 + 128 ] AAA;
@@ -210,6 +235,10 @@ void deactivateCart()
 	
 	DELAY( 1 << 10 );
 	latchSetClearImm( LATCH_RESET | LED_DEACTIVATE_CART2_HIGH, LED_DEACTIVATE_CART2_LOW | LATCH_ENABLE_KERNAL );
+	#ifdef WITH_NET
+	if (pSidekickNet != 0)
+		pSidekickNet->setCurrentKernel( (char*)"l" );	
+	#endif
 
 	DELAY( 1 << 27 );
 
@@ -250,6 +279,19 @@ bool toggleVDCMode;
 u8 currentVDCMode = 0;
 u8 vdc40ColumnMode = 0;
 
+void doCacheWellnessTreatmentX( void * pFIQ2 ){
+	//logger->Write( "RaspiMenu", LogNotice, "doCacheWellnessTreatmentX" );
+	
+	CleanDataCache();
+	InvalidateDataCache();
+	InvalidateInstructionCache();
+	pFIQ = pFIQ2;
+	warmCache( pFIQ );
+	DELAY(1<<18);
+	warmCache( pFIQ );
+	DELAY(1<<18);
+}
+
 void activateCart()
 {
 	initScreenAndLEDCodes();
@@ -276,6 +318,10 @@ void activateCart()
 		tftCopyBackground2Framebuffer();
 		tftSendFramebuffer16BitImm( tftFrameBuffer );
 	}
+	#ifdef WITH_NET
+	if (pSidekickNet != 0)
+		pSidekickNet->setCurrentKernel( (char*)"m" );	
+	#endif
 	SyncDataAndInstructionCache();
 	warmCache( pFIQ );
 	warmCache( pFIQ );
@@ -362,6 +408,12 @@ boolean CKernelMenu::Initialize( void )
 
 	u32 size = 0;
 
+	#ifdef WITH_NET
+		logger->Write ("SidekickKernel", LogNotice, "Compiled on: " COMPILE_TIME ", Git branch: " GIT_BRANCH ", Git hash: " GIT_HASH);
+		//TODO: this should be done in constructor of SideKickNet
+		m_SidekickNet.checkForSupportedPiModel();
+		m_SidekickNet.mountSDDrive();
+	#endif
 #if 1
 	u8 tempHDMI[ 640 * 480 * 3 ];
 	readFile( logger, (char*)DRIVE, (char*)FILENAME_SPLASH_HDMI, tempHDMI, &size );
@@ -391,6 +443,16 @@ boolean CKernelMenu::Initialize( void )
 	cartMenu[ 0x1fe1 ] = 0x00; // this flag indicates that VDC-support is disabled (can be turned on by C128 detection!)
 
 	latchSetClearImm( LED_INIT2_HIGH, LED_INIT2_LOW );
+
+	// read .PRG
+	#ifndef WITH_NET
+	readFile( logger, (char*)DRIVE, (char*)FILENAME_PRG, prgData, &prgSize );
+	#else
+	prgSize = sizeof RPIMENUPRG;
+	memcpy( &prgData[0], RPIMENUPRG, prgSize );
+	logger->Write( "SidekickMenu", LogNotice, "rpimenu.prg was read from memory." );
+	#endif
+	
 	latchSetClearImm( LED_INIT3_HIGH, LED_INIT3_LOW );
 
 	extern void scanDirectories( char *DRIVE );
@@ -491,6 +553,19 @@ boolean CKernelMenu::Initialize( void )
 	col[ 4 ] = skinValues.SKIN_MENU_TEXT_KEY & 15;
 	col[ 5 ] = skinValues.SKIN_MENU_TEXT_ITEM & 15;
 	memcpy( &cartMenu[ 0x1c10 ], col, 6 );
+
+	#ifdef WITH_NET
+		if (m_SidekickNet.usesWLAN())  
+			delayHandleNetworkValue = 1200000;
+	
+		if ( m_SidekickNet.ConnectOnBoot() ){
+			boolean bNetOK = bOK ? m_SidekickNet.Initialize() : false;
+			if (bNetOK){
+			  m_SidekickNet.UpdateTime();
+			}
+		}
+		pSidekickNet = m_SidekickNet.GetPointer();
+	#endif
 
 	readSettingsFile();
 	applySIDSettings();
@@ -778,7 +853,7 @@ void CKernelMenu::Run( void )
 	disableFIQ_Falling = 0;
 
 	// wait forever
-	while ( true )
+	while ( !isRebootRequested() )
 	{
 		if ( !disableCart )
 		{
@@ -1576,6 +1651,10 @@ void CKernelMenu::Run( void )
 	m_InputPin.DisableInterrupt();
 }
 
+void CKernelMenu::doCacheWellnessTreatment(){
+	doCacheWellnessTreatmentX( (void*) this->FIQHandler );
+}
+
 // approximate(!) current raster line times 63
 static u16 currentRasterLine = 0;
 
@@ -1902,6 +1981,24 @@ void mainMenu()
 	outputLatch();
 }
 
+
+boolean CKernelMenu::isRebootRequested(){
+#ifdef WITH_NET
+	if ( m_SidekickNet.isRebootRequested())
+		return true;
+	else
+#endif	
+	return false;
+
+}
+
+#ifdef WITH_NET
+void CKernelMenu::updateSystemMonitor ()
+{
+	m_SidekickNet.updateSystemMonitor( m_Memory.GetHeapFreeSpace(HEAP_ANY), m_CPUThrottle.GetTemperature());
+}
+#endif
+
 int main( void )
 {
 	CKernelMenu kernel;
@@ -1910,7 +2007,7 @@ int main( void )
 	extern void KernelKernalRun( CGPIOPinFIQ m_InputPin, CKernelMenu *kernelMenu, char *FILENAME );
 	extern void KernelGeoRAMRun( CGPIOPinFIQ m_InputPin, CKernelMenu *kernelMenu );
 	extern void KernelLaunchRun( CGPIOPinFIQ m_InputPin, CKernelMenu *kernelMenu, const char *FILENAME, bool hasData = false, u8 *prgDataExt = NULL, u32 prgSizeExt = 0, u32 c128PRG = 0, u32 playingPSID = 0 );
-	extern void KernelEFRun( CGPIOPinFIQ m_InputPin, CKernelMenu *kernelMenu, const char *FILENAME, const char *menuItemStr, const char *FILENAME_KERNAL = NULL );
+	extern void KernelEFRun( CGPIOPinFIQ m_InputPin, CKernelMenu *kernelMenu, const char *FILENAME, const char *menuItemStr, bool hasData = false, u8 *crtDataExt = NULL, u32 crtSizeExt = 0, const char *FILENAME_KERNAL = NULL );
 	extern void KernelFC3Run( CGPIOPinFIQ m_InputPin, CKernelMenu *kernelMenu, char *FILENAME = NULL, const char *FILENAME_KERNAL = NULL );
 	extern void KernelFMRun( CGPIOPinFIQ m_InputPin, CKernelMenu *kernelMenu, char *FILENAME = NULL, const char *FILENAME_KERNAL = NULL );
 	extern void KernelWSRun( CGPIOPinFIQ m_InputPin, CKernelMenu *kernelMenu, char *FILENAME = NULL, const char *FILENAME_KERNAL = NULL );
@@ -1921,7 +2018,8 @@ int main( void )
 	extern void KernelSIDRun( CGPIOPinFIQ m_InputPin, CKernelMenu *kernelMenu, const char *FILENAME, bool hasData = false, u8 *prgDataExt = NULL, u32 prgSizeExt = 0, u32 c128PRG = 0, u32 playingPSID = 0 );
 	extern void KernelSIDRun8( CGPIOPinFIQ m_InputPin, CKernelMenu *kernelMenu, const char *FILENAME, bool hasData = false, u8 *prgDataExt = NULL, u32 prgSizeExt = 0, u32 c128PRG = 0 );
 	extern void KernelRKLRun( CGPIOPinFIQ	m_InputPin, CKernelMenu *kernelMenu, const char *FILENAME_KERNAL, const char *FILENAME, const char *FILENAME_RAM, u32 sizeRAM, bool hasData = false, u8 *prgDataExt = NULL, u32 prgSizeExt = 0, u32 c128PRG = 0 );
-	extern void KernelCartRun128( CGPIOPinFIQ	m_InputPin, CKernelMenu *kernelMenu, const char *FILENAME, const char *menuItemStr );
+	//extern void KernelCartRun128( CGPIOPinFIQ	m_InputPin, CKernelMenu *kernelMenu, const char *FILENAME, const char *menuItemStr );
+	extern void KernelCartRun128( CGPIOPinFIQ	m_InputPin, CKernelMenu *kernelMenu, const char *FILENAME, const char *menuItemStr, bool hasData = false, u8 *crtDataExt = NULL, u32 crtSizeExt = 0 );
 
 
 	extern u32 octaSIDMode;
@@ -1930,11 +2028,12 @@ int main( void )
 	subSID			= 0;
 
 
-	while ( true )
+	while ( !kernel.isRebootRequested() )
 	{
 		latchSetClearImm( LATCH_LED1, 0 );
 
 		kernel.Run();
+		if ( kernel.isRebootRequested() ) break;
 
 		latchSetClearImm( LATCH_LED0, LATCH_RESET | LATCH_ENABLE_KERNAL );
 		SET_GPIO( bNMI | bDMA ); 
@@ -2028,8 +2127,13 @@ int main( void )
 			break;
 		case 5:
 			if ( subHasKernal == -1 )
-				KernelEFRun( kernel.m_InputPin, &kernel, FILENAME, menuItemStr ); else
-				KernelEFRun( kernel.m_InputPin, &kernel, FILENAME, menuItemStr, filenameKernal ); 
+				KernelEFRun( kernel.m_InputPin, &kernel, FILENAME, menuItemStr, false, NULL, 0 );else
+		 		KernelEFRun( kernel.m_InputPin, &kernel, FILENAME, menuItemStr, false, NULL, 0, filenameKernal ); 
+			break;
+		case 99:
+			if ( subHasKernal == -1 )
+				KernelEFRun( kernel.m_InputPin, &kernel, FILENAME, menuItemStr, true, prgDataLaunch, prgSizeLaunch );else
+				KernelEFRun( kernel.m_InputPin, &kernel, FILENAME, menuItemStr, true, prgDataLaunch, prgSizeLaunch, filenameKernal );
 			break;
 		case 6:
 			if ( subHasKernal == -1 )
@@ -2081,7 +2185,8 @@ int main( void )
 				KernelSIDRun( kernel.m_InputPin, &kernel, NULL );
 			break;
 		case 9:
-			KernelCartRun128( kernel.m_InputPin, &kernel, FILENAME, menuItemStr );
+		case 95:
+			KernelCartRun128( kernel.m_InputPin, &kernel, FILENAME, menuItemStr, (launchKernel == 95), prgDataLaunch, prgSizeLaunch );
 			break;
 		case 10:
 			KernelRKLRun( kernel.m_InputPin, &kernel, NULL, "SD:C64/georam_launch.prg", FILENAME, 4096, false, NULL, 0, 0 ); 
@@ -2095,7 +2200,13 @@ int main( void )
 		default:
 			break;
 		}
+		#ifdef WITH_NET
+		pSidekickNet->setCurrentKernel( (char*)"m" );
+		#endif
 	}
 
-	return EXIT_HALT;
+	logger->Write( "RaspiMenu", LogNotice, "Rebooting..." );
+	if (!IsChainBootEnabled())
+		reboot ();
+	return EXIT_REBOOT;
 }

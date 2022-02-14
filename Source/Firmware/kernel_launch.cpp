@@ -252,7 +252,6 @@ void CKernelLaunch::Run( void )
 	bool firstEntry = false;
 	swiftLinknetDelayDMA = swiftLinknetDelayDMADefault;
 
-
 	pSidekickNet->setCurrentKernel( (char*)"l" );
 	unsigned netDelay = _playingPSID ? 180000000: 3500000; //TODO: improve this
 	unsigned followUpDelay = (pSidekickNet->getModemEmuType() == 1) ? 300000 : 300; //(_playingPSID ? 3000: 300);
@@ -290,10 +289,6 @@ void CKernelLaunch::Run( void )
 
 	nBytesRead = 0; stage = 1;
 	u32 cycleCountC64_Stage1 = 0;
-	#ifdef WITH_NET
-	pSidekickNet->setCurrentKernel( (char*)"l" );
-	unsigned netDelay = _playingPSID ? 900000000: 300; //TODO: improve this
-	#endif
 
 	// wait forever
 	while ( true )
