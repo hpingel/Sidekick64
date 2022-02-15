@@ -1088,7 +1088,7 @@ boolean CSidekickNet::checkForFinishedDownload()
 		{
 			//display image
 			//m_isDownloadReadyForLaunch = true;
-			m_isCSDBDownloadSavingQueued = true;
+			//m_isCSDBDownloadSavingQueued = true;
 		}
 		else if ( m_bSaveCSDBDownload2SD )
 		{
@@ -1259,6 +1259,8 @@ void CSidekickNet::getCSDBBinaryContent( ){
 			//logger->Write( "getCSDBBinaryContent", LogNotice, "now render tga image on display");		
 			//requireCacheWellnessTreatment();
 //			CLR_GPIO( bDMA ); 
+			m_isCSDBDownloadSavingQueued = false;
+			m_isDownloadReady = false;
 			extern unsigned char tempTGA[ 256 * 256 * 4 ];
 			int w = 0, h = 0;
 			tftParseTGA( tempTGA, prgDataLaunch, &w, &h, false, prgSizeLaunch );
@@ -1270,8 +1272,6 @@ void CSidekickNet::getCSDBBinaryContent( ){
 			//buggy: tftSplashScreenMemory( (u8*) prgDataLaunch, prgSizeLaunch );
 			cleanupDownloadData();
 //			requireCacheWellnessTreatment();
-			//m_isCSDBDownloadSavingQueued = false;
-			m_isDownloadReady = false;
 			requireCacheWellnessTreatment();
 //			SET_GPIO( bDMA );
 		}
@@ -1641,6 +1641,8 @@ void CSidekickNet::prepareDownloadOfTGAImage(){
 		parseSKTPDownloadCommand((char*)m_sktpScreenContent, m_sktpScreenPosition+1);
 		m_isCSDBDownloadQueued = true;
 	}
+	m_sktpResponseType = 2; //suggest that the content is unchanged
+	m_sktpScreenContent[m_sktpScreenPosition] = 88; //destroy tga chunk in case it is parsed a second time
 	m_sktpScreenPosition = m_sktpResponseLength;
 }
 

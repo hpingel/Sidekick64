@@ -44,6 +44,7 @@ static const char DRIVE[] = "SD:";
 
 unsigned delayHandleNetworkValue = 1500000;
 
+/*
 //static 
 const u8 RPIMENUPRG[] =
 {
@@ -53,7 +54,7 @@ const u8 RPIMENUPRG[] =
 
 #include "C64Side/rpimenu_prg.h"
 };
-
+*/
 CSidekickNet *pSidekickNet = 0;//used for c64screen to display net config params
 
 #endif
@@ -414,7 +415,7 @@ boolean CKernelMenu::Initialize( void )
 		m_SidekickNet.checkForSupportedPiModel();
 		m_SidekickNet.mountSDDrive();
 	#endif
-#if 1
+#ifndef WITH_NET
 	u8 tempHDMI[ 640 * 480 * 3 ];
 	readFile( logger, (char*)DRIVE, (char*)FILENAME_SPLASH_HDMI, tempHDMI, &size );
 	u32 xOfs = ( screen->GetWidth() - 640 ) / 2;
@@ -444,6 +445,7 @@ boolean CKernelMenu::Initialize( void )
 
 	latchSetClearImm( LED_INIT2_HIGH, LED_INIT2_LOW );
 
+/*
 	// read .PRG
 	#ifndef WITH_NET
 	readFile( logger, (char*)DRIVE, (char*)FILENAME_PRG, prgData, &prgSize );
@@ -452,7 +454,7 @@ boolean CKernelMenu::Initialize( void )
 	memcpy( &prgData[0], RPIMENUPRG, prgSize );
 	logger->Write( "SidekickMenu", LogNotice, "rpimenu.prg was read from memory." );
 	#endif
-	
+*/	
 	latchSetClearImm( LED_INIT3_HIGH, LED_INIT3_LOW );
 
 	extern void scanDirectories( char *DRIVE );
@@ -703,6 +705,89 @@ void convertScreenToBitmap( unsigned char *framebuffer )
 		}
 	}
 }
+
+void CKernelMenu::enableFIQInterrupt( void )
+{
+	// setup FIQ
+	DisableIRQs();
+	m_InputPin.ConnectInterrupt( this->FIQHandler, this );
+	m_InputPin.EnableInterrupt( GPIOInterruptOnRisingEdge );
+	m_InputPin.EnableInterrupt2( GPIOInterruptOnFallingEdge );
+	//EnableIRQs();
+}
+
+void CKernelMenu::DisableFIQInterrupt( void )
+{
+	m_InputPin.DisableInterrupt();
+	m_InputPin.DisableInterrupt2();
+	m_InputPin.DisconnectInterrupt();
+	EnableIRQs();
+}
+
+
+#ifdef WITH_NET
+boolean CKernelMenu::handleNetwork( boolean doRender)
+{
+	//handleC64 - processes the key the user has pressed to determine how 
+	//the screen has to change (e.g. jump from page a to page b)
+	DisableFIQInterrupt();
+	if (doRender)
+		handleC64( lastChar, &launchKernel, FILENAME, filenameKernal, menuItemStr, &startForC128 );
+
+	updateSystemMonitor();
+	if ( updateMenu == 1 && doRender && modeC128 )
+		m_SidekickNet.setC128Mode();
+	//the order of the following function calls is done like this on purpose
+	m_SidekickNet.handleQueuedNetworkAction();
+	if (m_SidekickNet.IsRunning()){
+		if ( m_SidekickNet.isDownloadReadyForLaunch()){
+			logger->Write( "RaspiMenu", LogNotice, "Download is ready for launch" );
+			u32 launchKernelTmp = m_SidekickNet.getCSDBDownloadLaunchType();
+			if (launchKernelTmp > 0)
+			{
+				launchKernel = launchKernelTmp;
+				strcpy(FILENAME, m_SidekickNet.getCSDBDownloadFilename());
+				strcpy(menuItemStr, m_SidekickNet.getCSDBDownloadFilename());
+				lastChar = 0xfffffff;
+			}
+			m_SidekickNet.cleanupDownloadData(); //this also removes the status message
+		}
+		
+		//if there is an unsaved download we save it to sd card
+		//after the status message was rendered by checkForFinishedDownload
+		m_SidekickNet.checkForSaveableDownload();
+		
+		//when HTTP download is finished but we haven't saved it yet
+		//a status message is being put onto the screen for the user
+		m_SidekickNet.checkForFinishedDownload();
+		
+		if (m_SidekickNet.isMenuScreenUpdateNeeded())
+			doRender = true;
+	}
+	else
+  	doRender = true;
+
+
+	if ( doRender ){
+		renderC64(); //puts the active menu page into the raspi memory
+		warmCache( pFIQ );
+		//doCacheWellnessTreatment();
+	}
+/*
+	m_timeStampOfLastNetworkEvent = 0;
+	
+	if (m_SidekickNet.usesWLAN()) // && !modeC128)
+		delayHandleNetworkValue = m_SidekickNet.isWebserverRunning() ? 850000 : 900000; //, 850000 maybe, also check F7 browser
+	//else if (m_SidekickNet.usesWLAN() && modeC128)
+	//	delayHandleNetworkValue = 1200000;
+	if ( m_SidekickNet.isSKTPScreenActive())
+		delayHandleNetworkValue = 900000;
+*/	
+	enableFIQInterrupt();
+	return doRender;
+}
+#endif
+
 
 // all this is used for rendering the menu
 static int startAfterReset = 1;
@@ -1059,8 +1144,18 @@ void CKernelMenu::Run( void )
 			}
 
 			startForC128 = 0;
+#ifdef WITH_NET
+			//disable queued screenrefreshs
+//			if (m_SidekickNet.isSKTPRefreshWaiting()) 
+//				m_SidekickNet.cancelSKTPRefresh();
+			handleNetwork( true );
+			//lastAutoRefresh = 0;
+			
+			//handleC64 - processes the key the user has pressed to determine how 
+			//the screen has to change (e.g. jump from page a to page b)
+#else
 			handleC64( lastChar, &launchKernel, FILENAME, filenameKernal, menuItemStr, &startForC128 );
-	
+#endif			
 			if ( screenFadeTasks == 3 && delayCommandTicks <= 2 )
 			{
 				memset( c64screen, 32, 1000 );
@@ -1074,8 +1169,12 @@ void CKernelMenu::Run( void )
 					if ( menuScreen == 0x01 )
 						printC64( 0, 22, "    press (shift+)\x9e for vdc output!     ", 1, 0 ); else
 						printC64( 0, 22, "    press (shift+)\x9e for VDC output!     ", 1, 0 ); 
+#ifndef WITH_NET
 				} else
 					renderC64();
+#else
+				}
+#endif
 			}
 
 			/*char tt[64];
@@ -1109,7 +1208,7 @@ void CKernelMenu::Run( void )
 
 			convertScreenToBitmap( framebuffer );
 
-			if ( showAnimation && currentVDCMode < 2 )
+			if ( showAnimation && currentVDCMode < 2 && !m_SidekickNet.isSKTPScreenActive() )
 			{
 				ctn++;
 				if ( currentVDCMode == 1 )
@@ -1538,7 +1637,7 @@ void CKernelMenu::Run( void )
 			nBytesToTransfer = 7 * 8 * 64;
 
 			// transfer animation only if VIC-output is active
-			if ( currentVDCMode < 2 )
+			if ( currentVDCMode < 2 && !m_SidekickNet.isSKTPScreenActive())
 			while ( nBytesToTransfer > 0 ) 
 			{
 				nBytesToTransfer --;
@@ -2104,7 +2203,12 @@ int main( void )
 		case 41:
 			playingPSID = 1; // intentionally no break
 		case 40: // launch something from a disk image or PRG in memory (e.g. a converted .SID-file)
-			//logger->Write( "RaspiMenu", LogNotice, "filename from d64: %s", FILENAME );
+			logger->Write( "RaspiMenu", LogNotice, "filename from d64: %s", FILENAME );
+			#ifdef WITH_NET
+			if ( modeC128 && strstr( FILENAME, "128" ) )
+				startForC128 = 1;
+			#endif
+			
 			if ( subSID ) {
 				applySIDSettings();
 				if ( octaSIDMode )

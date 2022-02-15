@@ -462,10 +462,12 @@ int readFavorites( CLogger *logger, char *DRIVE )
 	char path[ 2048 ];
 	sprintf( path, "SD:/FAVORITES" );
 
+#ifndef WITH_NET
 	// mount file system
 	FATFS m_FileSystem;
 	if ( f_mount( &m_FileSystem, "SD:", 1 ) != FR_OK )
 		logger->Write( "RaspiMenu", LogPanic, "Cannot mount drive: SD:" );
+#endif
 
 	DIR dir;
 	FILINFO FileInfo;
@@ -492,11 +494,11 @@ int readFavorites( CLogger *logger, char *DRIVE )
 
 	f_closedir( &dir );
 
-
+#ifndef WITH_NET
 	// unmount file system
 	if ( f_mount( 0, "SD:", 0 ) != FR_OK )
 		logger->Write( "RaspiMenu", LogPanic, "Cannot unmount drive: SD:" );
-
+#endif
 
 	//
 	// now let's figure out some decent layout and create the menu
