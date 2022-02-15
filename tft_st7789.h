@@ -8,9 +8,9 @@
  
  tft_st7789.h
 
- RasPiC64 - A framework for interfacing the C64 and a Raspberry Pi 3B/3B+
-          - code for driving the ST7789 TFT and lots of helper function (framebuffer, lazy updates etc)
- Copyright (c) 2020 Carsten Dachsbacher <frenetic@dachsbacher.de>
+ Sidekick64 - A framework for interfacing 8-Bit Commodore computers (C64/C128,C16/Plus4,VC20) and a Raspberry Pi Zero 2 or 3A+/3B+
+            - code for driving the ST7789 TFT and lots of helper function (framebuffer, lazy updates etc)
+ Copyright (c) 2019-2022 Carsten Dachsbacher <frenetic@dachsbacher.de>
 
  Logo created with http://patorjk.com/software/taag/
  
@@ -56,8 +56,8 @@ extern unsigned char tftFrameBuffer12Bit[ 240 * 240 * 3 / 2 ];
 
 extern void tftSendFramebuffer16BitImm( const u8 *raw );
 extern void tftSendFramebuffer12BitImm( const u8 *raw );
-extern void tftInit();
-extern void tftInitImm();
+extern void tftInit( int rot = -1 );
+extern void tftInitImm( int rot = -1 );
 
 extern u32 rgb24to16( u32 r, u32 g, u32 b );
 extern int tftLoadTGA( const char *drive, const char *name, unsigned char *dst, int *imgWidth, int *imgHeight, int wantAlpha );

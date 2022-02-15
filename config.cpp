@@ -40,7 +40,7 @@
 u32 skinFontLoaded;
 char skinFontFilename[ 1024 ];
 union T_SKIN_VALUES	skinValues;
-int screenType;
+int screenType, screenRotation;
 
 #ifdef WITH_NET
 	char netSidekickHostname[ 256 ];
@@ -120,6 +120,7 @@ int readConfig( CLogger *logger, char *DRIVE, char *FILENAME )
 	cfgPos = cfg;
 
 	screenType = 0;
+	screenRotation = 0;
 
 	while ( *cfgPos != 0 )
 	{
@@ -209,7 +210,12 @@ int readConfig( CLogger *logger, char *DRIVE, char *FILENAME )
 						screenType = 0;
 					if ( strstr( ptr, "ST7789" ) )
 						screenType = 1;
-				}
+					if ( strstr( ptr, "ST7789_ROTATE" ) )
+					{
+						screenType = 1;
+						screenRotation = 1;
+					}
+				}				
 
 #ifdef WITH_NET
 				if ( strcmp( ptr, "NET_SIDEKICK_HOSTNAME" ) == 0 )

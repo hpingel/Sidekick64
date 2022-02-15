@@ -620,7 +620,7 @@ void CKernelMenu::Run( void )
 			//tftLoadBackgroundTGA( DRIVE, FILENAME_SPLASH_RGB128, 8 ); else
 			//tftLoadBackgroundTGA( DRIVE, FILENAME_SPLASH_RGB, 8 ); 
 		tftCopyBackground2Framebuffer();
-		tftInitImm();
+		tftInitImm( screenRotation );
 		tftSendFramebuffer16BitImm( tftFrameBuffer );
 	}
 

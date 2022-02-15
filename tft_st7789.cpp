@@ -8,9 +8,9 @@
 
  tft_st7789.cpp
 
- RasPiC64 - A framework for interfacing the C64 and a Raspberry Pi 3B/3B+
-          - code for driving the ST7789 TFT and lots of helper function (framebuffer, lazy updates etc)
- Copyright (c) 2020 Carsten Dachsbacher <frenetic@dachsbacher.de>
+ Sidekick64 - A framework for interfacing 8-Bit Commodore computers (C64/C128,C16/Plus4,VC20) and a Raspberry Pi Zero 2 or 3A+/3B+
+            - code for driving the ST7789 TFT and lots of helper function (framebuffer, lazy updates etc)
+ Copyright (c) 2019-2022 Carsten Dachsbacher <frenetic@dachsbacher.de>
 
  Logo created with http://patorjk.com/software/taag/
  
@@ -33,7 +33,8 @@
 #define OLED_DC		LATCH_LED2
 #define OLED_RES	LATCH_LED3
 
-const static u32 ysize = 240, xsize = 240, invert = 1, rotate = 0;
+static u32 ysize = 240, xsize = 240, invert = 1, 
+				 rotate = 3; /* 3 for 90° rotation, 0 otherwise */
 
 const u32 CASET = 0x2A; // column address
 const u32 RASET = 0x2B; // row address
@@ -416,15 +417,19 @@ void tftSendFramebuffer12BitImm( const u8 *raw )
 	TFTimm_DC_LOW
 }
 
-void tftInit()
+void tftInit( int rot )
 {
+	if ( rot >= 0 )
+		rotate = rot > 0 ? 3 : 0;
 	TFT_SDA_LOW
 	lastBit = 0;
 	tftInitDisplay();
 }
 
-void tftInitImm()
+void tftInitImm( int rot )
 {
+	if ( rot >= 0 )
+		rotate = rot > 0 ? 3 : 0;
 	TFTimm_SDA_LOW
 	lastBit = 0;
 	tftInitDisplayImm();
