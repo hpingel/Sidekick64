@@ -465,6 +465,53 @@ void applySIDSettings()
 						 settings[5], settings[6], settings[9], settings[10], settings[13], settings[14], settings[15], settings[11], settings[16], useHDMI );
 }
 
+int fileExists( CLogger *logger, const char *DRIVE, const char *FILENAME )
+{
+
+#ifndef WITH_NET
+
+	FATFS m_FileSystem;
+	// mount file system
+	if ( f_mount( &m_FileSystem, DRIVE, 1 ) != FR_OK )
+	{
+		//logger->Write( "fe", LogNotice, "Cannot mount drive: %s", DRIVE );
+		return -1;
+	}
+#endif
+
+	// get filesize
+	FILINFO info;
+	u32 result = f_stat( FILENAME, &info );
+
+	// open file
+	FIL file;
+	result = f_open( &file, FILENAME, FA_READ | FA_OPEN_EXISTING );
+	if ( result != FR_OK )
+	{
+#ifndef WITH_NET		
+		f_mount( 0, DRIVE, 0 );
+#endif
+		//logger->Write( "fe", LogNotice, "Cannot open file: %s", FILENAME );
+		return -2;
+	}
+
+	if ( f_close( &file ) != FR_OK )
+	{
+		//logger->Write( "fe", LogNotice, "Cannot close file" );
+		return -5;
+	}
+
+#ifndef WITH_NET
+	// unmount file system
+	if ( f_mount( 0, DRIVE, 0 ) != FR_OK )
+	{
+		//logger->Write( "fe", LogNotice, "Cannot unmount drive: %s", DRIVE );
+		return -6;
+	}
+#endif
+	return 1;
+}
+
 
 // ugly, hard-coded handling of UI
 void handleC64( int k, u32 *launchKernel, char *FILENAME, char *filenameKernal )
