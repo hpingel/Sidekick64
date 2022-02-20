@@ -111,6 +111,7 @@ public:
 	void setSktpRefreshTimeout( unsigned timeout);
 	void queuedSktpRefreshAllowed();
 	void handleQueuedNetworkAction();
+	void drawTGAImageOnTFT();
 	void getCSDBBinaryContent();
 	u8 getCSDBDownloadLaunchType();
 	boolean isAnyNetworkActionQueued();
