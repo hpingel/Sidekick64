@@ -1206,16 +1206,23 @@ void CKernelMenu::Run( void )
 				}
 			}
 
-			convertScreenToBitmap( framebuffer );
-
 #ifdef WITH_NET
-			if ( showAnimation && currentVDCMode < 2 && !m_SidekickNet.isSKTPScreenActive() )
+			if (!m_SidekickNet.isSKTPScreenActive())
+				convertScreenToBitmap( framebuffer );
+			else
+				memset( bitmap, 0, 64 * 64 );
 #else
-			if ( showAnimation && currentVDCMode < 2 )
+			convertScreenToBitmap( framebuffer );
 #endif
+
+			if ( showAnimation && currentVDCMode < 2 )
 			{
 				ctn++;
+#ifdef WITH_NET
+				if ( currentVDCMode == 1 || m_SidekickNet.isSKTPScreenActive())
+#else			
 				if ( currentVDCMode == 1 )
+#endif				
 				{
 					memset( bitmap, 0, 64 * 64 );
 				} else
@@ -1641,11 +1648,7 @@ void CKernelMenu::Run( void )
 			nBytesToTransfer = 7 * 8 * 64;
 
 			// transfer animation only if VIC-output is active
-#ifdef WITH_NET			
-			if ( currentVDCMode < 2 && !m_SidekickNet.isSKTPScreenActive())
-#else			
 			if ( currentVDCMode < 2)
-#endif			
 			while ( nBytesToTransfer > 0 ) 
 			{
 				nBytesToTransfer --;
