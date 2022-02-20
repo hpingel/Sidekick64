@@ -1089,6 +1089,9 @@ boolean CSidekickNet::checkForFinishedDownload()
 			//display image
 			//m_isDownloadReadyForLaunch = true;
 			//m_isCSDBDownloadSavingQueued = true;
+			if ( screenType == 1 && strcmp( m_CSDBDownloadExtension, "tga" ) == 0)
+				drawTGAImageOnTFT();
+			
 		}
 		else if ( m_bSaveCSDBDownload2SD )
 		{
@@ -1239,6 +1242,23 @@ boolean CSidekickNet::UpdateTime(void)
 	return false;
 }
 
+void CSidekickNet::drawTGAImageOnTFT(){
+	//logger->Write( "drawTGAImageOnTFT", LogNotice, "now render tga image on display");		
+	//requireCacheWellnessTreatment();
+	m_isCSDBDownloadSavingQueued = false;
+	m_isDownloadReady = false;
+	extern unsigned char tempTGA[ 256 * 256 * 4 ];
+	int w = 0, h = 0;
+	tftParseTGA( tempTGA, prgDataLaunch, &w, &h, false, prgSizeLaunch );
+	tftLoadBackgroundTGAMemory( tempTGA, 240, 240, false);
+	tftCopyBackground2Framebuffer();
+	tftInitImm();
+	tftSendFramebuffer16BitImm( tftFrameBuffer );
+	//buggy: tftSplashScreenMemory( (u8*) prgDataLaunch, prgSizeLaunch );
+	cleanupDownloadData();
+	requireCacheWellnessTreatment();
+}
+
 void CSidekickNet::getCSDBBinaryContent( ){
 	assert (m_isActive);
 	unsigned iFileLength = 0;
@@ -1252,30 +1272,6 @@ void CSidekickNet::getCSDBBinaryContent( ){
 		if (m_loglevel > 3)
 			logger->Write( "getCSDBBinaryContent", LogNotice, "memcpy finished.");
 		requireCacheWellnessTreatment();
-		
-		//tgastuff
-		if ( screenType == 1 && strcmp( m_CSDBDownloadExtension, "tga" ) == 0)
-		{
-			//logger->Write( "getCSDBBinaryContent", LogNotice, "now render tga image on display");		
-			//requireCacheWellnessTreatment();
-//			CLR_GPIO( bDMA ); 
-			m_isCSDBDownloadSavingQueued = false;
-			m_isDownloadReady = false;
-			extern unsigned char tempTGA[ 256 * 256 * 4 ];
-			int w = 0, h = 0;
-			tftParseTGA( tempTGA, prgDataLaunch, &w, &h, false, prgSizeLaunch );
-			tftLoadBackgroundTGAMemory( tempTGA, 240, 240, false);
-//			requireCacheWellnessTreatment();
-			tftCopyBackground2Framebuffer();
-			tftInitImm();
-			tftSendFramebuffer16BitImm( tftFrameBuffer );
-			//buggy: tftSplashScreenMemory( (u8*) prgDataLaunch, prgSizeLaunch );
-			cleanupDownloadData();
-//			requireCacheWellnessTreatment();
-			requireCacheWellnessTreatment();
-//			SET_GPIO( bDMA );
-		}
-		
 	}
 	else if (m_CSDBDownloadHost.port == 443)
 		setErrorMsgC64((char*)"          HTTPS request failed          ", false);
@@ -1640,8 +1636,9 @@ void CSidekickNet::prepareDownloadOfTGAImage(){
 	if ( screenType == 1 ){
 		parseSKTPDownloadCommand((char*)m_sktpScreenContent, m_sktpScreenPosition+1);
 		m_isCSDBDownloadQueued = true;
+		m_queueDelay = 4;
 	}
-	m_sktpResponseType = 2; //suggest that the content is unchanged
+	//m_sktpResponseType = 2; //suggest that the content is unchanged
 	m_sktpScreenContent[m_sktpScreenPosition] = 88; //destroy tga chunk in case it is parsed a second time
 	m_sktpScreenPosition = m_sktpResponseLength;
 }
