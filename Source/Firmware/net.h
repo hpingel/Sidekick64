@@ -100,6 +100,7 @@ public:
 	void updateFrame();
 	#endif
 	void checkForSupportedPiModel();
+	boolean isFirstSKTPScreen();
 	void enteringSktpScreen();
 	void leavingSktpScreen();
 	void updateSktpScreenContent();
@@ -143,6 +144,7 @@ public:
 	void resetSktpSession();
 	boolean launchSktpSession();
 	void redrawSktpScreen();
+	boolean isSktpRedrawNeeded();
 	boolean isSktpSessionActive();
 	CString getSktpPath( unsigned key );
 	void updateSystemMonitor( size_t, unsigned);
@@ -284,6 +286,7 @@ private:
 	unsigned m_sktpSession;
  	unsigned m_sktpScreenErrorCode;
 	boolean  m_isSktpScreenActive;
+	boolean  m_wasSktpScreenFreshlyEntered;
 	boolean  m_isMenuScreenUpdateNeeded;
 	boolean  m_isC128;
 	boolean  m_isBBSSocketConnected;
