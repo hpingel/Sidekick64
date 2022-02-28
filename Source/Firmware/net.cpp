@@ -158,6 +158,7 @@ CSidekickNet::CSidekickNet(
 		m_sktpScreenContent( (unsigned char * ) ""),
 		m_sktpSessionID( (char * ) ""),
 		m_isSktpScreenActive( false ),
+		m_wasSktpScreenFreshlyEntered( false ),
 		m_isMenuScreenUpdateNeeded( false ),
 		m_isC128( false ),
 		m_isBBSSocketConnected(false),
@@ -942,14 +943,17 @@ void CSidekickNet::handleQueuedNetworkAction()
 		}
 */		
 		//handle keypress anyway even if we have downloaded or saved something
-		else if (m_isSktpKeypressQueued)
+		else if (m_isSktpKeypressQueued || m_sktpRefreshWaiting)
 		{
-			updateSktpScreenContent();
-			//m_isMenuScreenUpdateNeeded = true;
+			if (m_sktpRefreshWaiting && m_sktpKey == 0 )
+			{
+				m_isSktpKeypressQueued = false;
+				queuedSktpRefreshAllowed();
+			}
+			else
+				updateSktpScreenContent();
 			m_isSktpKeypressQueued = false;
 		}
-		else if (m_sktpRefreshWaiting)
-			queuedSktpRefreshAllowed();
 
 	}
 }
@@ -1316,6 +1320,11 @@ void CSidekickNet::redrawSktpScreen(){
 		m_sktpSession	= 2;
 }
 
+boolean CSidekickNet::isSktpRedrawNeeded(){
+	return m_sktpSession == 2;
+}
+
+
 boolean CSidekickNet::isSktpSessionActive(){
 	return m_sktpSession > 0;
 }
@@ -1388,10 +1397,18 @@ CString CSidekickNet::getSktpPath( unsigned key )
 
 void CSidekickNet::enteringSktpScreen(){
 	m_isSktpScreenActive = true;
+	m_wasSktpScreenFreshlyEntered = true;
 }
 
 void CSidekickNet::leavingSktpScreen(){
 	m_isSktpScreenActive = false;
+	m_wasSktpScreenFreshlyEntered = false;
+}
+
+boolean CSidekickNet::isFirstSKTPScreen(){
+	boolean tmp = m_wasSktpScreenFreshlyEntered;
+	m_wasSktpScreenFreshlyEntered = false;
+	return tmp;
 }
 
 boolean CSidekickNet::isSKTPScreenActive(){

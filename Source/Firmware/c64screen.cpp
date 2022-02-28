@@ -1775,11 +1775,9 @@ void handleC64( int k, u32 *launchKernel, char *FILENAME, char *filenameKernal, 
 		if ( k == VK_F7 )
 		{
 			pSidekickNet->leavingSktpScreen();
+			previousMenuScreen = MENU_SKTP;
 			menuScreen = MENU_MAIN;
 			handleC64( 0xffffffff, launchKernel, FILENAME, filenameKernal, menuItemStr );
-			//trying to put the colors back to black
-			injectPOKE( 53280, 0); //skinValues.SKIN_MENU_BORDER_COLOR );
-			injectPOKE( 53281, 0); //skinValues.SKIN_MENU_BACKGROUND_COLOR );
 			return;
 		}
 		else if ( k != 0 )
@@ -1787,11 +1785,12 @@ void handleC64( int k, u32 *launchKernel, char *FILENAME, char *filenameKernal, 
 			//the user has actually manually pressed a key on the Commodore keyboard
 			//or caused a joystick event
 			pSidekickNet->queueSktpKeypress(k);
-		}/*
-		else if (k == 0 && pSidekickNet->isSKTPRefreshWaiting())
+		}
+		//FIXME: this doesn't do the trick yet
+		else if (k == 0 && (pSidekickNet->isSKTPRefreshWaiting() || pSidekickNet->isSktpRedrawNeeded() ))
 		{
-			isAnyNetworkActionQueued()
-		}*/
+			pSidekickNet->queueSktpKeypress(0);
+		}
 	} else
 	if ( menuScreen == MENU_SYSTEMINFO )
 	{
@@ -2148,8 +2147,14 @@ void printMainMenu()
 	printSidekickLogo();
 
 	startInjectCode();
-	//injectPOKE( 53280, skinValues.SKIN_MENU_BORDER_COLOR );
-	//injectPOKE( 53281, skinValues.SKIN_MENU_BACKGROUND_COLOR );
+#ifdef WITH_NET	
+	if ( previousMenuScreen == MENU_SKTP)
+	{
+		//trying to put the colors back to black
+		injectPOKE( 53281, 0);//skinValues.SKIN_MENU_BACKGROUND_COLOR );
+		injectPOKE( 53280, 0);//skinValues.SKIN_MENU_BORDER_COLOR );
+	}
+#endif	
 	if ( skinFontLoaded )
 		injectPOKE( 53272, 30 ); else
 		injectPOKE( 53272, 23 ); 
@@ -2431,15 +2436,25 @@ void printSKTPScreen()
 					if ( type == 0 || type == 1 || type == 2 || type == 5 || type == 6)
 					{
 						content = (char *) pSidekickNet->GetSktpScreenContentChunk( pos, color, inverse, repeat);
-						y = pos / 40;
-						x = pos % 40;
-						if (type < 5) repeat = 1;
-						if (type < 6)
+						if (type < 5) 
+							repeat = 1;
+							
+						if (type == 2)
 						{
-							for (u8 z = 0; z < repeat; z++)
-								printC64( x, y+yOffset+z, content, color, inverse ? 0x80 : 0, (type == 2 || type == 5) ? 4:1);
+							for (u16 c = 0; c < strlen(content); c++)
+							{
+								c64screen[ pos + c ] = content[c];
+								c64color[ pos + c ] = color;
+							}
 						}
-						else
+						else if (type < 6)
+						{
+							y = pos / 40;
+							x = pos % 40;
+							for (u8 z = 0; z < repeat; z++)
+								printC64( x, y+yOffset+z, content, color, inverse ? 0x80 : 0, (type == 5) ? 4:1, strlen(content));
+						}
+						else if (type == 6)
 						{
 							//paintbrush chunk (6)
 							u8 gap = color;
@@ -2448,7 +2463,7 @@ void printSKTPScreen()
 								{
 									u8 co = content[c];
 									if ( co == 16 ) co = 0;
-									c64color[ x + ((y+yOffset) * 40) + c + (z*(gap + strlen(content))) ] = co;
+									c64color[ pos + c + (z*(gap + strlen(content))) ] = co;
 								}
 						}
 					}
@@ -2479,6 +2494,7 @@ void printSKTPScreen()
 	injectPOKE( 53280, SKTPborderColor); //skinValues.SKIN_MENU_BORDER_COLOR );
 	injectPOKE( 53281, SKTPbgColor); //skinValues.SKIN_MENU_BACKGROUND_COLOR );
 	injectPOKE( 53272, 21 + (SKTPisLowerCharset ? 2 : 0) ); // use normal c64 font
+	//FIXME: Jumping back to normal charset doesn't work in VDC mode!
 	c64screenUppercase = SKTPisLowerCharset ? 0:1;
 }
 	
