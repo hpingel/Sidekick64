@@ -41,7 +41,7 @@
 #include <circle/machineinfo.h>
 #include <circle/sched/scheduler.h>
 #include <circle/usb/usbhcidevice.h>
-#ifdef WITH_USB_SERIAL
+#ifdef WITH_CIRCLE_AS_OF_STEP_42
 #include <circle/usb/usbserialft231x.h>
 #include <circle/usb/usbmidi.h>
 #endif
@@ -169,7 +169,7 @@ public:
 	void setCurrentKernel( char *);
 	void setC128Mode();
 	void enterWebUploadMode();
-	#ifdef WITH_USB_SERIAL
+	#ifdef WITH_CIRCLE_AS_OF_STEP_42
 	boolean isUsbUserportModemConnected();
 	#endif
 	void addToModemOutputBuffer( unsigned char );
@@ -205,7 +205,7 @@ private:
 	void EnableWebserver();
 	CIPAddress getIPForHost( const char *, bool & );
 	boolean HTTPGet (remoteHTTPTarget & target, const char * path, char *pBuffer, unsigned & nLengthRead);
-	#ifdef WITH_USB_SERIAL
+	#ifdef WITH_CIRCLE_AS_OF_STEP_42
 	void usbPnPUpdate();
 	#endif
 	void cleanUpModemEmuSocket();
@@ -240,7 +240,7 @@ private:
 #endif	
 	//CActLED							m_ActLED;
 	CWebServer        * m_WebServer;
-#ifdef WITH_USB_SERIAL
+#ifdef WITH_CIRCLE_AS_OF_STEP_42
 	CUSBSerialFT231XDevice * volatile m_pUSBSerial;
 	CUSBMIDIDevice * volatile m_pUSBMidi;
 	CDeviceNameService	* m_DeviceNameService;
