@@ -457,12 +457,20 @@ boolean CSidekickNet::unmountSDDrive()
 
 boolean CSidekickNet::RaspiHasOnlyWLAN()
 {
-	return (m_PiModel == MachineModel3APlus || m_PiModel == MachineModelZero2W);
+	return (m_PiModel == MachineModel3APlus 
+#ifdef WITH_USB_SERIAL
+		|| m_PiModel == MachineModelZero2W
+#endif
+	);
 }
 
 void CSidekickNet::checkForSupportedPiModel()
 {
-	if ( m_PiModel != MachineModel3APlus && m_PiModel != MachineModel3BPlus && m_PiModel != MachineModelZero2W)
+	if ( m_PiModel != MachineModel3APlus && m_PiModel != MachineModel3BPlus 
+#ifdef WITH_USB_SERIAL
+		&& m_PiModel != MachineModelZero2W
+#endif
+	)
 	{
 		if (m_loglevel > 1)
 			logger->Write( "CSidekickNet::Initialize", LogWarning, 

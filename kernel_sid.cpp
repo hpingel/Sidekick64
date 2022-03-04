@@ -114,7 +114,9 @@ const uint8_t MIDI_RECEIVE_REG  = 0x09;*/
 // Daten + Sequential simultaneously
 // => address < 8 and (address&3)==sequential
 
+#ifdef WITH_USB_SERIAL
 #define SUPPORT_MIDI
+#endif
 
 #ifdef SUPPORT_MIDI
 
