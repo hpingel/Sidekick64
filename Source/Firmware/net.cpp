@@ -85,7 +85,7 @@ static const char CSDB_HOST[] = "csdb.dk";
 #ifdef WITH_WLAN
 #define DRIVEWLAN "SD:"
 #define FIRMWARE_PATH	DRIVEWLAN "/wlan/"		// wlan firmware files must be provided here
-#define CONFIG_FILE	FIRMWARE_PATH "/wpa_supplicant.conf"
+#define CONFIG_FILE	FIRMWARE_PATH "wpa_supplicant.conf"
 #endif
 
 //static 
@@ -105,6 +105,8 @@ extern unsigned char prgDataLaunch[ 1027*1024 ] AAA;
   extern unsigned char logo_bg_raw[32000];
 #endif
 
+extern int fileExists( CLogger *logger, const char *DRIVE, const char *FILENAME );
+
 CSidekickNet::CSidekickNet( 
 		CInterruptSystem * pInterruptSystem, 
 		CTimer * pTimer, 
@@ -117,7 +119,7 @@ CSidekickNet::CSidekickNet(
 		m_pInterrupt(pInterruptSystem),
 		m_pTimer(pTimer),
 		m_EMMC( *pEmmcDevice),
-#ifdef WITH_CIRCLE_AS_OF_STEP_42
+#ifdef WITH_CIRCLE_AS_OF_STEP_44
 		m_DeviceNameService( pDeviceNameService ),
 #endif
 		m_kMenu(pKernelMenu),
@@ -135,7 +137,7 @@ CSidekickNet::CSidekickNet(
 #endif
 		m_pBBSSocket(0),
 		m_WebServer(0),
-#ifdef WITH_CIRCLE_AS_OF_STEP_42
+#ifdef WITH_CIRCLE_AS_OF_STEP_44
 		m_pUSBSerial(0),
 		m_pUSBMidi(0),
 #endif
@@ -183,7 +185,7 @@ CSidekickNet::CSidekickNet(
 		m_sysMonCPUTemp(0),
 		m_loglevel(2),
 		m_CSDBDownloadSavePath((char *) ""), 
-		m_currentKernelRunning((char *) "-"),
+		m_currentKernelRunning((char *) "m"),
 		m_oldSecondsLeft(0),
 		m_modemCommand( (char * ) ""),
 		m_modemCommandLength(0),
@@ -267,7 +269,7 @@ boolean CSidekickNet::Initialize()
 	
 	while (!m_Net->IsRunning() && sleepCount < sleepLimit)
 	{
-		#ifdef WITH_CIRCLE_AS_OF_STEP_42
+		#ifdef WITH_CIRCLE_AS_OF_STEP_44
 		usbPnPUpdate();
 		#endif
 		m_pScheduler->Yield ();
@@ -353,7 +355,7 @@ boolean CSidekickNet::Initialize()
 	return true;
 }
 
-#ifdef WITH_CIRCLE_AS_OF_STEP_42
+#ifdef WITH_CIRCLE_AS_OF_STEP_44
 
 void CSidekickNet::usbPnPUpdate()
 {
@@ -459,7 +461,7 @@ boolean CSidekickNet::unmountSDDrive()
 boolean CSidekickNet::RaspiHasOnlyWLAN()
 {
 	return (m_PiModel == MachineModel3APlus
-#ifdef WITH_CIRCLE_AS_OF_STEP_42
+#ifdef WITH_CIRCLE_AS_OF_STEP_44
 		 || m_PiModel == MachineModelZero2W
 #endif
 	);
@@ -468,7 +470,7 @@ boolean CSidekickNet::RaspiHasOnlyWLAN()
 void CSidekickNet::checkForSupportedPiModel()
 {
 	if ( m_PiModel != MachineModel3APlus && m_PiModel != MachineModel3BPlus
-#ifdef WITH_CIRCLE_AS_OF_STEP_42
+#ifdef WITH_CIRCLE_AS_OF_STEP_44
 		 && m_PiModel != MachineModelZero2W
 #endif
 	 )
@@ -852,7 +854,7 @@ u8 CSidekickNet::getCSDBDownloadLaunchType(){
 	return type;
 }
 
-#ifdef WITH_CIRCLE_AS_OF_STEP_42
+#ifdef WITH_CIRCLE_AS_OF_STEP_44
 
 boolean CSidekickNet::isUsbUserportModemConnected(){
 		return m_pUSBSerial != 0;
@@ -1811,17 +1813,21 @@ void CSidekickNet::enterWebUploadMode(){
 	m_modemEmuType = 0; //stop any active modem emu
 
 	//if not in menu kernel (l), leave it
+	
 	if ( strcmp( m_currentKernelRunning, "m" ) == 0){
 		prgSizeLaunch = sizeof WEBUPLOADPRG;
 		memcpy( prgDataLaunch, WEBUPLOADPRG, prgSizeLaunch);
+		memcpy(m_CSDBDownloadExtension,"prg",3);
+		m_CSDBDownloadExtension[3]='\0';
 		m_isDownloadReadyForLaunch = true;
 	}
+
 }
 
 
 void CSidekickNet::setModemEmuBaudrate( unsigned rate )
 {
-	#ifdef WITH_CIRCLE_AS_OF_STEP_42
+	#ifdef WITH_CIRCLE_AS_OF_STEP_44
 	if ( m_modemEmuType == SK_MODEM_USERPORT_USB )
 	{
 		m_pUSBSerial->SetBaudRate(rate);
@@ -1860,7 +1866,7 @@ void CSidekickNet::cleanUpModemEmuSocket()
 
 int CSidekickNet::readCharFromFrontend( unsigned char * buffer)
 {
-		#ifdef WITH_CIRCLE_AS_OF_STEP_42
+		#ifdef WITH_CIRCLE_AS_OF_STEP_44
 		if ( m_modemEmuType == SK_MODEM_USERPORT_USB )
 		{
 			return m_pUSBSerial->Read(buffer, 1);
@@ -1892,7 +1898,7 @@ int CSidekickNet::readCharFromFrontend( unsigned char * buffer)
 
 int CSidekickNet::writeCharsToFrontend( unsigned char * buffer, unsigned length)
 {
-	#ifdef WITH_CIRCLE_AS_OF_STEP_42
+	#ifdef WITH_CIRCLE_AS_OF_STEP_44
 	if ( m_modemEmuType == SK_MODEM_USERPORT_USB )
 	{
 		return m_pUSBSerial->Write(buffer, length);

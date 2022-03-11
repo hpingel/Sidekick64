@@ -78,6 +78,21 @@ void initCycleCounter()
 
 void setDefaultTimings( int mode )
 {
+	
+	
+#if RASPPI >= 4
+
+	WAIT_FOR_SIGNALS = 50;
+	WAIT_CYCLE_MULTIPLEXER = 240;
+	WAIT_CYCLE_READ = 500;
+	WAIT_CYCLE_WRITEDATA = 500;
+	WAIT_CYCLE_READ_BADLINE = 400;
+	WAIT_CYCLE_READ_VIC2 = 445;
+	WAIT_CYCLE_WRITEDATA_VIC2 = 505;
+	WAIT_CYCLE_MULTIPLEXER_VIC2 = 265;
+	WAIT_TRIGGER_DMA = 600;
+	WAIT_RELEASE_DMA = 600;
+#else	
 	switch ( mode )
 	{
 	// Raspberry Pi 3A+/3B+, standard clocking
@@ -136,8 +151,9 @@ void setDefaultTimings( int mode )
 		WAIT_TRIGGER_DMA			= 520;
 		WAIT_RELEASE_DMA			= 520;
 		break;
-	};
 
+	};
+#endif
 /*	const int dt = +5;
 	WAIT_FOR_SIGNALS += dt;
 	WAIT_CYCLE_MULTIPLEXER += dt;
