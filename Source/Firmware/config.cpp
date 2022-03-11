@@ -314,7 +314,7 @@ int readConfig( CLogger *logger, char *DRIVE, char *FILENAME )
 					ptr = strtok_r( NULL, "\"", &rest );
 					strncpy( netSidekickHostname, ptr, 255 );
 				#ifdef DEBUG_OUT
-					logger->Write( "RaspiMenu", LogNotice, " sidekick hostname >%s<", netUpdateHostName );
+					logger->Write( "RaspiMenu", LogNotice, " sidekick hostname >%s<", netSidekickHostname );
 				#endif
 				}
 
