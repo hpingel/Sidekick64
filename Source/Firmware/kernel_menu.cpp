@@ -44,17 +44,17 @@ static const char DRIVE[] = "SD:";
 
 unsigned delayHandleNetworkValue = 1500000;
 
-/*
-//static 
-const u8 RPIMENUPRG[] =
-{
-//Caution: Whenever upstream rpimenu.prg changes we have to manually call converttool!
-//../webcontent/converttool -b rpimenu.prg > rpimenu_prg.h
-//This has to be put into the workflow
 
-#include "C64Side/rpimenu_prg.h"
+//static 
+const u8 FILENAME_MENU_IN_MEMORY[] =
+{
+//Caution: Whenever upstream menu_bin changes we have to manually call converttool!
+//../../webcontent/converttool -b menu.bin > menu_bin.h
+//This has to be put into the workflow
+#include "C64Side/SK64MenuNet/menu_bin.h"
+
 };
-*/
+
 CSidekickNet *pSidekickNet = 0;//used for c64screen to display net config params
 
 #endif
@@ -389,11 +389,15 @@ boolean CKernelMenu::Initialize( void )
 
 	CMachineInfo * m_pMachineInfo;
 
+
+#ifdef WITH_CIRCLE_AS_OF_STEP44
+	//OK, this check is only possible as of Circle 44...
 	if ( m_pMachineInfo->Get()->GetMachineModel () == MachineModelZero2W )
 	{
 		rpiHasAudioJack = false;
 		rpiIsZero2 = true;
 	}
+#endif
 
 	// initialize ARM cycle counters (for accurate timing)
 	initCycleCounter();
@@ -410,12 +414,11 @@ boolean CKernelMenu::Initialize( void )
 	u32 size = 0;
 
 #ifdef WITH_NET
-		logger->Write ("SidekickKernel", LogNotice, "Compiled on: " COMPILE_TIME ", Git branch: " GIT_BRANCH ", Git hash: " GIT_HASH);
 		//TODO: this should be done in constructor of SideKickNet
 		m_SidekickNet.checkForSupportedPiModel();
 		m_SidekickNet.mountSDDrive();
 #endif
-#ifndef WITH_NET
+#ifndef WITH_NET_DEBUG
 	u8 tempHDMI[ 640 * 480 * 3 ];
 	readFile( logger, (char*)DRIVE, (char*)FILENAME_SPLASH_HDMI, tempHDMI, &size );
 	u32 xOfs = ( screen->GetWidth() - 640 ) / 2;
@@ -433,28 +436,25 @@ boolean CKernelMenu::Initialize( void )
 			p = &tempHDMI[ ( a + b * 640 ) * 3 ];
 			screen->SetPixel( a, b, _CONV_RGB( p[ 0 ], p[ 1 ], p[ 2 ] )  ); 
 		}
+#else
+	logger->Write ("SidekickKernel", LogNotice, "Compiled on: " COMPILE_TIME ", Git branch: " GIT_BRANCH ", Git hash: " GIT_HASH ", Defines: " METADEFINES);
 #endif
 
 	// read launch code
 	cartMenu = (unsigned char *)( ((u64)&cart_pool2+64) & ~63 );
+#ifndef WITH_NET
 	readFile( logger, (char*)DRIVE, (char*)FILENAME_MENU, cartMenu, &size );
+#else
+	size = sizeof FILENAME_MENU_IN_MEMORY;
+	memcpy( &cartMenu[0], FILENAME_MENU_IN_MEMORY, size );
+	logger->Write( "SidekickMenu", LogNotice, "menu.bin was read from memory (network kernel)." );
+#endif
 	
 	// attention
 	cartMenu[ 0x1fe0 ] = 0xff; // this flag indicates that the Sidekick has just booted (to prevent repetious checks for VIC type etc)
 	cartMenu[ 0x1fe1 ] = 0x00; // this flag indicates that VDC-support is disabled (can be turned on by C128 detection!)
 
 	latchSetClearImm( LED_INIT2_HIGH, LED_INIT2_LOW );
-
-/*
-	// read .PRG
-	#ifndef WITH_NET
-	readFile( logger, (char*)DRIVE, (char*)FILENAME_PRG, prgData, &prgSize );
-	#else
-	prgSize = sizeof RPIMENUPRG;
-	memcpy( &prgData[0], RPIMENUPRG, prgSize );
-	logger->Write( "SidekickMenu", LogNotice, "rpimenu.prg was read from memory." );
-	#endif
-*/	
 	latchSetClearImm( LED_INIT3_HIGH, LED_INIT3_LOW );
 
 	extern void scanDirectories( char *DRIVE );
@@ -465,6 +465,10 @@ boolean CKernelMenu::Initialize( void )
 	//
 	// guess automatic timings from current RPi clock rate
 	//
+#if RASPPI >= 4
+	logger->Write ("SidekickKernel", LogNotice, "setDefaultTimings for RASPPI4");
+	setDefaultTimings( 0 );
+#else
 	u32 rpiClockMHz = (u32)(m_CPUThrottle.GetClockRate () / 1000000);
 	switch ( rpiClockMHz )
 	{
@@ -482,7 +486,7 @@ boolean CKernelMenu::Initialize( void )
 		setDefaultTimings( AUTO_TIMING_RPI0_C64C128 );
 		break;
 	};
-
+#endif
 	if ( !readConfig( logger, (char*)DRIVE, (char*)FILENAME_CONFIG ) )
 	{
 		latchSetClearImm( LED_INITERR_HIGH, LED_INITERR_LOW );
@@ -532,7 +536,10 @@ boolean CKernelMenu::Initialize( void )
 		//memcpy( 1024 + charset+8*(91), skcharlogo_raw, 224 ); <- this is the upper case font used in the browser, skip logo to keep all PETSCII characters
 		memcpy( 2048 + charset+8*(91), skcharlogo_raw, 224 );
 		memcpy( charset + 94 * 8, charset + 2048 + 233 * 8, 8 );
-	} 
+	}
+	else if ( skinFontFilename[0] != 0 ){
+		logger->Write( "RaspiMenu", LogPanic, "error reading font file " );
+	}
 
 	// prepare a few things for color fading and updates
 	for ( int j = 0; j < 5; j++ )
@@ -1146,8 +1153,8 @@ void CKernelMenu::Run( void )
 			startForC128 = 0;
 #ifdef WITH_NET
 			//disable queued screenrefreshs
-//			if (m_SidekickNet.isSKTPRefreshWaiting()) 
-//				m_SidekickNet.cancelSKTPRefresh();
+			if (m_SidekickNet.isSKTPRefreshWaiting()) 
+				m_SidekickNet.cancelSKTPRefresh();
 			handleNetwork( true );
 			//lastAutoRefresh = 0;
 			
@@ -1765,6 +1772,33 @@ void CKernelMenu::Run( void )
 			updateMenu = 0;
 			doneWithHandling = 1;
 		}
+#ifdef WITH_NET
+				//TODO: this is not finished here
+				if (updateMenu == 0 && m_SidekickNet.isMenuScreenUpdateNeeded())
+				{
+					handleNetwork(false);
+					
+					
+					//we never end up in here for a sktp timed screen refresh
+					DisableFIQInterrupt();
+					doneWithHandling = 0;
+					updateMenu = 1;
+					//logger->Write( "SidekickMenu", LogNotice, "MenuScreenUpdateNeeded => NMI" );
+					//render should be after disable fiq because then the stuff like 
+					//system clock, uptime and CPU temp are being updated
+					renderC64(); //puts the active menu page into the raspi memory
+					warmCache( pFIQ );
+					DELAY(1<<18);
+					doCacheWellnessTreatment();
+					enableFIQInterrupt();
+					if (updateMenu == 0)
+					{
+						doneWithHandling = 1;
+						updateMenu = 0;
+					}
+				
+				}
+#endif
 
 	}
 
@@ -2225,7 +2259,7 @@ int main( void )
 		case 41:
 			playingPSID = 1; // intentionally no break
 		case 40: // launch something from a disk image or PRG in memory (e.g. a converted .SID-file)
-			logger->Write( "RaspiMenu", LogNotice, "filename from d64: %s", FILENAME );
+			//logger->Write( "RaspiMenu", LogNotice, "filename from d64: %s", FILENAME );
 			#ifdef WITH_NET
 			if ( modeC128 && strstr( FILENAME, "128" ) )
 				startForC128 = 1;

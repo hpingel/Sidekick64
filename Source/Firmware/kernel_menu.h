@@ -30,6 +30,9 @@
 #ifndef _kernel_h
 #define _kernel_h
 
+//#define WITH_NET_DEBUG
+
+
 #ifndef COMPILE_MENU_WITH_SOUND
 #define COMPILE_MENU_WITH_SOUND
 #endif
@@ -113,7 +116,7 @@ public:
 		m_Screen( m_Options.GetWidth(), m_Options.GetHeight() ),
 	#endif
 		m_Timer( &m_Interrupt ),
-#ifdef WITH_NET		
+#ifdef WITH_NET_DEBUG		
 		m_Logger( m_Options.GetLogLevel(), &m_Timer ),
 #else		
 		// 0 to hide all debug messages, 5 print all

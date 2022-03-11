@@ -1229,7 +1229,7 @@ void printNetworkScreen()
 	if ( pSidekickNet->IsRunning() )
 	{
 		strConnection.Append( "Active" );
-		#ifdef WITH_CIRCLE_AS_OF_STEP_42
+		#ifdef WITH_CIRCLE_AS_OF_STEP_44
 		if ( pSidekickNet->isUsbUserportModemConnected() )
 			strUPModemEmu.Append( "Active" );
 		else
