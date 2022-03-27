@@ -2085,6 +2085,7 @@ void CSidekickNet::handleModemEmulation( bool silent = false)
 						if ( !silent)
 							logger->Write ("CSidekickNet", LogNotice, "no quotes but atdt detected, still acceptable");
 						start++;
+						while (m_modemCommand[start] == 32){start++;};
 					}
 					else
 					{

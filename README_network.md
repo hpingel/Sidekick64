@@ -133,7 +133,7 @@ Besides implementing two modem types a basic command line interface also had to 
 * `ATI2` (print current local IP address of Sidekick64 )
 * `ATI7` (print current date and time)
 * `ATB` (change baud rate, values possible are `ATB300`, `ATB1200`, `ATB2400`, `ATB4800`, `ATB9600` - this doesn't affect the Swiftlink emulation so it is only relevant for Userport modem emulation)
-* `ATD"host:port"` or ATDThost:port (connect to a remote server host with port)
+* `ATD"host:port"` or `ATDThost:port` or `ATDT host:port` (connect to a remote server host with port)
 * `ATD@RC` (temporary development shortcut to quickly connect to the [Retrocampus BBS](https://retrocampus.com/bbs/) of Francesco Sblendorio)
 
 The default baud rate can also be changed by setting the configuration parameter `NET_MODEM_DEFAULT_BAUDRATE` to a desired value. Check section [Configuration parameters](#configuration-parameters) for further details.
