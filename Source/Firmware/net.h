@@ -43,6 +43,7 @@
 #include <circle/usb/usbhcidevice.h>
 #ifdef WITH_CIRCLE_AS_OF_STEP_44
 #include <circle/usb/usbserialft231x.h>
+#include <circle/usb/usbserialpl2303.h>
 #include <circle/usb/usbmidi.h>
 #endif
 #include <circle/util.h>
@@ -241,7 +242,7 @@ private:
 	//CActLED							m_ActLED;
 	CWebServer        * m_WebServer;
 #ifdef WITH_CIRCLE_AS_OF_STEP_44
-	CUSBSerialFT231XDevice * volatile m_pUSBSerial;
+	CUSBSerialDevice * volatile m_pUSBSerial;
 	CUSBMIDIDevice * volatile m_pUSBMidi;
 	CDeviceNameService	* m_DeviceNameService;
 #endif

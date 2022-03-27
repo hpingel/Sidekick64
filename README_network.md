@@ -141,8 +141,7 @@ The default baud rate can also be changed by setting the configuration parameter
 
 When it comes to the type of modem being emulated, there is a choice:
 ### Userport modem
-A userport based UP9600 modem may be emulated with relatively simple cabling or with a helper PCB that plugs into the userport and is connected to Sidekick 64 via USB via a cheap FTDI-USB-adapter.
-The cabling needed is the same as described in this [blog post](https://1200baud.wordpress.com/2012/10/14/build-your-own-c64-2400-baud-usb-device-for-less-than-15/) by alwyz. He also links to a [helpful Wiki page](http://www.hardwarebook.info/C64_RS232_User_Port) describing the assignment needed for software emulated RS232 at the Userport in a table. This table doesn't include the additional connections for needed for the UP9600 hack which are described in alwyz's blog post. If you already own a PCB for userport modem emulation based on ESP32 or ESP8266 chances are very high that you can reuse this PCB if you can remove the ESP from it (if it has a socket).
+A userport based UP9600 modem may be emulated with relatively simple cabling or with a helper PCB that plugs into the userport and is connected to Sidekick 64 via USB via a cheap FTDI-USB-adapter (FT231x). The cabling needed is the same as described in this [blog post](https://1200baud.wordpress.com/2012/10/14/build-your-own-c64-2400-baud-usb-device-for-less-than-15/) by alwyz. He also links to a [helpful Wiki page](http://www.hardwarebook.info/C64_RS232_User_Port) describing the assignment needed for software emulated RS232 at the Userport in a table. This table doesn't include the additional connections for needed for the UP9600 hack which are described in alwyz's blog post. If you already own a PCB for userport modem emulation based on ESP32 or ESP8266 chances are very high that you can reuse this PCB if you can remove the ESP from it (if it has a socket).
 
 We connect RX (crossed), TX (crossed) and GND between the Userport and the FTDI adapter (set to 5V).
 
@@ -152,6 +151,7 @@ If you have cabled up your userport to the FTDI-Adapter and plugged the FTDI int
 * In the network menu screen of Sidekick64 hit the key "m" until the modem emulation type is shown to be "Userport".
 * In CCGMS, set modem type to `UP9600` or to `Userport modem` depending on your cabling.
 
+As an alternative to FT231x, a USB2RS232 adaper with PL2303 chipset is also supported.
 
 ### Swiftlink/Turbo232 modem (highly experimental)
 A Swiftlink modem may be emulated (which normally would be connected to the expansion port). This is still highly experimental at the moment and will crash CCGMS after a couple of screens.

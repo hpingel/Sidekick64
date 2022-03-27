@@ -365,6 +365,8 @@ void CSidekickNet::usbPnPUpdate()
 		if ( m_pUSBSerial == 0 )
 		{
 			m_pUSBSerial = (CUSBSerialFT231XDevice *) m_DeviceNameService->GetDevice ("utty1", FALSE);
+			if (m_pUSBSerial == 0)
+				m_pUSBSerial = (CUSBSerialPL2303Device *) m_DeviceNameService->GetDevice ("utty1", FALSE);
 			if (m_pUSBSerial != 0)
 			{
 				logger->Write( "CSidekickNet::Initialize", LogNotice, 
