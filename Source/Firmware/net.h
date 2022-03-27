@@ -134,6 +134,7 @@ public:
 	boolean getSKTPBorderBGColorCharset( u8 &borderColor, u8 &bgColor);
 	void enableSktpRefreshTimeout();
 	void prepareDownloadOfTGAImage();
+	void updateTGAImageFromSKTPChunk();
 	unsigned char * GetSktpScreenContentChunk( u16 & startPos, u8 &color, boolean & inverse, u8 &repeat );
 	CString getTimeString();
 	CString getUptime();
@@ -159,7 +160,7 @@ public:
 	boolean isRebootRequested();
 	void requestReboot();
 	void requireCacheWellnessTreatment();
-	void getNetRAM( u8 *, u32 *);
+	//void getNetRAM( u8 *, u32 *);
 	void prepareLaunchOfUpload( char *, char *, u8, char * );
 	CString getBaudrate();
 	CString getLoggerStringForHost( CString hostname, int port);
