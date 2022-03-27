@@ -2431,6 +2431,7 @@ void printSKTPScreen()
 					5 vertical repeat chunk
 					6 paintbrush chunk
 					7 tga image file url/name to be shown on color tft display
+					8 tga image content
 					*/
 					u8 type = pSidekickNet->GetSktpScreenContentChunkType();
 					if ( type == 0 || type == 1 || type == 2 || type == 5 || type == 6)
@@ -2473,6 +2474,8 @@ void printSKTPScreen()
 						SKTPisLowerCharset = (pSidekickNet->getSKTPBorderBGColorCharset( SKTPborderColor, SKTPbgColor) == 1);
 					else if (type == 7)
 						pSidekickNet->prepareDownloadOfTGAImage();
+					else if (type == 8)
+						pSidekickNet->updateTGAImageFromSKTPChunk();
 					else if (type == 255)
 					{
 						logger->Write( "printSKTPScreen", LogWarning, "end of sktp response was reached");

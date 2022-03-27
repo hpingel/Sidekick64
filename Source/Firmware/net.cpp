@@ -1272,7 +1272,7 @@ void CSidekickNet::drawTGAImageOnTFT(){
 	tftSendFramebuffer16BitImm( tftFrameBuffer );
 	//buggy: tftSplashScreenMemory( (u8*) prgDataLaunch, prgSizeLaunch );
 	cleanupDownloadData();
-	requireCacheWellnessTreatment();
+	//requireCacheWellnessTreatment();
 }
 
 void CSidekickNet::getCSDBBinaryContent( ){
@@ -1531,7 +1531,8 @@ void CSidekickNet::updateSktpScreenContent(){
 		m_sktpSession = 1;
 	}
 
-	char pResponseBuffer[4097]; //maybe turn this into member var when creating new sktp class?
+	//we need more than 233KB so that we can put in a tga image if we need to...
+	char pResponseBuffer[1024 * 500 + 1]; //maybe turn this into member var when creating new sktp class?
 	if (HTTPGet ( m_SKTPServer, getSktpPath( m_sktpKey ), pResponseBuffer, m_sktpResponseLength))
 	{
 		if ( m_sktpResponseLength > 0 )
@@ -1672,6 +1673,35 @@ void CSidekickNet::prepareDownloadOfTGAImage(){
 	m_sktpScreenPosition = m_sktpResponseLength;
 }
 
+void CSidekickNet::updateTGAImageFromSKTPChunk()
+{
+	m_sktpScreenContent[m_sktpScreenPosition] = 88; //destroy tga chunk in case it is parsed a second time
+	prgSizeLaunch = 
+		m_sktpScreenContent[ ++m_sktpScreenPosition ] * 65536 +
+		m_sktpScreenContent[ ++m_sktpScreenPosition ] * 256 +
+		m_sktpScreenContent[ ++m_sktpScreenPosition ];
+	
+	if ( prgSizeLaunch > 1024 * 350)
+	{
+		logger->Write( "updateTGAImageFromSKTPChunk", LogNotice, "prgSizeLaunch too big: %u", prgSizeLaunch);
+		return;
+	}
+
+	memcpy( prgDataLaunch, &m_sktpScreenContent[ m_sktpScreenPosition +1], prgSizeLaunch);
+	prgDataLaunch[prgSizeLaunch+1] = '\0';
+	extern unsigned char tempTGA[ 256 * 256 * 4 ];
+	int w = 0, h = 0;
+	tftParseTGA( tempTGA, prgDataLaunch, &w, &h, false, prgSizeLaunch );
+	tftLoadBackgroundTGAMemory( tempTGA, 240, 240, false);
+	tftCopyBackground2Framebuffer();
+	tftInitImm();
+	tftSendFramebuffer16BitImm( tftFrameBuffer );
+
+//	m_sktpScreenPosition += prgSizeLaunch;
+	m_sktpScreenPosition = m_sktpResponseLength;
+
+}
+
 unsigned char * CSidekickNet::GetSktpScreenContentChunk( u16 & startPos, u8 &color, boolean &inverse, u8 &repeat )
 {
 	repeat = 0;
@@ -1794,12 +1824,13 @@ void CSidekickNet::requireCacheWellnessTreatment(){
 	m_kMenu->doCacheWellnessTreatment();
 }
 
+/*
 void CSidekickNet::getNetRAM( u8 * content, u32 * size){
 	CString path = "/getNetRam.php";
 	if (!HTTPGet ( m_SKTPServer, path, (char*) content, *size)){
 		logger->Write( "getNetRAM", LogError, "Failed with path >%s<", path);
 	}
-}
+}*/
 
 void CSidekickNet::setCurrentKernel( char * r){
 	m_currentKernelRunning = r;
