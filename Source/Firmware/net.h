@@ -44,6 +44,7 @@
 #ifdef WITH_CIRCLE_AS_OF_STEP_44
 #include <circle/usb/usbserialft231x.h>
 #include <circle/usb/usbserialpl2303.h>
+#include <circle/usb/usbserialch341.h>
 #include <circle/usb/usbmidi.h>
 #endif
 #include <circle/util.h>
