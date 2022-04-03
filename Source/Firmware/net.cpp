@@ -1886,7 +1886,6 @@ void CSidekickNet::cleanUpModemEmuSocket()
 		m_isBBSSocketFirstReceive = false;
 		m_BBSSocketDisconnectPlusCount = 0;
 	}
-	setModemEmuBaudrate(m_baudRate);
 	m_modemCommandLength = 0;
 	m_modemCommand[0] = '\0';
 	m_socketHost[0] = '\0';
