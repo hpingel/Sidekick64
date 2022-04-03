@@ -214,6 +214,7 @@ private:
 	void cleanUpModemEmuSocket();
 	int readCharFromFrontend( unsigned char * );
 	int writeCharsToFrontend( unsigned char *, unsigned length);
+	void handleModemEmulationCommandMode( bool );
 	void SendErrorResponse();
 	void SocketConnect( char *, unsigned, bool );
 	void SocketConnectIP( CIPAddress, unsigned );
@@ -294,6 +295,7 @@ private:
 	boolean  m_isC128;
 	boolean  m_isBBSSocketConnected;
 	boolean  m_isBBSSocketFirstReceive;
+	u8       m_BBSSocketDisconnectPlusCount;
 	unsigned m_videoFrameCounter;
 	size_t m_sysMonHeapFree;
 	unsigned m_sysMonCPUTemp;
