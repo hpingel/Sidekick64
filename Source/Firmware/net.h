@@ -184,6 +184,7 @@ public:
 	bool areCharsInInputBuffer();
 	bool areCharsInOutputBuffer();
 	boolean isWebserverRunning();
+	void iterateModemEmuBaudrate();
 
 
 private:

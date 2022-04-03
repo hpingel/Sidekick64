@@ -1860,6 +1860,34 @@ void CSidekickNet::enterWebUploadMode(){
 
 }
 
+void CSidekickNet::iterateModemEmuBaudrate()
+{
+	#ifdef WITH_CIRCLE_AS_OF_STEP_44
+	//if ( m_modemEmuType == SK_MODEM_USERPORT_USB )
+	{
+		switch(m_baudRate){
+			case 300:
+				m_baudRate = 1200;
+				break;
+			case 1200:
+				m_baudRate = 2400;
+				break;
+			case 2400:
+				m_baudRate = 4800;
+				break;
+			case 4800:
+				m_baudRate = 9600;
+				break;
+			case 9600:
+			default:
+				m_baudRate = 300;
+				break;
+		}
+		m_pUSBSerial->SetBaudRate(m_baudRate);
+	}
+	#endif
+}
+
 
 void CSidekickNet::setModemEmuBaudrate( unsigned rate )
 {
