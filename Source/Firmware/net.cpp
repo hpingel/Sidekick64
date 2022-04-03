@@ -1895,6 +1895,7 @@ void CSidekickNet::setModemEmuBaudrate( unsigned rate )
 	if ( m_modemEmuType == SK_MODEM_USERPORT_USB )
 	{
 		m_pUSBSerial->SetBaudRate(rate);
+		m_baudRate = rate;
 	}
 	else if ( m_modemEmuType == SK_MODEM_SWIFTLINK )
 	{
@@ -2390,6 +2391,15 @@ void CSidekickNet::handleModemEmulationCommandMode( bool silent ){
 						a = writeCharsToFrontend((unsigned char *)"sidekick64 userport modem emulation\rhave fun!\r", 46);
 					else
 						a = writeCharsToFrontend((unsigned char *)"sidekick64 swiftlink modem emulation\rhave fun!\r", 47);
+					a = writeCharsToFrontend((unsigned char *)"current baudrate: ", 18);
+
+					CString strHelper;
+					unsigned char tmp[50];
+					strHelper = getBaudrate();
+					strHelper.Append("\r");
+					unsigned l = sprintf( (char *) tmp, strHelper );
+					a = writeCharsToFrontend(tmp, l);
+						
 						//a = writeCharsToFrontend((unsigned char *)"\x40\x60 \x9f \x7dc\x05 1w\x1c 2w\x1e 3g\x1f 4b\x95 5b\x96 6r\x97 7g\x98 8g\x99 9g\x9a ab\x9c bp\x9e cy\x05-" ,13*4+4 );
 				}
 				else{
