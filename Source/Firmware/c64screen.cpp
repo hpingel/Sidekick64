@@ -699,6 +699,10 @@ int checkForScreenFade( int k, char *menuItemStr, u32 *startC128 = NULL )
 
 		if ( k == VK_F7 ) return 1;
 		if ( k == VK_F5 ) return 1;
+#ifdef WITH_NET
+		//entering the network menu from the main menu via AT
+		if ( k == VK_AT ) return 1;
+#endif
 
 		int temp;
 		int hasKernalAlready = subHasKernal;
@@ -727,14 +731,18 @@ int checkForScreenFade( int k, char *menuItemStr, u32 *startC128 = NULL )
 					return 0; else
 					return 3;
 			}
+#ifndef WITH_NET
 			checkCRTFile( logger, DRIVE, filename, &err );
 			if ( err == 0 )
+#endif
 				return 3;
 
 			return 0;
 		case ACT_LAUNCH_PRG: // .PRG file
+#ifndef WITH_NET
 			if ( fileExists( logger, DRIVE, filename ) <= 0 )
 				return 0; 
+#endif
 
 			if ( !( ( subSID && octaSIDMode && !wireSIDAvailable ) ||
 				  ( subSID && !wireSIDAvailable && settings[10] == 0 ) ) ) // no SID-wire, FM emulation off
@@ -826,8 +834,10 @@ int checkForScreenFade( int k, char *menuItemStr, u32 *startC128 = NULL )
 							return 3;
 						} else
 						{
+#ifndef WITH_NET
 							checkCRTFile( logger, DRIVE, FILENAME, &err );
 							if ( err == 0 )
+#endif
 								return 3;
 						}
 						return 0;
