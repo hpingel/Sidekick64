@@ -196,7 +196,8 @@ CSidekickNet::CSidekickNet(
 		m_modemInputBufferLength(0),
 		m_modemInputBufferPos(0),
 		m_socketPort(0),
-		m_baudRate(1200)
+		m_baudRate(1200),
+		m_PRGLaunchTweakValue(4)
 {
 	assert (m_pTimer != 0);
 	assert (& m_pScheduler != 0);
@@ -409,6 +410,21 @@ CString CSidekickNet::getBaudrate(){
 	CString Number;
 	Number.Format ("%02d", m_baudRate);
 	return Number;
+}
+
+CString CSidekickNet::getPRGLaunchTweakValueAsString(){
+	CString Number;
+	Number.Format ("%02d", m_PRGLaunchTweakValue);
+	return Number;
+}
+
+u8 CSidekickNet::getPRGLaunchTweakValue(){
+	return m_PRGLaunchTweakValue;
+}
+
+void CSidekickNet::increasePRGLaunchTweakValue(){
+	if ( ++m_PRGLaunchTweakValue > 7 )
+	  m_PRGLaunchTweakValue = 0;
 }
 
 CString CSidekickNet::getLoggerStringForHost( CString hostname, int port){

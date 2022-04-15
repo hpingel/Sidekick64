@@ -89,10 +89,19 @@ void prepareOnReset( bool refresh = false )
 {
 	if ( !refresh )
 	{
-		/*CleanDataCache();
-		InvalidateDataCache();
-		InvalidateInstructionCache();*/
+#ifdef WITH_NET		
+		if ((pSidekickNet->getPRGLaunchTweakValue() & 1) == 1)
+		{ 
+			//logger->Write( "sk", LogNotice, "enabled PRGlaunchTweak #1");
+			CleanDataCache();
+			InvalidateDataCache();
+			InvalidateInstructionCache();
+		}
+		else
+			SyncDataAndInstructionCache();
+#else
 		SyncDataAndInstructionCache();
+#endif		
 	}
 
 	if ( _playingPSID )
@@ -107,7 +116,17 @@ void prepareOnReset( bool refresh = false )
 	FORCE_READ_LINEAR32a( prgData, prgSize, prgSize * 8 );
 
 	// launch code / CBM80
+#ifdef WITH_NET		
+	if ((pSidekickNet->getPRGLaunchTweakValue() & 2) == 2)
+	{
+		//logger->Write( "sk", LogNotice, "enabled PRGlaunchTweak #2");
+		CACHE_PRELOAD_DATA_CACHE( &launchCode[ 0 ], 512, CACHE_PRELOADL1KEEP )
+	}
+	else
+		CACHE_PRELOAD_DATA_CACHE( &launchCode[ 0 ], 512, CACHE_PRELOADL2KEEP )
+#else
 	CACHE_PRELOAD_DATA_CACHE( &launchCode[ 0 ], 512, CACHE_PRELOADL2KEEP )
+#endif
 	FORCE_READ_LINEAR32a( launchCode, 512, 512 * 16 );
 
 	for ( u32 i = 0; i < prgSizeAboveA000; i++ )
@@ -117,8 +136,22 @@ void prepareOnReset( bool refresh = false )
 		forceReadLaunch = prgData[ i ];
 
 	// FIQ handler
+#ifdef WITH_NET		
+	if ((pSidekickNet->getPRGLaunchTweakValue() & 4) == 4)
+	{
+		//logger->Write( "sk", LogNotice, "enabled PRGlaunchTweak #3");
+		CACHE_PRELOAD_INSTRUCTION_CACHE( (void*)&FIQ_HANDLER, 4 * 1024 );
+		FORCE_READ_LINEAR32( (void*)&FIQ_HANDLER, 4 * 1024 );
+	}
+	else
+	{
+		CACHE_PRELOAD_INSTRUCTION_CACHE( (void*)&FIQ_HANDLER, 3 * 1024 );
+		FORCE_READ_LINEAR32( (void*)&FIQ_HANDLER, 3 * 1024 );
+	}
+#else
 	CACHE_PRELOAD_INSTRUCTION_CACHE( (void*)&FIQ_HANDLER, 3 * 1024 );
 	FORCE_READ_LINEAR32( (void*)&FIQ_HANDLER, 3 * 1024 );
+#endif
 }
 
 static u32 nBytesRead, stage;
@@ -276,10 +309,13 @@ void CKernelLaunch::Run( void )
 
 	// warm caches
 	prepareOnReset( true );
+/*	
+	DELAY(1<<18);
+	prepareOnReset( true );
+	DELAY(1<<18);
+	//prepareOnReset( true );
+*/	
 	prepareOnReset( false );
-
-	//BEGIN_CYCLE_COUNTER
-
 
 	// ready to go
 	latchSetClear( LATCH_RESET, 0 );
