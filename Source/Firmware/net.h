@@ -164,6 +164,9 @@ public:
 	//void getNetRAM( u8 *, u32 *);
 	void prepareLaunchOfUpload( char *, char *, u8, char * );
 	CString getBaudrate();
+	CString getPRGLaunchTweakValueAsString();
+	u8 getPRGLaunchTweakValue();
+	void increasePRGLaunchTweakValue();
 	CString getLoggerStringForHost( CString hostname, int port);
 	boolean isSKTPScreenActive();
 	unsigned getSKTPErrorCode();
@@ -315,7 +318,7 @@ private:
 	char m_socketHost[256];
 	unsigned m_socketPort;
 	unsigned m_baudRate;
-		
+	u8 m_PRGLaunchTweakValue;
 	remoteHTTPTarget m_SKTPServer;
 	remoteHTTPTarget m_CSDB;
 	remoteHTTPTarget m_CSDB_HVSC;

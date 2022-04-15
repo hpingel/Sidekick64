@@ -1786,6 +1786,10 @@ void handleC64( int k, u32 *launchKernel, char *FILENAME, char *filenameKernal, 
 				pSidekickNet->iterateModemEmuBaudrate();
 			}
 		}
+		else if ( k == 'p' || k == 'P')
+		{
+			pSidekickNet->increasePRGLaunchTweakValue();
+		}
 	} else
 	if ( menuScreen == MENU_SKTP )
 	{
@@ -2201,6 +2205,7 @@ void printNetworkScreen()
 	CString strWebserver  = "Webserver state:    ";
 	CString strModemEmu   = "Modem emulation (M):";
 	CString strModemBaudR = "Baud rate       (B):";
+	CString strPRGLnchTwk = "PRGlaunch tweak (P):";
 	CString strHelper;
 	
 	if (strcmp(netSidekickHostname,"") != 0)
@@ -2236,6 +2241,7 @@ void printNetworkScreen()
 	}
 	
 	strModemBaudR.Append( pSidekickNet->getBaudrate() );
+	strPRGLnchTwk.Append( pSidekickNet->getPRGLaunchTweakValueAsString() );
 	
 	u32 y1 = 2;
 
@@ -2245,6 +2251,7 @@ void printNetworkScreen()
 	printC64( x+1, y1+11, strHostName,       skinValues.SKIN_MENU_TEXT_SYSINFO, 0 );
 	printC64( x+1, y1+12, strModemEmu,       skinValues.SKIN_MENU_TEXT_SYSINFO, 0 );
 	printC64( x+1, y1+13, strModemBaudR,     skinValues.SKIN_MENU_TEXT_SYSINFO, 0 );
+	printC64( x+1, y1+16, strPRGLnchTwk,     skinValues.SKIN_MENU_TEXT_SYSINFO, 0 );
 	
 	if (strcmp(netSktpHostName,"") != 0){
 		unsigned port = netSktpHostPort;
