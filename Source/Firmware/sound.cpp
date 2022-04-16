@@ -107,6 +107,7 @@ u32 smpLast, smpCur;
 
 #if RASPPI >= 4
 #define CLOCK_FREQ			250000000
+//see https://github.com/rsta2/circle/commit/88528bc5b7849eb1a863c754ad184404423b1e7e
 #else
 #define CLOCK_FREQ			500000000
 #endif
@@ -150,14 +151,24 @@ void initPWMOutput()
 {
 	__attribute__((unused)) CGPIOPin   *m_Audio1 = new CGPIOPin( GPIOPinAudioLeft, GPIOModeAlternateFunction0 );
 	__attribute__((unused)) CGPIOPin   *m_Audio2 = new CGPIOPin( GPIOPinAudioRight, GPIOModeAlternateFunction0 );
+	
+	#if RASPPI >= 4
+	CGPIOClock *m_Clock  = new CGPIOClock( GPIOClockPWM );
+	#else
 	CGPIOClock *m_Clock  = new CGPIOClock( GPIOClockPWM, GPIOClockSourcePLLD );
+	#endif
 
 	u32 nSampleRate = SAMPLERATE;
 	PWMRange = ( CLOCK_FREQ / CLOCK_DIVIDER + nSampleRate / 2 ) / nSampleRate;
 
 	PeripheralEntry();
 
+	#if RASPPI >= 4
+	m_Clock->StartRate( CLOCK_FREQ );
+	#else
 	m_Clock->Start( CLOCK_DIVIDER );
+	#endif
+
 	CTimer::SimpleusDelay( 2000 );
   #if RASPPI >= 4
 	write32( ARM_PWM1_RNG1, PWMRange );
