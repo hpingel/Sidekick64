@@ -127,7 +127,7 @@ u32 smpLast, smpCur;
 #define ARM_PWM_CTL_SBIT2	(1 << 11)
 #define ARM_PWM_CTL_POLA2	(1 << 12)
 #define ARM_PWM_CTL_USEF2	(1 << 13)
-#define ARM_PWM_CTL_MSEN2	(1 << 14)
+#define ARM_PWM_CTL_MSEN2	(1 << 15)
 
 // PWM status register
 #define ARM_PWM_STA_FULL1	(1 << 0)
