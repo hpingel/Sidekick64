@@ -1,0 +1,11 @@
+--- a/circle/lib/interruptgic.cpp
++++ b/circle/lib/interruptgic.cpp
+@@ -199,7 +199,7 @@ void CInterruptSystem::ConnectFIQ (unsigned nFIQ, TFIQHandler *pHandler, void *p
+ {
+ 	assert (nFIQ <= ARM_MAX_FIQ);
+ 	assert (pHandler != 0);
+-	assert (FIQData.pHandler == 0);
++	//assert (FIQData.pHandler == 0);
+ 
+ 	FIQData.pHandler = pHandler;
+ 	FIQData.pParam = pParam;
