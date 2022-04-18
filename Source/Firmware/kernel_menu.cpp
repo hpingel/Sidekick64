@@ -388,16 +388,11 @@ boolean CKernelMenu::Initialize( void )
 #endif
 
 	CMachineInfo * m_pMachineInfo;
-
-
-#ifdef WITH_CIRCLE_AS_OF_STEP44
-	//OK, this check is only possible as of Circle 44...
 	if ( m_pMachineInfo->Get()->GetMachineModel () == MachineModelZero2W )
 	{
 		rpiHasAudioJack = false;
 		rpiIsZero2 = true;
 	}
-#endif
 
 	// initialize ARM cycle counters (for accurate timing)
 	initCycleCounter();

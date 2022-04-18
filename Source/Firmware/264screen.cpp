@@ -1230,14 +1230,10 @@ void printNetworkScreen()
 	if ( pSidekickNet->IsRunning() )
 	{
 		strConnection.Append( "Active" );
-		#ifdef WITH_CIRCLE_AS_OF_STEP_44
 		if ( pSidekickNet->isUsbUserportModemConnected() )
 			strUPModemEmu.Append( "Active" );
 		else
 			strUPModemEmu.Append( "No cable detected" );
-		#else
-			strUPModemEmu.Append( "No support" );
-		#endif
 	}
 	else
 	{
