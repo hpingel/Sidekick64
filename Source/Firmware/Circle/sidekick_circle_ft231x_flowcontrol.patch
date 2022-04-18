@@ -1,0 +1,28 @@
+--- a/circle/lib/usb/usbserialft231x.cpp
++++ b/circle/lib/usb/usbserialft231x.cpp
+@@ -135,6 +137,25 @@ boolean CUSBSerialFT231XDevice::SetBaudRate (unsigned nBaudRate)
+ 	else if (divisor == 0x4001)
+ 		divisor = 1;
+ 
++	if (pHost->ControlMessage (GetEndpoint0 (),
++				   REQUEST_OUT | REQUEST_VENDOR | REQUEST_TO_DEVICE,
++				   FTDI_SIO_SET_FLOW_CTRL,
++				   0,
++				   (nBaudRate == 9600 ? 0x1 << 8 : 0), //FTDI_SIO_RTS_CTS_HS in case of 9600
++				   0, 0) < 0)
++	{
++		CLogger::Get ()->Write (FromFt231x, LogError, "Cannot modify flow control setting");
++	}
++	else
++	{
++		if ( nBaudRate == 9600)
++			CLogger::Get ()->Write (FromFt231x, LogError, "RTS/CTS flow control enabled for baudrate 9600");
++		else
++			CLogger::Get ()->Write (FromFt231x, LogError, "RTS/CTS flow control disabled for baudrate != 9600");
++		
++	}
++	
++	
+ 	if (pHost->ControlMessage (GetEndpoint0 (),
+ 				   REQUEST_OUT | REQUEST_VENDOR | REQUEST_TO_DEVICE,
+ 				   FTDI_SIO_SET_BAUD_RATE,
