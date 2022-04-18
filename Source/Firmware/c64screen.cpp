@@ -84,7 +84,7 @@ const int ACT_NOTHING		= 0;
 extern CLogger *logger;
 #ifdef WITH_NET
 extern CSidekickNet * pSidekickNet;
-#include "circle/version.h"
+#include <circle/version.h>
 
 u8 SKTPborderColor = 0; 
 u8 SKTPbgColor = 0; 
@@ -2379,7 +2379,8 @@ void printSystemInfoScreen()
 	else
 		printC64( x+1, y1+16, "Git tag    : " GIT_TAG, skinValues.SKIN_MENU_TEXT_ITEM, 0 );
 	printC64( x+1, y1+17, "Git hash   : " GIT_HASH, skinValues.SKIN_MENU_TEXT_ITEM, 0 );
-	printC64( x+1, y1+18, "Circle     : " CIRCLE_VERSION_STRING, skinValues.SKIN_MENU_TEXT_ITEM, 0 );
+	printC64( x+1, y1+18, "Circle     :" , skinValues.SKIN_MENU_TEXT_ITEM, 0 );
+	printC64( x+15, y1+18, CIRCLE_VERSION_STRING, skinValues.SKIN_MENU_TEXT_ITEM, 0 );
 
 
 	printSidekickLogo();
