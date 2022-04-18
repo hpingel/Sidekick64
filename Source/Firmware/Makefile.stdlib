@@ -56,7 +56,6 @@ LIBS	= $(CIRCLEHOME)/addon/vc4/sound/libvchiqsound.a \
 
 ifeq ($(net), on)
 CPPFLAGS += -DWITH_NET=1
-CPPFLAGS += -DWITH_CIRCLE_AS_OF_STEP_44=1 
 OBJS += net.o webserver.o
 LIBS += $(CIRCLEHOME)/lib/net/libnet.a
 ifeq ($(wlan), on)
@@ -84,7 +83,6 @@ LIBS	= $(CIRCLEHOME)/addon/vc4/sound/libvchiqsound.a \
 				
 ifeq ($(net), on)
 CPPFLAGS += -DWITH_NET=1
-CPPFLAGS += -DWITH_CIRCLE_AS_OF_STEP_44=1 
 OBJS += net.o webserver.o
 LIBS += $(CIRCLEHOME)/lib/net/libnet.a 
 ifeq ($(wlan), on)

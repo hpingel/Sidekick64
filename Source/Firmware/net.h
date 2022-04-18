@@ -41,12 +41,10 @@
 #include <circle/machineinfo.h>
 #include <circle/sched/scheduler.h>
 #include <circle/usb/usbhcidevice.h>
-#ifdef WITH_CIRCLE_AS_OF_STEP_44
 #include <circle/usb/usbserialft231x.h>
 #include <circle/usb/usbserialpl2303.h>
 #include <circle/usb/usbserialch341.h>
 #include <circle/usb/usbmidi.h>
-#endif
 #include <circle/util.h>
 #include <SDCard/emmc.h>
 
@@ -175,9 +173,7 @@ public:
 	void setCurrentKernel( char *);
 	void setC128Mode();
 	void enterWebUploadMode();
-	#ifdef WITH_CIRCLE_AS_OF_STEP_44
 	boolean isUsbUserportModemConnected();
-	#endif
 	void addToModemOutputBuffer( unsigned char );
 	unsigned char getCharFromInputBuffer();
 	void handleModemEmulation(bool);
@@ -212,9 +208,7 @@ private:
 	void EnableWebserver();
 	CIPAddress getIPForHost( const char *, bool & );
 	boolean HTTPGet (remoteHTTPTarget & target, const char * path, char *pBuffer, unsigned & nLengthRead);
-	#ifdef WITH_CIRCLE_AS_OF_STEP_44
 	void usbPnPUpdate();
-	#endif
 	void cleanUpModemEmuSocket();
 	int readCharFromFrontend( unsigned char * );
 	int writeCharsToFrontend( unsigned char *, unsigned length);
@@ -248,11 +242,9 @@ private:
 #endif	
 	//CActLED							m_ActLED;
 	CWebServer        * m_WebServer;
-#ifdef WITH_CIRCLE_AS_OF_STEP_44
 	CUSBSerialDevice * volatile m_pUSBSerial;
 	CUSBMIDIDevice * volatile m_pUSBMidi;
 	CDeviceNameService	* m_DeviceNameService;
-#endif
 	CSocket             *m_pBBSSocket;	
 
 	boolean m_useWLAN;
