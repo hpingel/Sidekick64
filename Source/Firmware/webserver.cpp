@@ -261,9 +261,9 @@ CHTTPDaemon *CWebServer::CreateWorker (CNetSubSystem *pNetSubSystem, CSocket *pS
 
 #ifndef IS264
 			#if RASPPI >= 4
-				const char * filenamek = m_SidekickNet->usesWLAN() ? "SD:rpi4_kernel_sk64_wlan.img" : "SD:rpi4_kernel_sk64_net.img";
+				const char * filenamek = "SD:rpi4_kernel_sk64_net.img";
 			#else
-				const char * filenamek = m_SidekickNet->usesWLAN() ? "SD:kernel_sk64_wlan.img" : "SD:kernel_sk64_net.img";
+				const char * filenamek = !m_SidekickNet->kernelSupportsWLAN() ? "SD:kernel_sk64_ethernet.img" : "SD:kernel_sk64_net.img";
 			#endif
 #else
 			#if RASPPI >= 4
