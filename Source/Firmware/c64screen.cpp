@@ -1749,10 +1749,20 @@ void handleC64( int k, u32 *launchKernel, char *FILENAME, char *filenameKernal, 
 			handleC64( 0xffffffff, launchKernel, FILENAME, filenameKernal, menuItemStr );
 			return;
 		}
-		else if ( k == 'c' || k == 'C')
+		else if ( k == 'c' || k == 'C' )
 		{
 			if (!pSidekickNet->IsRunning())
 			{
+				pSidekickNet->queueNetworkInit();
+				clearErrorMsg();
+				setErrorMsg( pSidekickNet->getNetworkActionStatusMessage() );
+			}
+		}
+		else if (!pSidekickNet->RaspiHasOnlyWLAN() && (k == 'x' || k == 'X'))
+		{
+			if (!pSidekickNet->IsRunning())
+			{
+				pSidekickNet->useLANInsteadOfWLAN();
 				pSidekickNet->queueNetworkInit();
 				clearErrorMsg();
 				setErrorMsg( pSidekickNet->getNetworkActionStatusMessage() );
@@ -1806,11 +1816,10 @@ void handleC64( int k, u32 *launchKernel, char *FILENAME, char *filenameKernal, 
 			//or caused a joystick event
 			pSidekickNet->queueSktpKeypress(k);
 		}
-		//FIXME: this doesn't do the trick yet
-		else if (k == 0 && (pSidekickNet->isSKTPRefreshWaiting() || pSidekickNet->isSktpRedrawNeeded() ))
+		else if (k == 0 && pSidekickNet->isSktpRedrawNeeded() )
 		{
 			pSidekickNet->queueSktpKeypress(0);
-		}
+		}		
 	} else
 	if ( menuScreen == MENU_SYSTEMINFO )
 	{
@@ -2265,7 +2274,7 @@ void printNetworkScreen()
 
 	if ( pSidekickNet->IsRunning() )
 	{
-		if (pSidekickNet->isWireless())
+		if (pSidekickNet->usesWLAN())
 			printC64( x+1, y1+4, "You are connected (via WLAN).",   skinValues.SKIN_MENU_TEXT_ITEM, 0 );
 		else
 			printC64( x+1, y1+4, "You are connected (via network cable).",   skinValues.SKIN_MENU_TEXT_ITEM, 0 );
@@ -2277,12 +2286,18 @@ void printNetworkScreen()
 	}
 	else{
 		printC64( x+1, y1+4, "Network connection is inactive", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
-		if (pSidekickNet->isWireless())
+		if (pSidekickNet->kernelSupportsWLAN())
 		{
 			//                   "012345678901234567890123456789012345XXXX"
-			printC64( x+1, y1+5, "Press >C< to enable WIFI. (Config",   skinValues.SKIN_MENU_TEXT_ITEM, 0 );
-			printC64( x+1, y1+6, "file with SSID and passphrase is",   skinValues.SKIN_MENU_TEXT_ITEM, 0 );
-			printC64( x+1, y1+7, "needed on the SD card.)"          ,   skinValues.SKIN_MENU_TEXT_ITEM, 0 );
+			printC64( x+1, y1+5, "Press >C< to enable WIFI. ",   skinValues.SKIN_MENU_TEXT_ITEM, 0 );
+			if (pSidekickNet->RaspiHasOnlyWLAN())
+			{
+				printC64( x+1, y1+6, "(Config file with SSID and pass- ",   skinValues.SKIN_MENU_TEXT_ITEM, 0 );
+				printC64( x+1, y1+7, "phrase is needed on the SD card.)",   skinValues.SKIN_MENU_TEXT_ITEM, 0 );
+			}
+			else{
+				printC64( x+1, y1+6, "Or press >X< to enable ethernet. ",   skinValues.SKIN_MENU_TEXT_ITEM, 0 );
+			}
 		}
 		else if (pSidekickNet->RaspiHasOnlyWLAN())
 		{
@@ -2519,10 +2534,11 @@ void printSKTPScreen()
 			}
 		}
 	}
-	//printC64( 1, 24, pSidekickNet->getSysMonInfo(0), skinValues.SKIN_MENU_TEXT_ITEM, 0 );
+	//printC64( 1, 23, pSidekickNet->getTimeString(), skinValues.SKIN_MENU_TEXT_SYSINFO, 0 );
+	//printC64( 1, 24, pSidekickNet->getSysMonInfo(1), skinValues.SKIN_MENU_TEXT_SYSINFO, 0 );
 
 	startInjectCode();
-	injectPOKE( 53280, SKTPborderColor); //skinValues.SKIN_MENU_BORDER_COLOR );
+	//injectPOKE( 53280, SKTPborderColor); //skinValues.SKIN_MENU_BORDER_COLOR );
 	injectPOKE( 53281, SKTPbgColor); //skinValues.SKIN_MENU_BACKGROUND_COLOR );
 	injectPOKE( 53272, 21 + (SKTPisLowerCharset ? 2 : 0) ); // use normal c64 font
 	//FIXME: Jumping back to normal charset doesn't work in VDC mode!

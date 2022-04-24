@@ -90,6 +90,8 @@ public:
 	CSidekickNet * GetPointer(){ return this; };
 	boolean ConnectOnBoot (void);
 	boolean usesWLAN (void);
+	boolean kernelSupportsWLAN(void);
+	void useLANInsteadOfWLAN ();
 	boolean Initialize ( void );
 	boolean IsRunning ( void );
 	boolean IsConnecting ( void );
@@ -121,7 +123,6 @@ public:
 	boolean checkForFinishedDownload();
 	boolean checkForSaveableDownload();
 	boolean isDownloadReadyForLaunch();
-	boolean isWireless(){ return m_useWLAN;};
 	boolean RaspiHasOnlyWLAN();
 	void setSavePath(char*);
 	boolean IsSktpScreenContentEndReached();
@@ -219,6 +220,7 @@ private:
 	boolean checkShortcut( char *, bool);
 	void setModemEmuBaudrate( unsigned );
 	boolean IsStillRunning ( void );
+
 
 	CUSBHCIDevice     * m_USBHCI;
 	CMachineInfo      * m_pMachineInfo; //used for c64screen to display raspi model name

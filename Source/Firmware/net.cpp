@@ -67,9 +67,6 @@
 #endif
 
 // Network configuration
-#ifndef WITH_WLAN
-#define USE_DHCP
-#endif
 // Time configuration
 static const char NTPServer[]    = "pool.ntp.org";
 static const int nTimeZone       = 1*60;		// minutes diff to UTC
@@ -242,6 +239,19 @@ boolean CSidekickNet::ConnectOnBoot (){
 
 boolean CSidekickNet::usesWLAN (){
 	return m_useWLAN;
+}
+
+boolean CSidekickNet::kernelSupportsWLAN(){
+	#ifdef WITH_WLAN
+		return true;
+	#else
+		return false;
+	#endif
+}
+
+
+void CSidekickNet::useLANInsteadOfWLAN (){
+	m_useWLAN = false;
 }
 
 boolean CSidekickNet::Initialize()
@@ -625,7 +635,7 @@ boolean CSidekickNet::Prepare()
 	if ( RaspiHasOnlyWLAN() && !m_useWLAN )
 	{
 		logger->Write( "CSidekickNet::Initialize", LogNotice, 
-			"Your Raspberry Pi model (3A+) doesn't have an ethernet socket. Skipping init of CNetSubSystem."
+			"Your Raspberry Pi model (3A+/Zero2W) doesn't have an ethernet socket. Skipping init of CNetSubSystem."
 		);
 		//                 "012345678901234567890123456789012345XXXX"
 		setErrorMsgC64((char*)" No WLAN support in this kernel. Sorry. ");
@@ -767,8 +777,10 @@ void CSidekickNet::queuedSktpRefreshAllowed()
 	//refesh when user didn't press a key
 	//this has to be quick for multiplayer games (value 4)
 	//and can be slow for csdb browsing (value 16)
-	if ( m_sktpRefreshWaiting && ++m_skipSktpRefresh >= m_sktpRefreshTimeout && !isAnyNetworkActionQueued())
+	if ( m_sktpRefreshWaiting && ++m_skipSktpRefresh >= m_sktpRefreshTimeout )
+//	if ( m_sktpRefreshWaiting && ++m_skipSktpRefresh >= m_sktpRefreshTimeout && !isAnyNetworkActionQueued())
 	{
+//		logger->Write ("CSidekickNet::queuedSktpRefreshAllowed", LogNotice, " - is allowed!");
 		m_sktpRefreshWaiting = false;
 		m_skipSktpRefresh = 0;
 		m_sktpRefreshTimeout = 0;
@@ -958,18 +970,20 @@ void CSidekickNet::handleQueuedNetworkAction()
 		}
 */		
 		//handle keypress anyway even if we have downloaded or saved something
-		else if (m_isSktpKeypressQueued || m_sktpRefreshWaiting)
+		else if (m_isSktpKeypressQueued)
 		{
-			if (m_sktpRefreshWaiting && m_sktpKey == 0 )
-			{
-				m_isSktpKeypressQueued = false;
-				queuedSktpRefreshAllowed();
-			}
-			else
-				updateSktpScreenContent();
+			updateSktpScreenContent();
 			m_isSktpKeypressQueued = false;
 		}
-
+		else if (m_sktpRefreshWaiting)
+		{
+			if( m_sktpKey == 0)
+				queuedSktpRefreshAllowed();
+			else{
+				updateSktpScreenContent();
+				m_isSktpKeypressQueued = false;
+			}
+		}
 	}
 }
 
@@ -1660,8 +1674,9 @@ boolean CSidekickNet::getSKTPBorderBGColorCharset( u8 &borderColor, u8 &bgColor)
 
 void CSidekickNet::enableSktpRefreshTimeout(){
 	//logger->Write( "enableSktpRefreshTimeout", LogNotice, "enabled");
+	m_sktpScreenContent[m_sktpScreenPosition] = 88; //destroy refresh chunk in case it is parsed a second time
 	u8 timeout = m_sktpScreenContent[ ++m_sktpScreenPosition ];
-	setSktpRefreshTimeout( timeout < 3 ? 3 : timeout); //minimum value
+	setSktpRefreshTimeout( timeout < 1 ? 1 : timeout); //minimum value
 	m_sktpScreenPosition++;
 }
 
