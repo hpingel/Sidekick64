@@ -1376,7 +1376,7 @@ void printSystemInfoScreen()
 		printC64( x+1, y1+16, "Git tag    : " GIT_TAG, skinValues.SKIN_MENU_TEXT_ITEM, 0 );
 	printC64( x+1, y1+17, "Git hash   : " GIT_HASH, skinValues.SKIN_MENU_TEXT_ITEM, 0 );
 	printC64( x+1, y1+18, "Circle     :" , skinValues.SKIN_MENU_TEXT_ITEM, 0 );
-	printC64( x+15, y1+18, CIRCLE_VERSION_STRING, skinValues.SKIN_MENU_TEXT_ITEM, 0 );
+	printC64( x+14, y1+18, CIRCLE_VERSION_STRING, skinValues.SKIN_MENU_TEXT_ITEM, 0 );
 
 	printSidekickLogo();
 	
