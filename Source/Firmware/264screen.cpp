@@ -67,7 +67,7 @@ const int VK_MOUNT_START = 77; // M
 extern CLogger *logger;
 #ifdef WITH_NET
 extern CSidekickNet * pSidekickNet;
-#include "circle/version.h"
+#include <circle/version.h>
 
 u8 SKTPborderColor = 0; 
 u8 SKTPbgColor = 0; 
@@ -880,12 +880,9 @@ void handleC64( int k, u32 *launchKernel, char *FILENAME, char *filenameKernal )
 		}
 		else if ( k == 's' || k == 'S')
 		{
-			//if (pSidekickNet->IsRunning())
-			{
 				menuScreen = MENU_SYSTEMINFO;
 				handleC64( 0xffffffff, launchKernel, FILENAME, filenameKernal );
 				return;
-			}
 		}
 		else if ( k == 'c' || k == 'C')
 		{
@@ -894,6 +891,25 @@ void handleC64( int k, u32 *launchKernel, char *FILENAME, char *filenameKernal )
 				pSidekickNet->queueNetworkInit();
 				clearErrorMsg();
 				setErrorMsg( pSidekickNet->getNetworkActionStatusMessage() );
+			}
+		}
+		else if (!pSidekickNet->RaspiHasOnlyWLAN() && (k == 'x' || k == 'X'))
+		{
+			if (!pSidekickNet->IsRunning())
+			{
+				pSidekickNet->useLANInsteadOfWLAN();
+				pSidekickNet->queueNetworkInit();
+				clearErrorMsg();
+				setErrorMsg( pSidekickNet->getNetworkActionStatusMessage() );
+			}
+		}
+		else if ( k == 'b' || k == 'B')
+		{
+			if (pSidekickNet->IsRunning())
+			{
+				//if ( pSidekickNet->getModemEmuType() == 1)
+				//	if (pSidekickNet->isUsbUserportModemConnected())
+				pSidekickNet->iterateModemEmuBaudrate();
 			}
 		}
 		/*
@@ -1211,7 +1227,7 @@ void printNetworkScreen()
 	CString strConnection = "Connection state: ";
 	CString strWebserver  = "Webserver state:  ";
 	CString strUPModemEmu = "Userport modem emu: ";
-	CString strModemBaudR = "Default baud rate:  ";
+	CString strModemBaudR = "Baud rate       (B):";
 	CString strHelper;
 	
 	if (strcmp(netSidekickHostname,"") != 0)
@@ -1269,7 +1285,7 @@ void printNetworkScreen()
 
 	if ( pSidekickNet->IsRunning() )
 	{
-		if (pSidekickNet->isWireless())
+		if (pSidekickNet->usesWLAN())
 			printC64( x+1, y1+4, "You are connected (via WLAN).",   skinValues.SKIN_MENU_TEXT_ITEM, 0 );
 		else
 			printC64( x+1, y1+4, "You are connected (via network cable).",   skinValues.SKIN_MENU_TEXT_ITEM, 0 );
@@ -1281,12 +1297,18 @@ void printNetworkScreen()
 	}
 	else{
 		printC64( x+1, y1+4, "Network connection is inactive", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
-		if (pSidekickNet->isWireless())
+		if (pSidekickNet->kernelSupportsWLAN())
 		{
 			//                   "012345678901234567890123456789012345XXXX"
-			printC64( x+1, y1+5, "Press >C< to enable WIFI. (Config",   skinValues.SKIN_MENU_TEXT_ITEM, 0 );
-			printC64( x+1, y1+6, "file with SSID and passphrase is",   skinValues.SKIN_MENU_TEXT_ITEM, 0 );
-			printC64( x+1, y1+7, "needed on the SD card.)"          ,   skinValues.SKIN_MENU_TEXT_ITEM, 0 );
+			printC64( x+1, y1+5, "Press >C< to enable WIFI. ",   skinValues.SKIN_MENU_TEXT_ITEM, 0 );
+			if (pSidekickNet->RaspiHasOnlyWLAN())
+			{
+				printC64( x+1, y1+6, "(Config file with SSID and pass- ",   skinValues.SKIN_MENU_TEXT_ITEM, 0 );
+				printC64( x+1, y1+7, "phrase is needed on the SD card.)",   skinValues.SKIN_MENU_TEXT_ITEM, 0 );
+			}
+			else{
+				printC64( x+1, y1+6, "Or press >X< to enable ethernet. ",   skinValues.SKIN_MENU_TEXT_ITEM, 0 );
+			}
 		}
 		else if (pSidekickNet->RaspiHasOnlyWLAN())
 		{
@@ -1305,7 +1327,6 @@ void printNetworkScreen()
 			printC64( x+1, y1+7, "(Plug in a network cable first.)",   skinValues.SKIN_MENU_TEXT_ITEM, 0 );
 		}
 	}
-
 	
 	printSidekickLogo();
 
@@ -1445,23 +1466,35 @@ void printSKTPScreen()
 					1 char repeat chunk
 					2 screencode chunk
 					3 meta screen refresh
-					4 colors & charset
+					4 colors (border, background) & charset
 					5 vertical repeat chunk
 					6 paintbrush chunk
+					7 tga image file url/name to be shown on color tft display
+					8 tga image content
 					*/
 					u8 type = pSidekickNet->GetSktpScreenContentChunkType();
 					if ( type == 0 || type == 1 || type == 2 || type == 5 || type == 6)
 					{
 						content = (char *) pSidekickNet->GetSktpScreenContentChunk( pos, color, inverse, repeat);
-						y = pos / 40;
-						x = pos % 40;
-						if (type < 5) repeat = 1;
-						if (type < 6)
+						if (type < 5) 
+							repeat = 1;
+							
+						if (type == 2)
 						{
-							for (u8 z = 0; z < repeat; z++)
-								printC64( x, y+yOffset+z, content, color, inverse ? 0x80 : 0, (type == 2 || type == 5) ? 4:1);
+							for (u16 c = 0; c < strlen(content); c++)
+							{
+								c64screen[ pos + c ] = content[c];
+								c64color[ pos + c ] = color;
+							}
 						}
-						else
+						else if (type < 6)
+						{
+							y = pos / 40;
+							x = pos % 40;
+							for (u8 z = 0; z < repeat; z++)
+								printC64( x, y+yOffset+z, content, color, inverse ? 0x80 : 0, (type == 5) ? 4:1, strlen(content));
+						}
+						else if (type == 6)
 						{
 							//paintbrush chunk (6)
 							u8 gap = color;
@@ -1470,7 +1503,7 @@ void printSKTPScreen()
 								{
 									u8 co = content[c];
 									if ( co == 16 ) co = 0;
-									c64color[ x + ((y+yOffset) * 40) + c + (z*(gap + strlen(content))) ] = co;
+									c64color[ pos + c + (z*(gap + strlen(content))) ] = co;
 								}
 						}
 					}
@@ -1478,6 +1511,16 @@ void printSKTPScreen()
 						pSidekickNet->enableSktpRefreshTimeout();
 					else if (type == 4)
 						SKTPisLowerCharset = (pSidekickNet->getSKTPBorderBGColorCharset( SKTPborderColor, SKTPbgColor) == 1);
+					else if (type == 7)
+						pSidekickNet->prepareDownloadOfTGAImage();
+					else if (type == 8)
+						pSidekickNet->updateTGAImageFromSKTPChunk();
+					else if (type == 88)
+					{
+						//silently ignore
+						//logger->Write( "printSKTPScreen", LogWarning, "magic 88");
+						break;
+					}
 					else if (type == 255)
 					{
 						logger->Write( "printSKTPScreen", LogWarning, "end of sktp response was reached");
@@ -1493,12 +1536,14 @@ void printSKTPScreen()
 			}
 		}
 	}
-	//printC64( 1, 24, pSidekickNet->getSysMonInfo(0), skinValues.SKIN_MENU_TEXT_ITEM, 0 );
+	//printC64( 1, 23, pSidekickNet->getTimeString(), skinValues.SKIN_MENU_TEXT_SYSINFO, 0 );
+	//printC64( 1, 24, pSidekickNet->getSysMonInfo(1), skinValues.SKIN_MENU_TEXT_SYSINFO, 0 );
 
 //	if ( SKTPisLowerCharset ) 
 		c64screen[ 1000 ] = ((0x6800 >> 8) & 0xFC); //lowercase
 //	else
 //		c64screen[ 1000 ] = ((0x6000 >> 8) & 0xFC); //uppercase
+//	c64screenUppercase = SKTPisLowerCharset ? 0:1;
 	c64screen[ 1001 ] = SKTPborderColor;
 	c64screen[ 1002 ] = SKTPbgColor;
 

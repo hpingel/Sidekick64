@@ -1604,10 +1604,12 @@ void CSidekickNet::updateSktpScreenContent(){
 		m_sktpScreenErrorCode = 2;
 	}
 
+	#ifndef IS264
 	//temporary workaround to reset the tft gfx when a menu is left
 	//until this is implemented in sktp
 	if ( m_sktpKey == 135 || m_sktpKey == 95)
 		m_kMenu->SplashScreenTFT();
+	#endif
 	
 	m_sktpKey = 0;
 }
