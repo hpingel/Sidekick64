@@ -199,15 +199,26 @@ void CKernelLaunch::Run( void )
 		bool customTGA = false;
 		if (strlen( FILENAME ) > 4 && !_playingPSID)
 		{
-			char fn[ 1024 ];
-			// attention: this assumes that the filename ending is always ".crt"!
-			memset( fn, 0, 1024 );
-			strncpy( fn, FILENAME, strlen( FILENAME ) - 4 );
-			strcat( fn, ".tga" );
-			if ( tftLoadBackgroundTGA( (char*)DRIVE, fn ) )
+			if (1==2)
 			{
+				//display tga from memory in case of csdb launcher
+				extern unsigned char tempTGA[ 256 * 256 * 4 ];
+				tftLoadBackgroundTGAMemory( tempTGA, 240, 240, false);
 				tftCopyBackground2Framebuffer();
 				customTGA = true;
+			}
+			else
+			{
+				char fn[ 1024 ];
+				// attention: this assumes that the filename ending is always ".crt"!
+				memset( fn, 0, 1024 );
+				strncpy( fn, FILENAME, strlen( FILENAME ) - 4 );
+				strcat( fn, ".tga" );
+				if ( tftLoadBackgroundTGA( (char*)DRIVE, fn ) )
+				{
+					tftCopyBackground2Framebuffer();
+					customTGA = true;
+				}
 			}
 		}
 		if (!customTGA)

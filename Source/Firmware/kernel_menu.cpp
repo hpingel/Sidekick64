@@ -559,10 +559,6 @@ boolean CKernelMenu::Initialize( void )
 	memcpy( &cartMenu[ 0x1c10 ], col, 6 );
 
 	#ifdef WITH_NET
-		//default to cable based network on B models
-		//if ( m_SidekickNet.ConnectOnBoot() && !pSidekickNet->RaspiHasOnlyWLAN() && m_SidekickNet.usesWLAN())
-		//	m_SidekickNet.useLANInsteadOfWLAN();
-			
 //		if (m_SidekickNet.usesWLAN())
 //			delayHandleNetworkValue = 1200000;
 	
@@ -823,6 +819,22 @@ static int postDelayFrame = 0;
 static int postDelayTicks = 0;
 
 static int disableFIQ_Falling = 0;
+
+#ifdef WITH_NET
+void CKernelMenu::SplashScreenTFT( void )
+{
+	tftLoadCharset( DRIVE, FILENAME_TFT_FONT );
+	tftLoadBackgroundTGA( DRIVE, FILENAME_SPLASH_RGB128, 8 ); 
+	memcpy( tftC128Logo, tftBackground, 240 * 240 * 2 );
+	tftLoadBackgroundTGA( DRIVE, FILENAME_SPLASH_RGB, 8 ); 
+	if ( modeC128 )
+		tftLoadBackgroundTGA( DRIVE, FILENAME_SPLASH_RGB128, 8 ); else
+		tftLoadBackgroundTGA( DRIVE, FILENAME_SPLASH_RGB, 8 ); 
+	tftCopyBackground2Framebuffer();
+	tftInitImm( screenRotation );
+	tftSendFramebuffer16BitImm( tftFrameBuffer );
+}
+#endif
 
 void CKernelMenu::Run( void )
 {
