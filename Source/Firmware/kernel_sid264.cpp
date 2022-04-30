@@ -1217,7 +1217,8 @@ void CKernel::FIQHandler (void *pParam)
 		#else
 		write32( ARM_PWM_DAT1, d1 );
 		write32( ARM_PWM_DAT2, d2 );
-		#endif		
+		#endif
+		}
 		goto get_out;
 	} 
 	#endif
