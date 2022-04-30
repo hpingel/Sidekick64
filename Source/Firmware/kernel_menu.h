@@ -146,6 +146,7 @@ public:
 	void Run( void );
 #ifdef WITH_NET
 	void updateSystemMonitor();
+	void SplashScreenTFT( void );
 #endif
 	boolean isRebootRequested();
 	void doCacheWellnessTreatment();

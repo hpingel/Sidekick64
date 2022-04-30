@@ -222,7 +222,8 @@ void CSidekickNet::setSidekickKernelUpdatePath( unsigned type)
 };*/
 
 boolean CSidekickNet::ConnectOnBoot (){
-	
+	//as ConnectOnBoot is called anyway very early we can afford to dump
+	//the initialization of the baudrate in here
 	if (netModemEmuDefaultBaudrate > 0){
 		switch(netModemEmuDefaultBaudrate){
 			case 300:
@@ -232,6 +233,13 @@ boolean CSidekickNet::ConnectOnBoot (){
 			case 9600:
 				m_baudRate = netModemEmuDefaultBaudrate;
 		}
+	}
+	
+	//default to cable based network on B models
+	if ( netConnectOnBoot && !RaspiHasOnlyWLAN() && usesWLAN() && 
+		fileExists( logger, (char*)DRIVE, (char*)(char*)"SD:WLAN/wpa_supplicant.conf" ) <= 0)
+	{
+		useLANInsteadOfWLAN();
 	}
 			
 	return netConnectOnBoot;
@@ -1595,6 +1603,12 @@ void CSidekickNet::updateSktpScreenContent(){
 	{
 		m_sktpScreenErrorCode = 2;
 	}
+
+	//temporary workaround to reset the tft gfx when a menu is left
+	//until this is implemented in sktp
+	if ( m_sktpKey == 135 || m_sktpKey == 95)
+		m_kMenu->SplashScreenTFT();
+	
 	m_sktpKey = 0;
 }
 
