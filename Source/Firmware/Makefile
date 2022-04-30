@@ -45,8 +45,8 @@ LIBS	= $(CIRCLEHOME)/addon/vc4/sound/libvchiqsound.a \
 endif
 
 ifeq ($(kernel), menu20)
-CFLAGS += -DCOMPILE_MENU=1
-OBJS += kernel_menu20.o crt.o dirscan.o vic20config.o vic20screen.o mygpiopinfiq.o  tft_st7789.o sound.o oscillator.o disk_emulation.o
+CFLAGS += -DCOMPILE_MENU=1 -DSIDEKICK20
+OBJS += kernel_menu20.o crt.o dirscan.o vic20config.o vic20screen.o mygpiopinfiq.o  tft_st7789.o sound.o disk_emulation.o
 #m6561.o 
 #kernel_launch264.o  kernel_ramlaunch264.o launch264.o
 

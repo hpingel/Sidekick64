@@ -82,9 +82,8 @@ endif
 endif
 
 ifeq ($(kernel), menu20)
-CFLAGS += -DCOMPILE_MENU=1
-OBJS += kernel_menu20.o crt.o dirscan.o vic20config.o vic20screen.o mygpiopinfiq.o  tft_st7789.o
-#kernel_launch264.o  kernel_ramlaunch264.o launch264.o
+CFLAGS += -DCOMPILE_MENU=1 -DSIDEKICK20
+OBJS += kernel_menu20.o crt.o dirscan.o vic20config.o vic20screen.o mygpiopinfiq.o  tft_st7789.o sound.o disk_emulation.o
 
 CFLAGS += -DCOMPILE_MENU_WITH_SOUND=1
 #OBJS += kernel_sid264.o sound.o ./resid/dac.o ./resid/filter.o ./resid/envelope.o ./resid/extfilt.o ./resid/pot.o ./resid/sid.o ./resid/version.o ./resid/voice.o ./resid/wave.o fmopl.o 

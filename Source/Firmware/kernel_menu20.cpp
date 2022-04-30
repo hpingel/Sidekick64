@@ -45,6 +45,10 @@ u8 bankVFLI = 0x0f;
 #define HDMI_SOUND
 #define SAMPLERATE 32000
 
+u32 fillSoundBuffer;
+u32 trackSampleProgress;
+u32 SAMPLERATE_ADJUSTED = SAMPLERATE;
+
 // we will read these files
 static const char DRIVE[] = "SD:";
 static const char FILENAME_PRG[] = "SD:VC20/rpimenu20.prg";		// .PRG to start
