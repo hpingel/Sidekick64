@@ -1893,8 +1893,6 @@ void CSidekickNet::enterWebUploadMode(){
 
 void CSidekickNet::iterateModemEmuBaudrate()
 {
-	//if ( m_modemEmuType == SK_MODEM_USERPORT_USB )
-	{
 		switch(m_baudRate){
 			case 300:
 				m_baudRate = 1200;
@@ -1912,8 +1910,10 @@ void CSidekickNet::iterateModemEmuBaudrate()
 			default:
 				m_baudRate = 300;
 				break;
+		if ( m_modemEmuType == SK_MODEM_USERPORT_USB )
+		{
+			m_pUSBSerial->SetBaudRate(m_baudRate);
 		}
-		m_pUSBSerial->SetBaudRate(m_baudRate);
 	}
 }
 
