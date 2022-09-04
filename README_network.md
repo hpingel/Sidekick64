@@ -1,6 +1,8 @@
 
 # Network features for Sidekick64
 
+## This version of the documentation is outdated as it is related to an older version. Please find the current documentation [here](https://github.com/hpingel/Sidekick64/blob/net-rebase-on-v0.51/README_network.md).
+
 <!-- TOC -->
 
 - [Network features for Sidekick64](#network-features-for-sidekick64)
@@ -47,6 +49,9 @@
 <!-- /TOC -->
 
 ## Introduction
+
+## This version of the documentation is outdated as it is related to an older version. Please find the current documentation [here](https://github.com/hpingel/Sidekick64/blob/net-rebase-on-v0.51/README_network.md).
+
 The main goal of this fork of Sidekick64 is to find out if it is possible to use the network capabilities of a Raspberry Pi in parallel with the emulation modes of Sidekick64 without meddling too much with any timings needed for reliably emulating C64 carts. Further goals were for me to learn how to use the Circle bare metal framework and to learn how Sidekick64 does its magic by trying to understand its source code.
 
 Once network features were squeezed into the "clockwork" of Sidekick64 without disturbing it too much, I started to add some network demos and tried to implement modem emulation to make use of the newly gained network capabilities. Without the excellent network examples of the Circle bare metal framework this would have been much harder to achieve.
@@ -80,7 +85,10 @@ Currently the following network related features are offered by the experimental
 	- Added SKTP browser: .... Control screen content and user key presses remotely via "SKTP server" (HTTP server with web application). Ability to download, launch and save files fetched via HTTP(S): PRG, SID, CRT, D64
 	- Added system information page: Allows to see the current RPi CPU temperature, basic network connection information and also meta info like date and time and information about the Sidekick64 kernel running
 * Outlook: Sidekick264 network support is also implemented in a highly experimental state. Due to the many variants that have to be tested Sidekick264 network has not been tested a lot.
+
 ## Quickstart
+
+## This version of the documentation is outdated as it is related to an older version. Please find the current documentation [here](https://github.com/hpingel/Sidekick64/blob/net-rebase-on-v0.51/README_network.md).
 
 1. Important: On the Sidekick64 PCB, set the jumper A13-BTN to BTN (vertical position). The reason for this is explained in section [Recommended setting for jumper "A13-BTN"](#recommended-setting-for-jumper-a13-btn).
 2. Download the following archives and files to your PC/MAC/Desktop:
