@@ -25,12 +25,12 @@ CPPFLAGS += \
 	-DCOMPILE_TIME="\"$(COMPILE_TIME)\"" \
 	-DGIT_BRANCH="\"$(GIT_BRANCH)\"" \
 	-DGIT_TAG="\"$(GIT_TAG)\""\
-	-DMETADEFINES="\"$(DEFINE)\"" 
+	-DMETADEFINES="\"$(DEFINE)\""
 CPPFLAGS += -DWITH_TLS
 
-EXTRACLEAN = OLED/*.o resid/*.o OLED/*.d resid/*.d PSID/libpsid64/*.o PSID/psid64/*.o D2EF/*.o
+EXTRACLEAN = OLED/*.o resid/*.o OLED/*.d resid/*.d PSID/libpsid64/*.o PSID/psid64/*.o D2EF/*.o Nuked-OPL3/*.o Nuked-OPLL/*.o
 
-OBJS = lowlevel_arm64.o gpio_defs.o helpers.o latch.o oled.o ./OLED/ssd1306xled.o ./OLED/ssd1306xled8x16.o ./OLED/num2str.o 
+OBJS = lowlevel_arm64.o gpio_defs.o helpers.o latch.o oled.o ./OLED/ssd1306xled.o ./OLED/ssd1306xled8x16.o ./OLED/num2str.o
 
 ### MENU C64/C128 ###
 ifeq ($(kernel), menu)
@@ -39,16 +39,25 @@ CPPFLAGS += -DCOMPILE_MENU=1 -fno-threadsafe-statics
 OBJS += ./Vice/m93c86.o
 OBJS += kernel_menu.o kernel_kernal.o kernel_launch.o kernel_ef.o kernel_fc3.o kernel_kcs.o kernel_ssnap5.o kernel_ar.o kernel_freezemachine.o kernel_warpspeed.o kernel_cart128.o crt.o dirscan.o config.o kernel_rkl.o c64screen.o tft_st7789.o launch.o
 
+OBJS += ./ymfm/src/ymfm_opl.o
+OBJS += ./ymfm/src/ymfm_adpcm.o
+OBJS += ./ymfm/src/ymfm_pcm.o
 
-OBJS += ./PSID/sidtune/PP20.o ./PSID/sidtune/PSID.o ./PSID/sidtune/SidTune.o ./PSID/sidtune/SidTuneTools.o 
-OBJS += ./PSID/libpsid64/psid64.o  ./PSID/libpsid64/reloc65.o  ./PSID/libpsid64/screen.o   ./PSID/libpsid64/theme.o  
-#OBJS += ./PSID/libpsid64/exomizer/chunkpool.o  ./PSID/libpsid64/exomizer/exomizer.o  ./PSID/libpsid64/exomizer/match.o  ./PSID/libpsid64/exomizer/optimal.o  ./PSID/libpsid64/exomizer/output.o  ./PSID/libpsid64/exomizer/radix.o  ./PSID/libpsid64/exomizer/search.o  ./PSID/libpsid64/exomizer/sfx64ne.o  
+OBJS += ./Nuked-OPL3/opl3.o
+OBJS += ./Nuked-OPLL/opll.o
+
+OBJS += ./Nuked-OPN2/ym3438.o
+
+OBJS += ./PSID/sidtune/PP20.o ./PSID/sidtune/PSID.o ./PSID/sidtune/SidTune.o ./PSID/sidtune/SidTuneTools.o
+OBJS += ./PSID/libpsid64/psid64.o  ./PSID/libpsid64/reloc65.o  ./PSID/libpsid64/screen.o   ./PSID/libpsid64/theme.o
+#OBJS += ./PSID/libpsid64/exomizer/chunkpool.o  ./PSID/libpsid64/exomizer/exomizer.o  ./PSID/libpsid64/exomizer/match.o  ./PSID/libpsid64/exomizer/optimal.o  ./PSID/libpsid64/exomizer/output.o  ./PSID/libpsid64/exomizer/radix.o  ./PSID/libpsid64/exomizer/search.o  ./PSID/libpsid64/exomizer/sfx64ne.o
 
 OBJS += ./D2EF/bundle.o ./D2EF/d64.o ./D2EF/diskimage.o ./D2EF/binaries.o ./D2EF/disk2easyflash.o
 
 CPPFLAGS += -DCOMPILE_MENU_WITH_SOUND=1
-OBJS += kernel_sid.o kernel_sid8.o sound.o ./resid/dac.o ./resid/filter.o ./resid/envelope.o ./resid/extfilt.o ./resid/pot.o ./resid/sid.o ./resid/version.o ./resid/voice.o ./resid/wave.o fmopl.o 
-CPPFLAGS += -DUSE_VCHIQ_SOUND=$(USE_VCHIQ_SOUND) 
+OBJS += kernel_sid.o kernel_sid8.o sound.o ./resid/dac.o ./resid/filter.o ./resid/envelope.o ./resid/extfilt.o ./resid/pot.o ./resid/sid.o ./resid/version.o ./resid/voice.o ./resid/wave.o fmopl.o
+
+CPPFLAGS += -DUSE_VCHIQ_SOUND=$(USE_VCHIQ_SOUND)
 
 LIBS	= $(CIRCLEHOME)/addon/vc4/sound/libvchiqsound.a \
         $(CIRCLEHOME)/addon/vc4/vchiq/libvchiq.a \
@@ -74,17 +83,17 @@ CPPFLAGS += -DCOMPILE_MENU=1
 OBJS += kernel_menu264.o kernel_launch264.o dirscan.o 264config.o kernel_ramlaunch264.o 264screen.o mygpiopinfiq.o launch264.o tft_st7789.o
 
 CPPFLAGS += -DCOMPILE_MENU_WITH_SOUND=1
-OBJS += kernel_sid264.o sound.o ./resid/dac.o ./resid/filter.o ./resid/envelope.o ./resid/extfilt.o ./resid/pot.o ./resid/sid.o ./resid/version.o ./resid/voice.o ./resid/wave.o fmopl.o 
-CPPFLAGS += -DUSE_VCHIQ_SOUND=$(USE_VCHIQ_SOUND) 
+OBJS += kernel_sid264.o sound.o ./resid/dac.o ./resid/filter.o ./resid/envelope.o ./resid/extfilt.o ./resid/pot.o ./resid/sid.o ./resid/version.o ./resid/voice.o ./resid/wave.o fmopl.o
+CPPFLAGS += -DUSE_VCHIQ_SOUND=$(USE_VCHIQ_SOUND)
 
 LIBS	= $(CIRCLEHOME)/addon/vc4/sound/libvchiqsound.a \
  	      $(CIRCLEHOME)/addon/vc4/vchiq/libvchiq.a \
         $(CIRCLEHOME)/addon/linux/liblinuxemu.a
-				
+
 ifeq ($(net), on)
 CPPFLAGS += -DWITH_NET=1
 OBJS += net.o webserver.o
-LIBS += $(CIRCLEHOME)/lib/net/libnet.a 
+LIBS += $(CIRCLEHOME)/lib/net/libnet.a
 ifeq ($(wlan), on)
 CPPFLAGS += -DWITH_WLAN=1
 LIBS += $(CIRCLEHOME)/addon/wlan/hostap/wpa_supplicant/libwpa_supplicant.a \
@@ -100,8 +109,8 @@ CPPFLAGS += -DCOMPILE_MENU=1 -DSIDEKICK20
 OBJS += kernel_menu20.o crt.o dirscan.o vic20config.o vic20screen.o mygpiopinfiq.o  tft_st7789.o sound.o disk_emulation.o
 
 CPPFLAGS += -DCOMPILE_MENU_WITH_SOUND=1
-#OBJS += kernel_sid264.o sound.o ./resid/dac.o ./resid/filter.o ./resid/envelope.o ./resid/extfilt.o ./resid/pot.o ./resid/sid.o ./resid/version.o ./resid/voice.o ./resid/wave.o fmopl.o 
-CPPFLAGS += -DUSE_VCHIQ_SOUND=$(USE_VCHIQ_SOUND) 
+#OBJS += kernel_sid264.o sound.o ./resid/dac.o ./resid/filter.o ./resid/envelope.o ./resid/extfilt.o ./resid/pot.o ./resid/sid.o ./resid/version.o ./resid/voice.o ./resid/wave.o fmopl.o
+CPPFLAGS += -DUSE_VCHIQ_SOUND=$(USE_VCHIQ_SOUND)
 
 LIBS	= $(CIRCLEHOME)/addon/vc4/sound/libvchiqsound.a \
    	      $(CIRCLEHOME)/addon/vc4/vchiq/libvchiq.a \
@@ -111,15 +120,15 @@ endif
 
 ### individual Kernels for C64 ###
 ifeq ($(kernel), cart)
-OBJS += kernel_cart.o 
+OBJS += kernel_cart.o
 endif
 
 ifeq ($(kernel), launch)
-OBJS += kernel_launch.o 
+OBJS += kernel_launch.o
 endif
 
 ifeq ($(kernel), kernal)
-OBJS += kernel_kernal.o 
+OBJS += kernel_kernal.o
 endif
 
 #ifeq ($(kernel), render)
@@ -131,16 +140,16 @@ endif
 #endif
 
 ifeq ($(kernel), ef)
-OBJS += kernel_ef.o crt.o 
+OBJS += kernel_ef.o crt.o
 endif
 
 ifeq ($(kernel), fc3)
 CPPFLAGS += -Wl,-emainFC3
-OBJS += kernel_fc3.o crt.o 
+OBJS += kernel_fc3.o crt.o
 endif
 
 ifeq ($(kernel), ar)
-OBJS += kernel_ar.o crt.o 
+OBJS += kernel_ar.o crt.o
 endif
 
 ifeq ($(kernel), ram)
@@ -148,7 +157,7 @@ OBJS += kernel_georam.o
 endif
 
 ifeq ($(kernel), sid)
-OBJS += kernel_sid.o sound.o ./resid/dac.o ./resid/filter.o ./resid/envelope.o ./resid/extfilt.o ./resid/pot.o ./resid/sid.o ./resid/version.o ./resid/voice.o ./resid/wave.o fmopl.o 
+OBJS += kernel_sid.o sound.o ./resid/dac.o ./resid/filter.o ./resid/envelope.o ./resid/extfilt.o ./resid/pot.o ./resid/sid.o ./resid/version.o ./resid/voice.o ./resid/wave.o fmopl.o
 endif
 
 ifeq ($(kernel), sid)
@@ -156,7 +165,7 @@ LIBS	= $(CIRCLEHOME)/addon/vc4/sound/libvchiqsound.a \
    	      $(CIRCLEHOME)/addon/vc4/vchiq/libvchiq.a \
 	      $(CIRCLEHOME)/addon/linux/liblinuxemu.a
 
-CPPFLAGS += -DUSE_VCHIQ_SOUND=$(USE_VCHIQ_SOUND) 
+CPPFLAGS += -DUSE_VCHIQ_SOUND=$(USE_VCHIQ_SOUND)
 endif
 
 CPPFLAGS += -Wno-comment
@@ -167,7 +176,7 @@ include $(CIRCLEHOME)/Rules.mk
 
 INCLUDE += \
 	   -I $(CIRCLE_STDLIB_DIR)/include \
-	   -I $(NEWLIBDIR)/include 
+	   -I $(NEWLIBDIR)/include
 
 LIBS += \
 	$(NEWLIBDIR)/lib/libm.a \

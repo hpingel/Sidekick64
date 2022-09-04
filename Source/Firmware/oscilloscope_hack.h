@@ -1,11 +1,11 @@
 /*
-  _________.__    .___      __   .__        __          _________.___________   
- /   _____/|__| __| _/____ |  | _|__| ____ |  | __     /   _____/|   \______ \  
- \_____  \ |  |/ __ |/ __ \|  |/ /  |/ ___\|  |/ /     \_____  \ |   ||    |  \ 
+  _________.__    .___      __   .__        __          _________.___________
+ /   _____/|__| __| _/____ |  | _|__| ____ |  | __     /   _____/|   \______ \
+ \_____  \ |  |/ __ |/ __ \|  |/ /  |/ ___\|  |/ /     \_____  \ |   ||    |  \
  /        \|  / /_/ \  ___/|    <|  \  \___|    <      /        \|   ||    `   \
 /_______  /|__\____ |\___  >__|_ \__|\___  >__|_ \    /_______  /|___/_______  /
-        \/         \/    \/     \/       \/     \/            \/             \/ 
- 
+        \/         \/    \/     \/       \/     \/            \/             \/
+
  oscilloscope_hack.h
 
  Sidekick64 - A framework for interfacing 8-Bit Commodore computers (C64/C128,C16/Plus4,VC20) and a Raspberry Pi Zero 2 or 3A+/3B+
@@ -13,7 +13,7 @@
  Copyright (c) 2019-2022 Carsten Dachsbacher <frenetic@dachsbacher.de>
 
  Logo created with http://patorjk.com/software/taag/
- 
+
  This program is free software: you can redistribute it and/or modify
  it under the terms of the GNU General Public License as published by
  the Free Software Foundation, either version 3 of the License, or
@@ -23,7 +23,7 @@
  but WITHOUT ANY WARRANTY; without even the implied warranty of
  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  GNU General Public License for more details.
- 
+
  You should have received a copy of the GNU General Public License
  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
@@ -58,7 +58,7 @@ if ( ( scopeUpdate++ & 3 ) == 0 )
 	scopeValue[ 1 ][ scopeX ] = y;
 #endif
 
-#ifdef EMULATE_OPL2
+#if defined(EMULATE_OPL2) || defined(EMULATE_OPL3)
 	y = 528 + 128 + ( valOPL >> 8 );
 	screen->SetPixel( x, scopeValue[ 2 ][ scopeX ], 0 );
 	screen->SetPixel( x, y, COLOR2 );

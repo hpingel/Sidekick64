@@ -1,20 +1,20 @@
 /*
-  _________.__    .___      __   .__        __          _________.___________   
- /   _____/|__| __| _/____ |  | _|__| ____ |  | __     /   _____/|   \______ \  
- \_____  \ |  |/ __ |/ __ \|  |/ /  |/ ___\|  |/ /     \_____  \ |   ||    |  \ 
+  _________.__    .___      __   .__        __          _________.___________
+ /   _____/|__| __| _/____ |  | _|__| ____ |  | __     /   _____/|   \______ \
+ \_____  \ |  |/ __ |/ __ \|  |/ /  |/ ___\|  |/ /     \_____  \ |   ||    |  \
  /        \|  / /_/ \  ___/|    <|  \  \___|    <      /        \|   ||    `   \
 /_______  /|__\____ |\___  >__|_ \__|\___  >__|_ \    /_______  /|___/_______  /
-        \/         \/    \/     \/       \/     \/            \/             \/ 
- 
+        \/         \/    \/     \/       \/     \/            \/             \/
+
  kernel_sid.cpp
 
  Sidekick64 - A framework for interfacing 8-Bit Commodore computers (C64/C128,C16/Plus4,VC20) and a Raspberry Pi Zero 2 or 3A+/3B+
-            - Sidekick SID: a SID and SFX Sound Expander Emulation 
+            - Sidekick SID: a SID and SFX Sound Expander Emulation
   		      (using reSID by Dag Lem and FMOPL by Jarek Burczynski, Tatsuyuki Satoh, Marco van den Heuvel, and Acho A. Tang)
  Copyright (c) 2019-2022 Carsten Dachsbacher <frenetic@dachsbacher.de>
 
  Logo created with http://patorjk.com/software/taag/
- 
+
  This program is free software: you can redistribute it and/or modify
  it under the terms of the GNU General Public License as published by
  the Free Software Foundation, either version 3 of the License, or
@@ -24,7 +24,7 @@
  but WITHOUT ANY WARRANTY; without even the implied warranty of
  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  GNU General Public License for more details.
- 
+
  You should have received a copy of the GNU General Public License
  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
@@ -45,10 +45,10 @@ static const char FILENAME_SPLASH_RGB[] = "SD:SPLASH/sk64_sid_bg2.tga";
 static const char FILENAME_SPLASH_RGB2[] = "SD:SPLASH/sk64_sid_bg.tga";
 static const char FILENAME_LED_RGB[] = "SD:SPLASH/sk64_sid_led.tga";
 
-//                 _________.___________         ____                      ________    ______  ____________  
-//_______   ____  /   _____/|   \______ \       /  _ \       ___.__. _____ \_____  \  /  __  \/_   \_____  \ 
-//\_  __ \_/ __ \ \_____  \ |   ||    |  \      >  _ </\    <   |  |/     \  _(__  <  >      < |   |/  ____/ 
-// |  | \/\  ___/ /        \|   ||    `   \    /  <_\ \/     \___  |  Y Y  \/       \/   --   \|   /       \ 
+//                 _________.___________         ____                      ________    ______  ____________
+//_______   ____  /   _____/|   \______ \       /  _ \       ___.__. _____ \_____  \  /  __  \/_   \_____  \
+//\_  __ \_/ __ \ \_____  \ |   ||    |  \      >  _ </\    <   |  |/     \  _(__  <  >      < |   |/  ____/
+// |  | \/\  ___/ /        \|   ||    `   \    /  <_\ \/     \___  |  Y Y  \/       \/   --   \|   /       \
 // |__|    \___  >_______  /|___/_______  /    \_____\ \     / ____|__|_|  /______  /\______  /|___\_______ \
 //             \/        \/             \/            \/     \/          \/       \/        \/             \/
 #include "resid/sid.h"
@@ -61,12 +61,39 @@ unsigned int SID_MODEL[2] = { 8580, 8580 };
 unsigned int SID_DigiBoost[2] = { 0, 0 };
 
 // do not change this value
-#define NUM_SIDS 2 
+#define NUM_SIDS 2
 SID *sid[ NUM_SIDS ];
 
 #ifdef EMULATE_OPL2
-FM_OPL *pOPL;
-u32 fmOutRegister;
+	FM_OPL *pOPL;
+	u32 fmOutRegister;
+#elif defined(EMULATE_OPN2)
+u32 opl3_debug_counter1 = 0;
+u32 opl3_debug_counter2 = 0;
+s32 opl3_debug_counter3 = 0;
+s32 opl3_debug_counter4 = 0;
+CString debug = "hallo, ";
+CString debug2 = "hallo, ";
+	static ym3438_t ym3438;
+	static short ym3438_accm[24][2];
+	static int ym3438_sample[2];
+	static int ym3438_cycles = 0;
+#elif defined(EMULATE_OPL3)
+	u32 opl3_debug_counter1 = 0;
+	u32 opl3_debug_counter2 = 0;
+	s32 opl3_debug_counter3 = 0;
+	s32 opl3_debug_counter4 = 0;
+	CString debug = "hallo, ";
+	CString debug2 = "hallo, ";
+	static opl3_chip opl3chip;
+	static opll_t opllchip;
+	ymfm::ymfm_interface my3812int;
+	ymfm::ym2413 my3812(my3812int);
+	ymfm::ym2413::output_data output[20];
+	//ymfm::ym3812 my3812(my3812int);
+	//ymfm::ym3812::output_data output[20];
+
+	//u32 fmOutRegister;
 #endif
 
 extern u8 flash_cacheoptimized_pool[ 1024 * 1024 + 8 * 1024 ] AAA;
@@ -92,7 +119,7 @@ uint8_t sidAutoDetectRegs_2[ 32 ];
 
 // counts the #cycles when the C64-reset line is pulled down (to detect a reset)
 u32 resetCounter,
-	cyclesSinceReset,  
+	cyclesSinceReset,
 	resetPressed, resetReleased;
 
 // Datel MIDI-interface
@@ -143,6 +170,49 @@ extern u32 wireSIDAvailable;
 
 u32 outputPWM = 1, outputHDMI = 0;
 
+void oplEmuWrite( u8 address, u8 data)
+{
+//	void OPLL_Write(opll_t *chip, uint32_t port, uint8_t data);
+
+}
+
+void oplEmuWriteAddress( u8 address)
+{
+
+}
+
+void oplEmuWriteData( u8 data)
+{
+
+}
+
+
+
+#ifdef EMULATE_OPN2
+//this method was taken from https://github.com/nukeykt/Genesis-Plus-GX/blob/master/core/sound/sound.c
+static void YM3438_Update(int *buffer, int length)
+{
+  int i, j;
+  for (i = 0; i < length; i++)
+  {
+    OPN2_Clock(&ym3438, ym3438_accm[ym3438_cycles]);
+    ym3438_cycles = (ym3438_cycles + 1) % 24;
+    if (ym3438_cycles == 0)
+    {
+      ym3438_sample[0] = 0;
+      ym3438_sample[1] = 0;
+      for (j = 0; j < 24; j++)
+      {
+        ym3438_sample[0] += ym3438_accm[j][0];
+        ym3438_sample[1] += ym3438_accm[j][1];
+      }
+    }
+    *buffer++ = ym3438_sample[0] * 11;
+    *buffer++ = ym3438_sample[1] * 11;
+  }
+}
+#endif
+
 void setSIDConfiguration( u32 mode, u32 sid1, u32 sid2, u32 sid2addr, u32 rr, u32 addr, u32 exp, s32 v1, s32 p1, s32 v2, s32 p2, s32 v3, s32 p3, s32 outputPWMHDMI, s32 MIDI, s32 soundfont, s32 midiVol )
 {
 	SID_MODEL[ 0 ] = ( sid1 == 0 ) ? 6581 : 8580;
@@ -171,10 +241,10 @@ void setSIDConfiguration( u32 mode, u32 sid1, u32 sid2, u32 sid2addr, u32 rr, u3
 		cfgVolOPL_Right  = cfgVolOPL_Right  * 256 / maxVolFactor;
 	}
 
-	if ( sid2 == 3 ) 
-	{ 
+	if ( sid2 == 3 )
+	{
 		cfgSID2_Disabled = 1; cfgVolSID2_Left = cfgVolSID2_Right = 0;
-	} else 
+	} else
 		cfgSID2_Disabled = 0;
 
 	if ( addr == 0 ) cfgSID2_PlaySameAsSID1 = 1; else cfgSID2_PlaySameAsSID1 = 0;
@@ -216,10 +286,10 @@ void setSIDConfiguration( u32 mode, u32 sid1, u32 sid2, u32 sid2addr, u32 rr, u3
 	cfgMIDIVolume = midiVol;
 }
 
-//  __     __                __      ___                   ___ 
-// /__` | |  \     /\  |\ | |  \    |__   |\/|    | |\ | |  |  
-// .__/ | |__/    /~~\ | \| |__/    |     |  |    | | \| |  |  
-//                                                            
+//  __     __                __      ___                   ___
+// /__` | |  \     /\  |\ | |  \    |__   |\/|    | |\ | |  |
+// .__/ | |__/    /~~\ | \| |__/    |     |  |    | | \| |  |
+//
 void initSID()
 {
 	resetCounter = 0;
@@ -265,7 +335,115 @@ void initSID()
 		ym3812_reset_chip( pOPL );
 		fmFakeOutput = 0;
 	}
+#elif defined(EMULATE_OPN2)
+	if ( cfgEmulateOPL2 )
+	{
+		Bit16s opl3Buffer[4];
+
+		OPN2_Reset(&ym3438);
+		OPN2_SetChipType(ym3438_mode_ym2612);
+		/* Nuked OPN2 */
+		memset(&ym3438, 0, sizeof(ym3438));
+		memset(&ym3438_sample, 0, sizeof(ym3438_sample));
+		memset(&ym3438_accm, 0, sizeof(ym3438_accm));
+
+		OPN2_Write( &ym3438, 0, 0);
+		OPN2_Clock(&ym3438, opl3Buffer);
+		OPN2_Write( &ym3438, 1, 0x2C);
+		OPN2_Clock(&ym3438, opl3Buffer);
+		OPN2_Write( &ym3438, 2, 0x3f);
+		OPN2_Clock(&ym3438, opl3Buffer);
+		OPN2_Write( &ym3438, 3, 0);
+		OPN2_Clock(&ym3438, opl3Buffer);
+		OPN2_Write( &ym3438, 4, 0xff);
+		OPN2_Clock(&ym3438, opl3Buffer);
+		OPN2_Write( &ym3438, 5, 0xff);
+		OPN2_Clock(&ym3438, opl3Buffer);
+		OPN2_Write( &ym3438, 6, 0x0f);
+		OPN2_Write( &ym3438, 7, 0x0f);
+		OPN2_Clock(&ym3438, opl3Buffer);
+		OPN2_Write( &ym3438, 48, 0);
+		OPN2_Clock(&ym3438, opl3Buffer);
+		OPN2_Write( &ym3438, 32, 0x1e);
+		OPN2_Clock(&ym3438, opl3Buffer);
+		OPN2_Write( &ym3438, 15, 0x04);
+		OPN2_Clock(&ym3438, opl3Buffer);
+
+	}
+#elif defined(EMULATE_OPL3)
+	if ( cfgEmulateOPL2 )
+	{
+		logger->Write( "", LogNotice, " OPL3 reset" );
+	  OPL3_Reset(&opl3chip, SAMPLERATE);
+
+		my3812.reset();
+/*
+		my3812.write( 0, 0);
+		my3812.generate(output, 1);
+		my3812.write( 1, 0x2C);
+		my3812.generate(output, 1);
+		my3812.write( 2, 0x3f);
+		my3812.generate(output, 1);
+		my3812.write( 3, 0);
+		my3812.generate(output, 1);
+		my3812.write( 4, 0xff);
+		my3812.generate(output, 1);
+		my3812.write( 5, 0xff);
+		my3812.generate(output, 1);
+		my3812.write( 6, 0x0f);
+		my3812.generate(output, 1);
+		my3812.write( 7, 0x0f);
+		my3812.generate(output, 1);
+		my3812.write( 48, 0);
+		my3812.generate(output, 1);
+		my3812.write( 32, 0x1e);
+		my3812.generate(output, 1);
+		my3812.write( 15, 0x04);
+		my3812.generate(output, 1);
+*/
+		OPLL_Reset( &opllchip, opll_type_ym2413);
+/*
+		OPLL_Write( &opllchip, 0, 0);
+		OPLL_Clock(&opllchip, opl3Buffer);
+		OPLL_Write( &opllchip, 1, 0x2C);
+		OPLL_Clock(&opllchip, opl3Buffer);
+		OPLL_Write( &opllchip, 2, 0x3f);
+		OPLL_Clock(&opllchip, opl3Buffer);
+		OPLL_Write( &opllchip, 3, 0);
+		OPLL_Clock(&opllchip, opl3Buffer);
+		OPLL_Write( &opllchip, 4, 0xff);
+		OPLL_Clock(&opllchip, opl3Buffer);
+		OPLL_Write( &opllchip, 5, 0xff);
+		OPLL_Clock(&opllchip, opl3Buffer);
+		OPLL_Write( &opllchip, 6, 0x0f);
+		OPLL_Write( &opllchip, 7, 0x0f);
+		OPLL_Clock(&opllchip, opl3Buffer);
+		OPLL_Write( &opllchip, 48, 0);
+		OPLL_Clock(&opllchip, opl3Buffer);
+		OPLL_Write( &opllchip, 32, 0x1e);
+		OPLL_Clock(&opllchip, opl3Buffer);
+		OPLL_Write( &opllchip, 15, 0x04);
+		OPLL_Clock(&opllchip, opl3Buffer);
+*/
+
+/*
+    Set pure sine, ML=4, sustainable tone as user voice
+        Write 0x00, 0x24, 0x3f, 0x00, 0x00, 0xf0, 0x0f, 0x0f to R#0-7
+    Write 0x04 to R#15 (Set bit 2 to 1)
+    Write 0x00 to R#48 (Select user-defined voice and max volume)
+    Write 0x1e to R#32 (Key-on and set BLK=7 and F-Number(H)=0)
+*/
+		/*
+		int16_t opl3Buffer[4];
+		for (int i=0; i < 0x106; i++){
+			OPL3_WriteRegBuffered(&opl3chip, i, 0);
+			//OPL3_GenerateStream(&opl3chip, opl3Buffer, 1 );
+		}*/
+
+		fmFakeOutput = 0;
+	}
 #endif
+
 	fmFakeOutput =
 	fmAutoDetectStep = 0;
 
@@ -530,7 +708,7 @@ startHereAfterReset:
 		allUsedLEDs = LATCH_LED_ALL;
 	if ( screenType == 1 )
 		allUsedLEDs = LATCH_LED0to1;
-	
+
 	latchSetClearImm( 0, LATCH_RESET | allUsedLEDs | LATCH_ENABLE_KERNAL );
 	latchSetClear( 0, LATCH_RESET | allUsedLEDs | LATCH_ENABLE_KERNAL );
 
@@ -547,7 +725,7 @@ startHereAfterReset:
 	{
 		tftLoadBackgroundTGA( DRIVE, FILENAME_SPLASH_RGB, 8 );
 
-		int w, h; 
+		int w, h;
 		extern char FILENAME_LOGO_RGBA[128];
 		extern unsigned char tempTGA[ 256 * 256 * 4 ];
 
@@ -593,7 +771,7 @@ startHereAfterReset:
 						//01234567890123456789
 			sprintf( b1, "midi/$de0X" );
 			sx = max( 0, ( 240 - charWidth * 10 ) / 2 - 2 );
-			tftPrint( b1, sx, 224-16, c1, charWidth == 16 ? 0 : -3 );	
+			tftPrint( b1, sx, 224-16, c1, charWidth == 16 ? 0 : -3 );
 		}
 #endif
 
@@ -613,7 +791,7 @@ startHereAfterReset:
 		tftLoadBackgroundTGA( DRIVE, FILENAME_SPLASH_RGB2, 8 );
 
 		initVisualization();
-	} 
+	}
 	#endif
 
 	//
@@ -704,7 +882,7 @@ startHereAfterReset:
 	latchSetClearImm( LATCH_RESET, allUsedLEDs | LATCH_ENABLE_KERNAL );
 
 	cycleCountC64 = 0;
-	while ( cycleCountC64 < 10 ) 
+	while ( cycleCountC64 < 10 )
 	{
 		pScheduler->MsSleep( 100 );
 	}
@@ -756,10 +934,10 @@ startHereAfterReset:
 			if ( ( ( stage == 1 ) && nBytesRead > 0 ) ||
  				 ( ( stage == 2 ) && nBytesRead < 32 && cycleCountC64 - cycleCountC64_Stage1 > 500000 ) )
 			{
-				if ( stage == 1 ) 
-				{ 
-					stage = 2; cycleCountC64_Stage1 = cycleCountC64; 
-				} else 
+				if ( stage == 1 )
+				{
+					stage = 2; cycleCountC64_Stage1 = cycleCountC64;
+				} else
 				{
 					stage = 0;
 					latchSetClear( 0, LATCH_RESET );
@@ -769,7 +947,7 @@ startHereAfterReset:
 					cycleCountC64 = 0;
 				}
 			}
-		
+
 			#ifdef COMPILE_MENU
 			TEST_FOR_JUMP_TO_MAINMENU( cycleCountC64, resetCounter )
 			#endif
@@ -780,9 +958,11 @@ startHereAfterReset:
 				EnableIRQs();
 				m_InputPin.DisableInterrupt();
 				m_InputPin.DisconnectInterrupt();
-				return;		
+				logger->Write( "TRY3", LogNotice, " OPL3 after app reset %u, %u", opl3_debug_counter1, opl3_debug_counter2);
+
+				return;
 			}
-			
+
 /*			if ( cycleCountC64 > 2000000 )
 			{
 				cycleCountC64 = 0;
@@ -798,7 +978,7 @@ startHereAfterReset:
 			CACHE_PRELOAD_DATA_CACHE( &charset[ 2048 ], 1024, CACHE_PRELOADL2KEEP );
 		}
 		DELAY(1<<22);
-	} 
+	}
 	#endif
 
 	resetReleased = 0;
@@ -815,6 +995,10 @@ startHereAfterReset:
 
 	fillSoundBuffer = 0;
 	// new main loop mainloop
+
+	bool oplValReady = false;
+	u8 oplVal = 0;
+	u8 oplReg = 0;
 
 	while ( true )
 	{
@@ -838,6 +1022,11 @@ startHereAfterReset:
 			EnableIRQs();
 			m_InputPin.DisableInterrupt();
 			m_InputPin.DisconnectInterrupt();
+			logger->Write( "try1", LogNotice, " OPL3 after app reset %u, %u, %i, %i", opl3_debug_counter1, opl3_debug_counter2, opl3_debug_counter3, opl3_debug_counter4);
+//			unsigned l = sprintf( (char *) tmp, strHelper );
+
+			logger->Write( "string", LogNotice, debug);
+			logger->Write( "string", LogNotice, debug2);
 			return;
 		}
 		#endif
@@ -851,9 +1040,11 @@ startHereAfterReset:
 			EnableIRQs();
 			m_InputPin.DisableInterrupt();
 			m_InputPin.DisconnectInterrupt();
+			logger->Write( "try2", LogNotice, " OPL3 after app reset %u, %u", opl3_debug_counter1, opl3_debug_counter2);
+
 			goto startHereAfterReset;
 
-			
+
 			if ( m_pSound )
 			{
 				if ( outputHDMI )
@@ -874,7 +1065,7 @@ startHereAfterReset:
 				{
 					initSoundOutput( &m_pSound, pVCHIQ, outputPWM, outputHDMI );
 				}
-				
+
 
 				resetCounter = cycleCountC64 = nCyclesEmulated = samplesElapsed = 0;
 				nBytesRead = 0; stage = 1;
@@ -890,7 +1081,7 @@ startHereAfterReset:
 
 			resetReleased = 0xff;
 			resetCounter = 0;
-		
+
 			for ( int i = 0; i < NUM_SIDS; i++ )
 			{
 				for ( int j = 0; j < 25; j++ )
@@ -903,8 +1094,15 @@ startHereAfterReset:
 				fmFakeOutput = 0;
 				ym3812_reset_chip( pOPL );
 			}
+			#elif defined(EMULATE_OPL3)
+			if ( cfgEmulateOPL2 )
+			{
+				fmFakeOutput = 0;
+				//OPL3_Reset(&opl3chip, SAMPLERATE ); //system_sound_mix_freq);
+				logger->Write( "", LogNotice, " OPL3 reset never gets called" );
+			}
 			#endif
-		
+
 			//tsf_reset( TinySoundFont );
 
 			ringRead = ringWrite;
@@ -923,7 +1121,7 @@ startHereAfterReset:
 			if ( renderDone == 2 )
 			{
 				if ( !sendFramebufferDone() )
-					sendFramebufferNext( 1 );		
+					sendFramebufferNext( 1 );
 
 				if ( sendFramebufferDone() )
 					renderDone = 3;
@@ -940,6 +1138,11 @@ startHereAfterReset:
 
 		s16 val1, val2;
 		s32 valOPL;
+//		int16_t opl3Buffer[4];
+//		int32_t opl3Buffer[4];
+		//Bit16s opl3Buffer[4];
+
+		//int opl3Buffer[2];
 
 		//u32 fadeVolume = 0;
 
@@ -1019,7 +1222,7 @@ startHereAfterReset:
 						{
 							s32 avail = (s32)avgSamplesAvail / avgCounter;
 							if ( targetSamplesAvail == 0 && ++ targetCount > 2 )
-								CVCHIQ_CB_Manual = true; 
+								CVCHIQ_CB_Manual = true;
 							if ( targetSamplesAvail == 0 && ++ targetCount > 10 )
 								targetSamplesAvail = max( avail, (s32)nSamplesPrecompute );
 
@@ -1029,13 +1232,13 @@ startHereAfterReset:
 								{
 									if ( avail < 5 * (s32)targetSamplesAvail / 100 && SAMPLERATE_ADJUSTED < SAMPLERATE )
 										SAMPLERATE_ADJUSTED = SAMPLERATE; else
-										SAMPLERATE_ADJUSTED ++; 
+										SAMPLERATE_ADJUSTED ++;
 								} else
 								if ( avail > (s32)targetSamplesAvail )
 								{
 									if ( avail > 105 * (s32)targetSamplesAvail / 100 && SAMPLERATE_ADJUSTED > SAMPLERATE )
 										SAMPLERATE_ADJUSTED = SAMPLERATE; else
-										SAMPLERATE_ADJUSTED --; 
+										SAMPLERATE_ADJUSTED --;
 								}
 								adjustRateAllowed = 0;
 							}
@@ -1072,11 +1275,11 @@ startHereAfterReset:
 			u32 samplesToEmulate = samplesToEmulateX65536 >> 16;
 			carrySamples = (samplesToEmulateX65536 & 65535);
 
-//			do 
+//			do
 			{ // do SID emulation until time passed to create an additional sample (i.e. there may be several cycles until a sample value is created)
 				#ifdef USE_PWM_DIRECT
 				u32 cyclesToEmulate = samplesToEmulate;
-				#else			
+				#else
 				u32 cyclesToEmulate = 2;
 				#endif
 
@@ -1147,10 +1350,10 @@ startHereAfterReset:
 						default:
 							break;
 						case 0x90: // note on
-							tsf_channel_note_on( TinySoundFont, channel, MD1, (float)MD2 / 127.0f ); 
+							tsf_channel_note_on( TinySoundFont, channel, MD1, (float)MD2 / 127.0f );
 							break;
 						case 0x80: // note off
-							tsf_channel_note_off( TinySoundFont, channel, MD1 ); 
+							tsf_channel_note_off( TinySoundFont, channel, MD1 );
 							break;
 						case 0xc0: // program change
 							tsf_channel_set_presetnumber( TinySoundFont, channel, MD1, ( channel == 9 ) );
@@ -1164,7 +1367,7 @@ startHereAfterReset:
 						case 0xb0: // control change
 							tsf_channel_midi_control( TinySoundFont, channel, MD1, MD2 );
 							break;
-						}		
+						}
 					} else
 #endif
 					{
@@ -1179,6 +1382,90 @@ startHereAfterReset:
 								ym3812_write( pOPL, 0, D ); else
 								ym3812_write( pOPL, 1, D );
 						} else
+						#elif defined(EMULATE_OPN2)
+						if ( cfgEmulateOPL2 && (ringBufGPIO[ ringRead ] & bIO2) )
+						{
+							if ( ( ( A & ( 1 << 4 ) ) == 0 ) )
+								OPN2_Write(&ym3438, 0, D); else
+								OPN2_Write(&ym3438, 1, D);
+						} else
+						#elif defined(EMULATE_OPL3)
+
+						if ( cfgEmulateOPL2 && (ringBufGPIO[ ringRead ] & bIO2) )
+						{
+							if ( A != 4*16 && A != 5*16){
+							CString NumberA;
+								NumberA.Format ("%02x", A);
+								debug2.Append("[");
+								debug2.Append(NumberA);
+								debug2.Append("]");
+								CString NumberD;
+								NumberD.Format ("%02x", D);
+								debug2.Append(NumberD);
+							}
+
+							CString Number;
+							Number.Format ("%02x", D);
+							opl3_debug_counter1 ++;
+
+							if ( ( ( A & ( 1 << 4 ) ) == 0 ) )
+							{
+									if ( D == 0xa0 )
+										my3812.write_address(16);
+									oplReg = D;
+
+									if ( opl3_debug_counter1 < 240){
+										debug2.Append("(r)");
+										debug2.Append(Number);
+									}
+/*
+									if ( opl3_debug_counter1 < 400 && oplVal>0){
+										CString Number3;
+										//Number3.Format ("%02x", A);
+										//debug.Append(Number3);
+										//debug.Append("-");
+										debug.Append(Number);
+										debug.Append(":");
+										CString Number2;
+										Number2.Format ("%02x", oplVal);
+										debug.Append(Number2);
+										debug.Append(",");
+									}
+*/
+									oplVal = 0;
+									oplValReady = false;
+									D=0;
+							} else {
+									OPLL_Write(&opllchip, 16,D);
+									if ( oplReg == 0xa0 ){
+										my3812.write(16, D);
+									}
+//										my3812.write_data(D);
+
+									if ( opl3_debug_counter1 < 240){
+										if (oplValReady){
+											debug2.Append("(x)");
+//											CString NumberReg;
+//											NumberReg.Format ("%02x", oplReg);
+//											debug2.Append(NumberReg);
+										}
+										else
+											debug2.Append("(v)");
+										debug2.Append(Number);
+									}
+									oplVal = D;
+									//OPLL_Write(&opll, (uint32_t) oplReg, (uint8_t) oplVal);
+//									OPL3_WriteReg(&opl3chip, (uint16_t) oplReg, oplVal);
+									//OPL3_WriteRegBuffered(&opl3chip, (uint16_t) oplReg, oplVal);
+									D=0;
+									if (oplValReady)
+										opl3_debug_counter2 ++;
+
+										oplValReady = true;
+							}
+
+						} else
+
 						#endif
 						//#if !defined(SID2_DISABLED) && !defined(SID2_PLAY_SAME_AS_SID1)
 						// TODO: generic masks
@@ -1204,7 +1491,7 @@ startHereAfterReset:
 					  s32 t = ringTime[ ringRead ] - nCyclesEmulated;
 					  if ( t <= 0 )
 						goto quicklyGetAnotherRegisterWrite;
-					} 
+					}
 				}
 
 
@@ -1234,7 +1521,47 @@ startHereAfterReset:
 			{
 				ym3812_update_one( pOPL, &valOPL, 1 );
 				// TODO asynchronous read back is an issue, needs to be fixed
-				fmOutRegister = encodeGPIO( ym3812_read( pOPL, 0 ) ); 
+				fmOutRegister = encodeGPIO( ym3812_read( pOPL, 0 ) );
+			}
+		#elif defined(EMULATE_OPLN2)
+			if ( cfgEmulateOPL2 )
+			{
+				YM3438_Update(opl3Buffer, 1);
+			}
+		#elif defined(EMULATE_OPL3)
+			if ( cfgEmulateOPL2 )
+			{
+/*
+				opl3Buffer[0] =0;
+				opl3Buffer[1] =0;
+				//opl3Buffer[2] =0;
+				//opl3Buffer[3] =0;
+*/
+
+//				OPL3_Generate(&opl3chip, opl3Buffer);
+				//OPL3_GenerateStream(&opl3chip, opl3Buffer, 1 );
+//				OPLL_Clock(&opllchip, opl3Buffer);
+//				valOPL = opl3Buffer[0];// + opl3Buffer[1]) / 2
+//					valOPL = opl3Buffer[0];
+
+				if (oplReg = 0xa0)
+					valOPL = oplVal *32;
+				else
+				{
+					my3812.generate(output, 1);
+					valOPL = output->data[0];
+				}
+/*
+				//valOPL = output->data[0];// + opl3Buffer[1]) / 2
+				if (opl3Buffer[0] > opl3_debug_counter3)
+					opl3_debug_counter3 = opl3Buffer[0];// + opl3Buffer[2] +  opl3Buffer[1] + opl3Buffer[4];
+				if (opl3Buffer[0] < opl3_debug_counter4)
+					opl3_debug_counter4 = opl3Buffer[0];// + opl3Buffer[2] +  opl3Buffer[1] + opl3Buffer[4];
+//				opl3_debug_counter4 ++;
+				//opl3Buffer
+				// TODO asynchronous read back is an issue, needs to be fixed
+				//fmOutRegister = encodeGPIO( ym3812_read( pOPL, 0 ) );
+*/
 			}
 		#endif
 
@@ -1253,7 +1580,7 @@ startHereAfterReset:
 				{
 					tsf_render_float( TinySoundFont, &midiSampleBuffer[0], midiBufferSize, 0 );
 					midiBufferOfs = 0;
-				} 
+				}
 
 				midiSampleLeft = midiSampleBuffer[ midiBufferOfs ] * 32767.0f;
 				midiSampleBuffer[ midiBufferOfs ] = 0.0f;
@@ -1289,7 +1616,7 @@ startHereAfterReset:
 			// vu meter
 			static u32 vu_nValues = 0;
 			static float vu_Sum[ 4 ] = { 0.0f, 0.0f, 0.0f, 0.0f };
-			
+
 			//if ( vu_Mode != 2 )
 			{
 				float t = (left+right) / (float)32768.0f * 0.5f;
@@ -1333,7 +1660,7 @@ startHereAfterReset:
 				const float scaleVis = 1.0f;
 				const u32 nLevelMeters = 3;
 				#include "tft_sid_vis.h"
-			} 
+			}
 			#endif
 		#endif
 		NoSampleGeneratedYet:;
@@ -1405,7 +1732,7 @@ void CKernel::FIQHandler (void *pParam)
 	if ( CPU_RESET && !resetReleased ) {
 		resetPressed = 1; resetCounter ++;
 	} else {
-		if ( resetPressed && resetCounter > 100 )	
+		if ( resetPressed && resetCounter > 100 )
 		{
 			resetReleased = 1;
 			disableCart = transferStarted = 0;
@@ -1431,16 +1758,16 @@ void CKernel::FIQHandler (void *pParam)
 
 	if ( busValueTTL < 0 )
 	{
-		busValue = 0;  
+		busValue = 0;
 	} else
 		busValueTTL --;
 
 	if ( CPU_WRITES_TO_BUS )
 		READ_D0to7_FROM_BUS( D )
 
-	//  __   ___       __      __     __  
-	// |__) |__   /\  |  \    /__` | |  \ 
-	// |  \ |___ /~~\ |__/    .__/ | |__/ 
+	//  __   ___       __      __     __
+	// |__) |__   /\  |  \    /__` | |  \
+	// |  \ |___ /~~\ |__/    .__/ | |__/
 	//
 	if ( cfgRegisterRead && CPU_READS_FROM_BUS && SID_ACCESS )
 	{
@@ -1486,7 +1813,7 @@ void CKernel::FIQHandler (void *pParam)
 
 		FINISH_BUS_HANDLING
 		return;
-	} 
+	}
 	if ( _playingPSID && IO2_ACCESS )
 	{
 		if ( CPU_READS_FROM_BUS && GET_IO12_ADDRESS == 0x55 )
@@ -1519,12 +1846,12 @@ void CKernel::FIQHandler (void *pParam)
 			OUTPUT_LATCH_AND_FINISH_BUS_HANDLING
 			return;
 		}
-	} 
-	//  __   ___       __      ___       
-	// |__) |__   /\  |  \    |__   |\/| 
-	// |  \ |___ /~~\ |__/    |     |  | 
-	//                                   
-	#ifdef EMULATE_OPL2
+	}
+	//  __   ___       __      ___
+	// |__) |__   /\  |  \    |__   |\/|
+	// |  \ |___ /~~\ |__/    |     |  |
+	//
+	#if defined(EMULATE_OPL2) || defined(EMULATE_OPL3)
 	if ( cfgEmulateOPL2 )
 	{
 		if ( ( CPU_READS_FROM_BUS && IO2_ACCESS ) && ( GET_IO12_ADDRESS == 0x60 ) )
@@ -1533,7 +1860,7 @@ void CKernel::FIQHandler (void *pParam)
 			// this is not a real read of the YM3812 status register!
 			// only a fake that let's the detection routine be satisfied
 			//
-			u32 D = fmFakeOutput; 
+			u32 D = fmFakeOutput;
 			fmFakeOutput = 0xc0 - fmFakeOutput;
 
 			WRITE_D0to7_TO_BUS( D )
@@ -1549,17 +1876,17 @@ void CKernel::FIQHandler (void *pParam)
 			FINISH_BUS_HANDLING
 			return;
 		} else
-		//       __    ___  ___     ___       
-		// |  | |__) |  |  |__     |__   |\/| 
-		// |/\| |  \ |  |  |___    |     |  | 
-		//                                    
-		if ( CPU_WRITES_TO_BUS && IO2_ACCESS ) 
+		//       __    ___  ___     ___
+		// |  | |__) |  |  |__     |__   |\/|
+		// |/\| |  \ |  |  |___    |     |  |
+		//
+		if ( CPU_WRITES_TO_BUS && IO2_ACCESS )
 		{
 			//READ_D0to7_FROM_BUS( D )
 
 			// this is mimicing some behaviour of the YM let it be detected
 			u32 A = ( ( g2 & A_FLAG ) >> A0 ) & ( 1 << 4 ); // A == 0 -> address register, otherwise data register
-			
+
 			if ( A == 0 && D == 0x04 && fmAutoDetectStep != 2 )
 				fmAutoDetectStep = 1;
 			if ( A > 0 && D == 0x60 && fmAutoDetectStep == 1 )
@@ -1571,7 +1898,7 @@ void CKernel::FIQHandler (void *pParam)
 				fmAutoDetectStep = 4;
 				fmFakeOutput = 0;
 			}
-				
+
 			ringBufGPIO[ ringWrite ] = ( g2 & A_FLAG ) | ( D << D0 ) | bIO2;
 			ringTime[ ringWrite ] = cycleCountC64;
 			ringWrite ++;
@@ -1579,14 +1906,14 @@ void CKernel::FIQHandler (void *pParam)
 
 			FINISH_BUS_HANDLING
 			return;
-		} 
-	} 
+		}
+	}
 	#endif // EMULATE_OPL2
-	//       __    ___  ___     __     __  
-	// |  | |__) |  |  |__     /__` | |  \ 
-	// |/\| |  \ |  |  |___    .__/ | |__/ 
-	//                                   
-	if ( CPU_WRITES_TO_BUS && SID_ACCESS ) 
+	//       __    ___  ___     __     __
+	// |  | |__) |  |  |__     /__` | |  \
+	// |/\| |  \ |  |  |___    .__/ | |__/
+	//
+	if ( CPU_WRITES_TO_BUS && SID_ACCESS )
 	{
 		//READ_D0to7_FROM_BUS( D )
 
@@ -1631,11 +1958,11 @@ void CKernel::FIQHandler (void *pParam)
 		ringTime[ ringWrite ] = cycleCountC64;
 		ringWrite ++;
 		ringWrite &= ( RING_SIZE - 1 );
-		
+
 		FINISH_BUS_HANDLING
 		return;
 	}
-	if ( CPU_WRITES_TO_BUS && IO1_ACCESS && cfgSID2_Addr == 2 ) 
+	if ( CPU_WRITES_TO_BUS && IO1_ACCESS && cfgSID2_Addr == 2 )
 	{
 		//READ_D0to7_FROM_BUS( D )
 
@@ -1654,7 +1981,7 @@ void CKernel::FIQHandler (void *pParam)
 	// MIDI experimental support
 #ifdef SUPPORT_MIDI
 	static uint8_t midiFIFO[ 4 ], midiFIFOIdx = 0;
-	if ( cfgMIDI && IO1_ACCESS ) 
+	if ( cfgMIDI && IO1_ACCESS )
 	{
 		register u32 A = GET_ADDRESS0to7;
 		register u8 MC, MD1, MD2;
@@ -1710,7 +2037,7 @@ void CKernel::FIQHandler (void *pParam)
 					WRITE_D0to7_TO_BUS( D )
 					FINISH_BUS_HANDLING
 					return;
-				} else 
+				} else
 				if ( (A&3) == MIDI_RECEIVE_REG )
 				{
 					D = 0;
@@ -1724,21 +2051,21 @@ void CKernel::FIQHandler (void *pParam)
 #endif
 
 
-	//  ___                      ___    __                     ___    __  
-	// |__   |\/| |  | |     /\   |  | /  \ |\ |    | |\ |    |__  | /  \ 
-	// |___  |  | \__/ |___ /~~\  |  | \__/ | \|    | | \|    |    | \__X 
+	//  ___                      ___    __                     ___    __
+	// |__   |\/| |  | |     /\   |  | /  \ |\ |    | |\ |    |__  | /  \
+	// |___  |  | \__/ |___ /~~\  |  | \__/ | \|    | | \|    |    | \__X
 	// OPTIONAL and omitted for this release
-	//																	
+	//
 	#ifdef EMULATION_IN_FIQ
 	run_emulation:
 	#include "fragment_emulation_in_fiq.h"
-	#endif		
+	#endif
 
-	//  __                 __       ___  __       ___ 
-	// |__) |  |  |\/|    /  \ |  |  |  |__) |  |  |  
-	// |    |/\|  |  |    \__/ \__/  |  |    \__/  |  
+	//  __                 __       ___  __       ___
+	// |__) |  |  |\/|    /  \ |  |  |  |__) |  |  |
+	// |    |/\|  |  |    \__/ \__/  |  |    \__/  |
 	// OPTIONAL
-	//											
+	//
 	#ifdef USE_PWM_DIRECT
 	if ( outputPWM )
 	{
@@ -1747,7 +2074,7 @@ void CKernel::FIQHandler (void *pParam)
 		unsigned long long samplesElapsedFIQ = ( ( unsigned long long )cycleCountC64 * ( unsigned long long )SAMPLERATE ) / ( unsigned long long )CLOCKFREQ;
 		if ( samplesElapsedFIQ != samplesElapsedBeforeFIQ && !CPU_RESET )
 		{
-			write32( ARM_GPIO_GPCLR0, bCTRL257 ); 
+			write32( ARM_GPIO_GPCLR0, bCTRL257 );
 			samplesElapsedBeforeFIQ = samplesElapsedFIQ;
 
 			u32 s = getSample();
@@ -1769,13 +2096,13 @@ void CKernel::FIQHandler (void *pParam)
 			#endif
 			RESET_CPU_CYCLE_COUNTER
 			return;
-		} 
+		}
 	}
 	#endif
 
-	//           ___  __       
-	// |     /\   |  /  ` |__| 
-	// |___ /~~\  |  \__, |  | 
+	//           ___  __
+	// |     /\   |  /  ` |__|
+	// |___ /~~\  |  \__, |  |
 	//
 	#ifdef COMPILE_MENU
 	#ifdef USE_LATCH_OUTPUT
@@ -1797,7 +2124,7 @@ void CKernel::FIQHandler (void *pParam)
 	}
 	#endif
 
-	/*u32 swizzle = 
+	/*u32 swizzle =
 		( (fCount & 128) >> 7 ) |
 		( (fCount & 64) >> 5 ) |
 		( (fCount & 32) >> 3 ) |
@@ -1840,7 +2167,7 @@ void CKernel::FIQHandler (void *pParam)
 			{
 				if ( swizzle < vuMeter[ 0 ] )
 					setLatchFIQ( LATCH_LED_ALL ); else
-					clrLatchFIQ( LATCH_LED_ALL );		
+					clrLatchFIQ( LATCH_LED_ALL );
 			} else
 			if ( vu_Mode == 2 )
 			{
@@ -1850,9 +2177,9 @@ void CKernel::FIQHandler (void *pParam)
 					( ( swizzle < vuMeter[ 3 ] ) ? LATCH_LED3 : 0 );
 
 				setLatchFIQ( led );
-				clrLatchFIQ( ( (~led) & LATCH_LED_ALL ) | LATCH_LED0 );		
+				clrLatchFIQ( ( (~led) & LATCH_LED_ALL ) | LATCH_LED0 );
 			} else
-				clrLatchFIQ( LATCH_LED_ALL );		
+				clrLatchFIQ( LATCH_LED_ALL );
 		}*/
 	} else
 	{

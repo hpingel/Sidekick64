@@ -1,18 +1,18 @@
 /*
-  __________________.___________   
- /  _____/\______   \   \_____  \  
-/   \  ___ |     ___/   |/   |   \ 
+  __________________.___________
+ /  _____/\______   \   \_____  \
+/   \  ___ |     ___/   |/   |   \
 \    \_\  \|    |   |   /    |    \
  \______  /|____|   |___\_______  /
-        \/                      \/ 
- 
+        \/                      \/
+
  gpio_defs.cpp
 
  Sidekick64 - A framework for interfacing 8-Bit Commodore computers (C64/C128,C16/Plus4,VC20) and a Raspberry Pi Zero 2 or 3A+/3B+
  Copyright (c) 2019-2022 Carsten Dachsbacher <frenetic@dachsbacher.de>
 
  Logo created with http://patorjk.com/software/taag/
- 
+
  This program is free software: you can redistribute it and/or modify
  it under the terms of the GNU General Public License as published by
  the Free Software Foundation, either version 3 of the License, or
@@ -22,7 +22,7 @@
  but WITHOUT ANY WARRANTY; without even the implied warranty of
  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  GNU General Public License for more details.
- 
+
  You should have received a copy of the GNU General Public License
  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
@@ -117,22 +117,22 @@ void gpioInit()
 	OUT_GPIO( EXROM );
 	INP_GPIO( GAME );
 	OUT_GPIO( GAME );
-	
+
 	INP_GPIO( NMI );
 	OUT_GPIO( NMI );
-	write32( ARM_GPIO_GPSET0, bNMI ); 
+	write32( ARM_GPIO_GPSET0, bNMI );
 
 	INP_GPIO( DMA );
 	OUT_GPIO( DMA );
-	write32( ARM_GPIO_GPSET0, bDMA ); 
+	write32( ARM_GPIO_GPSET0, bDMA );
 
 	for ( u32 i = 0; i < 32; i++ )
 		PULLUPDOWN_GPIO( i, PI_PUD_OFF );
-	
-	write32( ARM_GPIO_GPSET0, bEXROM | bNMI | bGAME );
-	write32( ARM_GPIO_GPCLR0, bCTRL257 ); 
 
-	SET_BANK2_OUTPUT 
+	write32( ARM_GPIO_GPSET0, bEXROM | bNMI | bGAME );
+	write32( ARM_GPIO_GPCLR0, bCTRL257 );
+
+	SET_BANK2_OUTPUT
 }
 
 // decodes SID address and data from GPIOs using the above mapping
@@ -143,9 +143,9 @@ void decodeGPIO( u32 g, u8 *a, u8 *d )
 	A = ( g >> A0 ) & 31;
 	D = ( g >> D0 ) & 255;
 
-	#ifdef EMULATE_OPL2
+//	#if defined(EMULATE_OPL2) || defined(EMULATE_OPL3)
 	A |= ( ( g & bIO2 ) >> IO2 ) << 6;
-	#endif
+//	#endif
 
 	*a = A; *d = D;
 }

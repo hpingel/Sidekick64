@@ -1,20 +1,20 @@
 /*
-  _________.__    .___      __   .__        __          _________.___________   
- /   _____/|__| __| _/____ |  | _|__| ____ |  | __     /   _____/|   \______ \  
- \_____  \ |  |/ __ |/ __ \|  |/ /  |/ ___\|  |/ /     \_____  \ |   ||    |  \ 
+  _________.__    .___      __   .__        __          _________.___________
+ /   _____/|__| __| _/____ |  | _|__| ____ |  | __     /   _____/|   \______ \
+ \_____  \ |  |/ __ |/ __ \|  |/ /  |/ ___\|  |/ /     \_____  \ |   ||    |  \
  /        \|  / /_/ \  ___/|    <|  \  \___|    <      /        \|   ||    `   \
 /_______  /|__\____ |\___  >__|_ \__|\___  >__|_ \    /_______  /|___/_______  /
-        \/         \/    \/     \/       \/     \/            \/             \/ 
- 
+        \/         \/    \/     \/       \/     \/            \/             \/
+
  kernel_sid.h
 
  Sidekick64 - A framework for interfacing 8-Bit Commodore computers (C64/C128,C16/Plus4,VC20) and a Raspberry Pi Zero 2 or 3A+/3B+
-            - Sidekick SID: a SID and SFX Sound Expander Emulation 
+            - Sidekick SID: a SID and SFX Sound Expander Emulation
   		      (using reSID by Dag Lem and FMOPL by Jarek Burczynski, Tatsuyuki Satoh, Marco van den Heuvel, and Acho A. Tang)
  Copyright (c) 2019-2022 Carsten Dachsbacher <frenetic@dachsbacher.de>
 
  Logo created with http://patorjk.com/software/taag/
- 
+
  This program is free software: you can redistribute it and/or modify
  it under the terms of the GNU General Public License as published by
  the Free Software Foundation, either version 3 of the License, or
@@ -24,7 +24,7 @@
  but WITHOUT ANY WARRANTY; without even the implied warranty of
  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  GNU General Public License for more details.
- 
+
  You should have received a copy of the GNU General Public License
  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
@@ -60,7 +60,12 @@ extern unsigned int SID_DigiBoost[2];
 #define SID2_MASK (1<<A5)
 
 // also emulate the OPL2 ("C64 Sound Expander", "FM-YAM")
-#define EMULATE_OPL2
+//#define EMULATE_OPL2
+
+//Nuked-OPL3 for sample playback
+#define EMULATE_OPL3 1
+
+//#define EMULATE_OPN2 1
 
 //
 // Mixer-Options
@@ -126,6 +131,17 @@ extern unsigned int SID_DigiBoost[2];
 #include "fmopl.h"
 #endif
 
+#include "Nuked-OPLL/opll.h"
+
+#ifdef EMULATE_OPL3
+	#include "Nuked-OPL3/opl3.h"
+	#include "ymfm/src/ymfm.h"
+	#include "ymfm/src/ymfm_opl.h"
+
+#elif defined(EMULATE_OPN2)
+#include "Nuked-OPN2/ym3438.h"
+#endif
+
 #ifdef COMPILE_MENU
 #include "kernel_menu.h"
 void KernelSIDFIQHandler( void *pParam );
@@ -173,7 +189,7 @@ public:
 
 private:
 	static void FIQHandler( void *pParam );
-	
+
 	// do not change this order
 	CMemorySystem		m_Memory;
 	CKernelOptions		m_Options;
