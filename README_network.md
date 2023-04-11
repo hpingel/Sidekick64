@@ -1,6 +1,8 @@
 
 # Network features for Sidekick64
 
+## This version of the documentation is outdated as it is related to an older version. Please find the current documentation [here](https://github.com/hpingel/Sidekick64/blob/net-rebase-on-v0.51c/README_network.md).
+
 <!-- TOC -->
 
 - [Network features for Sidekick64](#network-features-for-sidekick64)
@@ -45,6 +47,8 @@
 	- [Credits](#credits)
 
 <!-- /TOC -->
+
+## This version of the documentation is outdated as it is related to an older version. Please find the current documentation [here](https://github.com/hpingel/Sidekick64/blob/net-rebase-on-v0.51c/README_network.md).
 
 ## Introduction
 The main goal of this fork of Sidekick64 is to find out if it is possible to use the network capabilities of a Raspberry Pi in parallel with the emulation modes of Sidekick64 without meddling too much with any timings needed for reliably emulating C64 carts. Further goals were for me to learn how to use the Circle bare metal framework and to learn how Sidekick64 does its magic by trying to understand its source code.
