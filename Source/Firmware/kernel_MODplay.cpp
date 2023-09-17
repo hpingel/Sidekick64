@@ -38,6 +38,11 @@
 #include <math.h>
 #include "config.h"
 
+#ifdef WITH_NET
+#define LIBOPENMPT
+extern CSidekickNet * pSidekickNet;
+#endif
+
 #ifndef LIBOPENMPT
 #define POCKETMOD_IMPLEMENTATION
 #include "pocketmod.h"
@@ -339,8 +344,12 @@ static float clip(float value)
 
 #ifdef LIBOPENMPT
 static openmpt::module * mod;
-const std::map< std::string, std::string > ctls;
 static fake_context context;
+
+constexpr std::size_t buffersize = 1024;
+
+std::vector<float> left( buffersize );
+std::vector<float> right( buffersize );	
 
 #else
 static pocketmod_context context;
@@ -350,7 +359,11 @@ static u8 *mod_data;//, *slash;
 static u8 *ringbuf;
 static u32 *ringbufHDMI;
 static u32 mod_size, rbRead, rbWrite;
+#ifdef LIBOPENMPT
+#define ringbufSize 32768
+#else
 #define ringbufSize 16384
+#endif
 
 #ifndef LIBOPENMPT
 pocketmod_context modJumpContext[ 128 ];
@@ -406,9 +419,6 @@ void computeSamplesAndScreenUpdate( u16 vol )
 		float sampleLeft, sampleRight;
 
 #ifdef LIBOPENMPT
-		constexpr std::size_t buffersize = 1024;
-		std::vector<float> left( buffersize );
-		std::vector<float> right( buffersize );	
 		rendered_samples = mod->read( MOD_sampleRate, buffersize, left.data(), right.data());
 #else
 		int bytesToRender = 512 * sizeof( float ) * 2;
@@ -979,12 +989,14 @@ void CKernelMODplay::Run( void )
 		mod_data = wavMemory;
 
 		#ifdef WITH_NET
+		logger->Write( "modplayer", LogNotice, pSidekickNet->getSysMonInfo(1) );
 				//this is a hack for the network kernel to pass mod data over from memory
 				if ( hasData )
 				{
 					if ( prgSizeExt > (WAV_MEMSIZE_KB-256) * 1024 ) return;
 					memcpy(wavMemory, prgDataExt, prgSizeExt);
 					mod_size = prgSizeExt;
+					prgDataExt = NULL;
 				}
 				else
 				{
@@ -992,8 +1004,10 @@ void CKernelMODplay::Run( void )
 					getFileSize( logger, (char*)DRIVE, (char*)FILENAME, &size );
 					if ( size > (WAV_MEMSIZE_KB-256) * 1024 ) return;
 
-					readFile( logger, (char*)DRIVE, (char*)FILENAME, wavMemory, &size );
+					readFile( logger, (char*)DRIVE, (char*)FILENAME, prgDataExt, &size );
+					memcpy(wavMemory, prgDataExt, size);
 					mod_size = size;
+					prgDataExt = NULL;
 		#ifdef WITH_NET
 				}
 		#endif
@@ -1038,10 +1052,11 @@ void CKernelMODplay::Run( void )
 			return;
 		}
 		#else
+			const std::map< std::string, std::string > ctls;
+			std::clog.clear();
+			std::clog.setstate(std::ios_base::failbit);
 			mod = new openmpt::module ( mod_data, mod_size, std::clog, ctls );
-			constexpr std::size_t buffersize = 1024;
-			std::vector<float> left( buffersize );
-			std::vector<float> right( buffersize );	
+			mod_data = NULL;
 			int rendered_samples;
 			while ( rendered_samples = mod->read( MOD_SCAN_sampleRate, buffersize, left.data(), right.data()) > 0)
 			{
@@ -1054,8 +1069,6 @@ void CKernelMODplay::Run( void )
 				}
 			}
 			mod->set_position_seconds(0);
-			//mod = NULL;
-			//mod = new openmpt::module ( mod_data, mod_size, std::clog, ctls );
 			mod->set_repeat_count(-1);
 		#endif
 		modScale = 2.0f / ( maxV - minV ) * 0.95f;
@@ -1065,6 +1078,7 @@ void CKernelMODplay::Run( void )
 	if ( playFileType == 1 ) 
 	{
 		#ifdef WITH_NET
+//			logger->Write( "modplayer WAV ", LogNotice, pSidekickNet->getSysMonInfo(1) );
 				//this is a hack for the network kernel to pass mod data over from memory
 				if ( hasData )
 				{
@@ -1087,6 +1101,7 @@ void CKernelMODplay::Run( void )
 	{
 		#ifdef WITH_NET
 				//this is a hack for the network kernel to pass mod data over from memory
+//				logger->Write( "modplayer YM ", LogNotice, pSidekickNet->getSysMonInfo(1) );
 				if ( hasData )
 				{
 					if ( prgSizeExt > (WAV_MEMSIZE_KB-256) * 1024 ) return;
@@ -1135,6 +1150,9 @@ void CKernelMODplay::Run( void )
 		buf[ 20 ] = 0;
 		if ( strlen( buf ) > 14 ) buf[ 14 ] = 0;
 		for ( u32 i = 0; i < strlen( buf ); i++ ) 
+			//if (buf[ i ] == '"')
+			//	buf[ i ] = 34;
+			//else 
 			if ( !( ( buf[ i ] >= 'a' && buf[ i ] <= 'z' ) ||
 				    ( buf[ i ] >= 'A' && buf[ i ] <= 'Z' ) ||
 					( buf[ i ] >= '0' && buf[ i ] <= '9' ) || buf[ i ] == '-' ) )
@@ -1441,13 +1459,17 @@ void CKernelMODplay::Run( void )
 				delete(mod);
 				mod = NULL;
 			#endif
-//			#ifdef WITH_NET
-//			logger->Write( "modplayer leaving ", LogNotice, pSidekickNet->getSysMonInfo(1) );
-//			#endif
+			#ifdef WITH_NET
+			logger->Write( "modplayer leaving ", LogNotice, pSidekickNet->getSysMonInfo(1) );
+			#endif
 			return;		
 		}
 		#endif
+		int samplesInBuffer = ( rbWrite - rbRead + ringbufSize ) & ( ringbufSize - 1 );
 
+		#ifdef LIBOPENMPT
+		if ( samplesInBuffer >= 4096)
+		#endif
 		asm volatile ("wfi");
 
 		if ( disableCart )
@@ -1458,8 +1480,12 @@ void CKernelMODplay::Run( void )
 			}
 
 		#if 1
-			int samplesInBuffer = ( rbWrite - rbRead + ringbufSize ) & ( ringbufSize - 1 );
+//			int samplesInBuffer = ( rbWrite - rbRead + ringbufSize ) & ( ringbufSize - 1 );
+#ifdef LIBOPENMPT
+			if ( samplesInBuffer < 4096)
+#else
 			if ( samplesInBuffer < 4096 )
+#endif			
 			{
 				if ( fadeIn != 0xffffffff || fadeOut != 0xffffffff )
 				{

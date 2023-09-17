@@ -2496,7 +2496,7 @@ void printSystemInfoScreen()
 	printC64( x+1, y1+3, "You are running Sidekick on a", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
 	printC64( x+1, y1+4, pSidekickNet->getRaspiModelName(), skinValues.SKIN_MENU_TEXT_ITEM, 0 );
 	//printC64( x+1, y1+18, "System time           Uptime", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
-	printC64( x+1, y1+5, pSidekickNet->getSysMonInfo(0), skinValues.SKIN_MENU_TEXT_ITEM, 0 );
+	printC64( x+1, y1+5, pSidekickNet->getSysMonInfo(1), skinValues.SKIN_MENU_TEXT_ITEM, 0 );
 
 	printC64( x+1, y1+7, "Network settings", skinValues.SKIN_MENU_TEXT_HEADER, 0 );
 	printC64( x+1, y1+8, strIpAddress,   skinValues.SKIN_MENU_TEXT_ITEM, 0 );
