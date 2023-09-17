@@ -377,6 +377,8 @@ void CKernelLaunch::Run( void )
 	nBytesRead = 0; stage = 1;
 	u32 cycleCountC64_Stage1 = 0;
 
+BEGIN_CYCLE_COUNTER
+
 	// wait forever
 	while ( true )
 	{
@@ -580,6 +582,7 @@ void CKernelLaunch::Run( void )
 				if (swiftLinkEnabled && swiftLinkReleaseDMA)
 				{
 					swiftLinkReleaseDMA = false;
+					WAIT_UP_TO_CYCLE( WAIT_RELEASE_DMA );
 					SET_GPIO( bDMA );
 //					clrLatchFIQ( LATCH_LED0 );
 					//FINISH_BUS_HANDLING
@@ -602,15 +605,15 @@ void CKernelLaunch::Run( void )
 				{
 					if ( pSidekickNet->areCharsInInputBuffer())
 					{
-					unsigned char tmpOutput = pSidekickNet->getCharFromInputBuffer();
-					if ( tmpOutput > 0)
-					{
-						swiftLinkResponse = tmpOutput;
-//						swiftLinkReceived[swiftLinkReceivedCounter++] = tmpOutput;
-//						swiftLinkReceived[swiftLinkReceivedCounter] = '\0';
-						swiftLinkDoNMI = swiftLinkNmiDelay;
+						unsigned char tmpOutput = pSidekickNet->getCharFromInputBuffer();
+						if ( tmpOutput > 0)
+						{
+							swiftLinkResponse = tmpOutput;
+	//						swiftLinkReceived[swiftLinkReceivedCounter++] = tmpOutput;
+	//						swiftLinkReceived[swiftLinkReceivedCounter] = '\0';
+							swiftLinkDoNMI = swiftLinkNmiDelay;
+						}
 					}
-				}
 				}
 				else
 					swiftLinkDoNMI = swiftLinkNmiDelay;
