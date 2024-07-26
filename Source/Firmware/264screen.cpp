@@ -1541,11 +1541,10 @@ void printSKTPScreen()
 	//printC64( 1, 23, pSidekickNet->getTimeString(), skinValues.SKIN_MENU_TEXT_SYSINFO, 0 );
 	//printC64( 1, 24, pSidekickNet->getSysMonInfo(1), skinValues.SKIN_MENU_TEXT_SYSINFO, 0 );
 
-//	if ( SKTPisLowerCharset ) 
-		c64screen[ 1000 ] = ((0x6800 >> 8) & 0xFC); //lowercase
-//	else
-//		c64screen[ 1000 ] = ((0x6000 >> 8) & 0xFC); //uppercase
-//	c64screenUppercase = SKTPisLowerCharset ? 0:1;
+	if ( SKTPisLowerCharset ) 
+		c64screen[ 1000 ] = ((0x6800 >> 8) & 0xFC);
+	else
+		c64screen[ 1000 ] = ((0x6000 >> 8) & 0xFC);
 	c64screen[ 1001 ] = SKTPborderColor;
 	c64screen[ 1002 ] = SKTPbgColor;
 
