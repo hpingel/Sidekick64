@@ -882,9 +882,9 @@ void handleC64( int k, u32 *launchKernel, char *FILENAME, char *filenameKernal )
 		}
 		else if ( k == 's' || k == 'S')
 		{
-				menuScreen = MENU_SYSTEMINFO;
-				handleC64( 0xffffffff, launchKernel, FILENAME, filenameKernal );
-				return;
+			menuScreen = MENU_SYSTEMINFO;
+			handleC64( 0xffffffff, launchKernel, FILENAME, filenameKernal );
+			return;
 		}
 		else if ( k == 'c' || k == 'C')
 		{
@@ -937,7 +937,7 @@ void handleC64( int k, u32 *launchKernel, char *FILENAME, char *filenameKernal )
 	if ( menuScreen == MENU_SKTP )
 	{
 	
-		if ( k == KEY_F7 )
+		if ( k == KEY_HELP )
 		{
 			pSidekickNet->leavingSktpScreen();
 			menuScreen = MENU_MAIN;
@@ -973,7 +973,7 @@ void handleC64( int k, u32 *launchKernel, char *FILENAME, char *filenameKernal )
 	} else
 	if ( menuScreen == MENU_SYSTEMINFO )
 	{
-		if ( k == KEY_F7)
+		if ( k == KEY_HELP)
 		{
 			menuScreen = MENU_MAIN;
 			handleC64( 0xffffffff, launchKernel, FILENAME, filenameKernal );
@@ -1117,7 +1117,6 @@ void printSidekickLogo()
 			}
 	}
 }
-
 
 void printMainMenu()
 {

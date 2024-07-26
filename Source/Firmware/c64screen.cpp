@@ -1854,7 +1854,7 @@ void handleC64( int k, u32 *launchKernel, char *FILENAME, char *filenameKernal, 
 			handleC64( 0xffffffff, launchKernel, FILENAME, filenameKernal, menuItemStr );
 			return;
 		}
-		else if ( k == 'c' || k == 'C' )
+		else if ( k == 'c' || k == 'C')
 		{
 			if (!pSidekickNet->IsRunning())
 			{
