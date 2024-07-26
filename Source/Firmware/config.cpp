@@ -316,7 +316,6 @@ int readConfig( CLogger *logger, char *DRIVE, char *FILENAME )
 							screenRotation = 1;
 					}
 				}
-				
 #ifdef WITH_NET
 				if ( strcmp( ptr, "NET_SIDEKICK_HOSTNAME" ) == 0 )
 				{
@@ -398,9 +397,7 @@ int readConfig( CLogger *logger, char *DRIVE, char *FILENAME )
 					logger->Write( "RaspiMenu", LogNotice, " enable modplay via HDMI  >%i<", netModPlayOutputHDMI );
 				#endif
 				}
-
-#endif
-				
+#endif			
 			}
 		}
 	}

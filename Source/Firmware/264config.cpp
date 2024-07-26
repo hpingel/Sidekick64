@@ -49,7 +49,7 @@ int screenType, screenRotation;
 	u32  netSktpHostPort = 0;
 	char netSktpHostUser[ 64 ];
 	char netSktpHostPassword[ 64 ];
-	u32  netModemEmuDefaultBaudrate = 0;	
+	u32  netModemEmuDefaultBaudrate = 0;
 	boolean netConnectOnBoot = false;
 	boolean netEnableWebserver = false;
 #endif
@@ -232,7 +232,7 @@ int readConfig( CLogger *logger, char *DRIVE, char *FILENAME )
 					ptr = strtok_r( NULL, "\"", &rest );
 					strncpy( netSidekickHostname, ptr, 255 );
 				#ifdef DEBUG_OUT
-					logger->Write( "RaspiMenu", LogNotice, " sidekick hostname >%s<", netUpdateHostName );
+					logger->Write( "RaspiMenu", LogNotice, " sidekick hostname >%s<", netSidekickHostname );
 				#endif
 				}
 
@@ -250,7 +250,7 @@ int readConfig( CLogger *logger, char *DRIVE, char *FILENAME )
 					ptr = strtok_r( NULL, "\"", &rest );
 					netSktpHostPort = atoi( ptr );
 				#ifdef DEBUG_OUT
-					logger->Write( "RaspiMenu", LogNotice, " sktp host port  >%i<", netSktpHostPort );
+					logger->Write( "RaspiMenu", LogNotice, " sktp host port >%i<", netSktpHostPort );
 				#endif
 				}
 
@@ -271,16 +271,7 @@ int readConfig( CLogger *logger, char *DRIVE, char *FILENAME )
 					logger->Write( "RaspiMenu", LogNotice, " sktp pw >%s<", netSktpHostPassword );
 				#endif
 				}
-				
-				if ( strcmp( ptr, "NET_MODEM_DEFAULT_BAUDRATE" ) == 0 )
-				{
-					ptr = strtok_r( NULL, "\"", &rest );
-					netModemEmuDefaultBaudrate = atoi( ptr );
-				#ifdef DEBUG_OUT
-					logger->Write( "RaspiMenu", LogNotice, " modem emu default baudrate >%i<", netModemEmuDefaultBaudrate );
-				#endif
-				}
-				
+
 				if ( strcmp( ptr, "NET_CONNECT_ON_BOOT" ) == 0 )
 				{
 					ptr = strtok_r( NULL, "\"", &rest );
@@ -296,6 +287,15 @@ int readConfig( CLogger *logger, char *DRIVE, char *FILENAME )
 					netEnableWebserver = (atoi( ptr ) == 1);
 				#ifdef DEBUG_OUT
 					logger->Write( "RaspiMenu", LogNotice, " enable webserver  >%i<", netEnableWebserver );
+				#endif
+				}
+				
+				if ( strcmp( ptr, "NET_MODEM_DEFAULT_BAUDRATE" ) == 0 )
+				{
+					ptr = strtok_r( NULL, "\"", &rest );
+					netModemEmuDefaultBaudrate = atoi( ptr );
+				#ifdef DEBUG_OUT
+					logger->Write( "RaspiMenu", LogNotice, " modem emu default baudrate >%i<", netModemEmuDefaultBaudrate );
 				#endif
 				}
 #endif
