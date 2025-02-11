@@ -57,9 +57,9 @@ struct fake_context
     unsigned char pattern_num_rows;
     unsigned char used_num_samples; //hacked in by frntc
     int ticks_per_line;         /* A.K.A. song speed (initially 6)         */
-		int bpm;
+    int bpm;
     signed char pattern;        /* Current pattern in order                */
-		signed char pattern2;       /* Current pattern in order                */
+    signed char pattern2;       /* Current pattern in order                */
     signed char line;           /* Current line in pattern                 */
     short tick;                 /* Current tick in line                    */
     float sample;               /* Current sample in tick                  */
@@ -602,17 +602,16 @@ void computeSamplesAndScreenUpdate( u16 vol )
 				else
 				#endif
 					sprintf( buf, "%02d", maxsk( 0, context.line ) );
-				printSpriteLayer( fb, buf, 80, 78+5 );
+				printSpriteLayer( fb, buf, 80, 78+5 ); //step in pattern
 			}
 
 			if ( prevPatt != context.pattern )
 			{
-				
-				if ( context.length > 99)
+				if ( context.length > 99 || context.pattern > 99 )
 					sprintf( buf, "%03d", context.pattern );
 				else
 					sprintf( buf, "%02d", context.pattern );
-				printSpriteLayer( fb, buf, 80, 70+5 );
+				printSpriteLayer( fb, buf, 80, 70+5 ); //left number
 				#ifdef LIBOPENMPT
 				context.pattern2 = mod->get_current_pattern();
 				context.pattern_num_rows = mod->get_pattern_num_rows(context.pattern2);
@@ -1161,7 +1160,7 @@ void CKernelMODplay::Run( void )
 		else
 			sprintf( buf, "Pattern:  %02d/%02d %02d/%02d", context.pattern, context.length, context.pattern2, context.num_patterns );
 */
-		if ( context.length > 99 || context.num_patterns > 99 )
+		if ( context.length > 99 || context.pattern > 99 )
 			sprintf( buf, "Pattern:  %03d/%03d", context.pattern, context.length );
 		else
 			sprintf( buf, "Pattern:  %02d/%02d", context.pattern, context.length );
