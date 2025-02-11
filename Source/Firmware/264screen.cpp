@@ -1544,8 +1544,8 @@ void printSKTPScreen()
 		c64screen[ 1000 ] = ((0x6800 >> 8) & 0xFC);
 	else
 		c64screen[ 1000 ] = ((0x6000 >> 8) & 0xFC);
-	c64screen[ 1001 ] = SKTPborderColor;
-	c64screen[ 1002 ] = SKTPbgColor;
+	c64screen[ 1001 ] = SKTPbgColor;
+	c64screen[ 1002 ] = SKTPborderColor;
 
 }
 	
