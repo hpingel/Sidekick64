@@ -248,7 +248,7 @@ private:
 #endif	
 	//CActLED							m_ActLED;
 	CWebServer        * m_WebServer;
-	CUSBSerialDevice * volatile m_pUSBSerial;
+	CUSBSerialHostDevice * volatile m_pUSBSerial;
 	CUSBMIDIDevice * volatile m_pUSBMidi;
 	CDeviceNameService	* m_DeviceNameService;
 	CSocket             *m_pBBSSocket;	
